@@ -1,6 +1,8 @@
+import type { ReactNode } from "react";
 import { Dashboard } from "@/components/dashboard/Dashboard";
 import { ConfigurationErrorState } from "@/components/dashboard/ConfigurationErrorState";
 import { EmergencyDashboard } from "@/components/dashboard/EmergencyDashboard";
+import { ScrollHomeToTopOnContentReady } from "@/components/dashboard/ScrollHomeToTopOnContentReady";
 import { EmergencyUnavailableState } from "@/components/emergencyMode/EmergencyUnavailableState";
 import { PermanentManagerEmergencyHome } from "@/components/home/PermanentManagerEmergencyHome";
 import { PermanentManagerHome } from "@/components/home/PermanentManagerHome";
@@ -12,6 +14,27 @@ import { getRequestPermanentManagerHome } from "@/lib/readModels/getRequestPerma
 import { getRequestPersonalSchedule } from "@/lib/readModels/getRequestPersonalSchedule";
 import { getRequestDashboardVisitRecap } from "@/lib/readModels/getRequestRecentDashboardChanges";
 import { getRequestReportOneTomorrow } from "@/lib/readModels/getRequestReportOneTomorrow";
+
+/**
+ * Wraps every branch `DashboardPage` can return with `ScrollHomeToTopOnContentReady`
+ * (see that component's own docstring) -- one helper here instead of
+ * repeating the marker at each of this file's six return points. Keeps
+ * `DashboardPage` a single flat async function (never a sync wrapper around
+ * a separate async child component), which matters for two reasons: this
+ * file's own tests call `await DashboardPage()` directly and render the
+ * result, and a Suspense boundary can only resolve this marker into the
+ * SAME commit as the real content if it is a plain synchronous sibling
+ * inside that one async function's return value, not a separately-awaited
+ * subtree.
+ */
+function withHomeContentReady(children: ReactNode) {
+  return (
+    <>
+      <ScrollHomeToTopOnContentReady />
+      {children}
+    </>
+  );
+}
 
 /**
  * By the time this page renders, the protected layout has already gated
@@ -94,7 +117,7 @@ export default async function DashboardPage() {
   const result = await getRequestPersonalSchedule();
 
   if (result.status === "emergency_unavailable") {
-    return <EmergencyUnavailableState />;
+    return withHomeContentReady(<EmergencyUnavailableState />);
   }
   if (result.status === "emergency") {
     /**
@@ -122,21 +145,21 @@ export default async function DashboardPage() {
         null,
       );
       if (managerEmergencyResult.status === "ok") {
-        return (
+        return withHomeContentReady(
           <PermanentManagerEmergencyHome
             personName={result.person.name}
             localNow={managerEmergencyResult.model.localNow}
             fetchedAt={managerEmergencyResult.model.fetchedAt}
             everyoneShifts={managerEmergencyResult.model.everyoneShifts ?? []}
             diagnosticsCount={managerEmergencyResult.model.diagnostics.length}
-          />
+          />,
         );
       }
     }
-    return <EmergencyDashboard model={result.emergencyHome} />;
+    return withHomeContentReady(<EmergencyDashboard model={result.emergencyHome} />);
   }
   if (result.status !== "ok") {
-    return <ConfigurationErrorState />;
+    return withHomeContentReady(<ConfigurationErrorState />);
   }
 
   const calendarSyncEnabled = (await getCalendarFeedForCurrentUser()).enabled;
@@ -151,7 +174,7 @@ export default async function DashboardPage() {
       const reportOneResult = await getRequestReportOneTomorrow();
       const reportOneDraft = reportOneResult.status === "ok" ? reportOneResult.draft : null;
       const reportOneReserveInclusion = reportOneResult.status === "ok" ? reportOneResult.reserveInclusionByPersonId : undefined;
-      return (
+      return withHomeContentReady(
         <PermanentManagerHome
           model={homeResult.model}
           reportOneDraft={reportOneDraft}
@@ -159,7 +182,7 @@ export default async function DashboardPage() {
           userId={result.userId}
           calendarSyncEnabled={calendarSyncEnabled}
           eligibleForOnboarding={eligibleForOnboarding}
-        />
+        />,
       );
     }
   }
@@ -173,7 +196,7 @@ export default async function DashboardPage() {
   const reportOneDraft = reportOneResult?.status === "ok" ? reportOneResult.draft : null;
   const reportOneReserveInclusion = reportOneResult?.status === "ok" ? reportOneResult.reserveInclusionByPersonId : undefined;
 
-  return (
+  return withHomeContentReady(
     <Dashboard
       model={result.model}
       visitRecap={visitRecap}

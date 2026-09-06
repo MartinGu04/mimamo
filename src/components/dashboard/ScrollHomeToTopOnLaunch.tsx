@@ -27,7 +27,16 @@ let hasScrolledToTopThisPageLoad = false;
  *     Handled by the plain MOUNT effect below, gated by the module-scoped
  *     flag so it only ever fires once per real page load (see that
  *     variable's own docstring for why an in-app remount must never
- *     re-trigger it).
+ *     re-trigger it). This fires while `loading.tsx` is still the visible
+ *     fallback (this component lives in the surrounding layout, which
+ *     mounts before the real content resolves) -- real testing showed that
+ *     is too EARLY to be the final word: once the real content replaces
+ *     the fallback, a browser scroll-anchoring/restoration step can still
+ *     land afterward and undo this. `ScrollHomeToTopOnContentReady`
+ *     (rendered as part of the actual resolved `page.tsx` content, see its
+ *     own docstring) is the reset that actually wins that race -- this
+ *     early one is still worth keeping so the fallback itself never
+ *     visibly starts mid-scroll.
  *
  *  2. Real-device iOS testing showed (1) alone is NOT enough: reopening
  *     the installed PWA from the Home Screen after merely backgrounding it

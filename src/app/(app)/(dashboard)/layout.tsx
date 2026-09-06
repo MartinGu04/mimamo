@@ -12,7 +12,13 @@ import { ScrollHomeToTopOnLaunch } from "@/components/dashboard/ScrollHomeToTopO
  * surface `page.tsx` can render (`Dashboard`, `PermanentManagerHome`, the
  * Emergency Mode variants, `ConfigurationErrorState`) -- see that
  * component's own docstring for why a fresh page load should open at the
- * top while a mere app resume must never be disturbed.
+ * top while a mere app resume must never be disturbed. This layout mounts
+ * BEFORE the real content resolves (while `loading.tsx` is still the
+ * visible Suspense fallback), which is too early to survive a browser
+ * scroll-anchoring/restoration step landing after the real content swaps
+ * in -- `page.tsx`'s own `withHomeContentReady` helper renders a SECOND,
+ * separate marker (`ScrollHomeToTopOnContentReady`) as part of the actual
+ * resolved content for that reason; see that component's own docstring.
  */
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
