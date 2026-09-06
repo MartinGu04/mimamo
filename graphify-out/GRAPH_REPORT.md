@@ -1,16 +1,16 @@
 # Graph Report - mimamo  (2026-09-06)
 
 ## Corpus Check
-- 907 files · ~768,430 words
+- 911 files · ~769,317 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 5456 nodes · 13768 edges · 313 communities (221 shown, 92 thin omitted)
+- 5463 nodes · 13776 edges · 342 communities (239 shown, 103 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 160 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ee8155a3`
+- Built from commit: `0a0dc8c0`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -18,36 +18,36 @@
 - reminders.ts
 - duties/page.tsx
 - pipeline.ts
-- hebrewDate.ts
+- parseCalendarDate
 - calendar/actions.ts
-- EveryoneMonthGrid.tsx
+- PersonalEventView
 - labels.ts
 - (app)/manager/page.tsx
 - QualificationLiveCard.tsx
-- Panel.tsx
+- IssueRow.tsx
 - ruleActions.ts
-- LocalNow
+- emergencyScheduleTypes.ts
 - readModels/types.ts
-- AudienceGroupKey
+- audienceGroups.ts
 - buildPersonalScheduleReadModel.ts
 - engine/store.test.ts
-- personnel.ts
-- google/index.ts
+- dutyFairness.ts
+- managerOverview.ts
 - emergencyAgenda.ts
-- engine/scheduledBroadcast.ts
+- getNotificationServiceClient
 - ThemeProvider.tsx
-- EventPeriod
+- domain/event.ts
 - managerWorkbookContext.test.ts
 - notifications/page.tsx
-- managerEventProjections.test.ts
+- managerEventProjections.ts
 - presentation/dischargeCountdown.ts
 - PersonPicker
-- DayMeta
+- shiftSchedule.ts
 - Person
 - createSupabaseServiceRoleClient
 - pipeline.emergencyMode.test.ts
-- duties/page.test.tsx
-- inboxActions.ts
+- dutyFairnessTypes.ts
+- getAuthenticatedIdentity
 - engine/store.ts
 - usePushSubscription.ts
 - buildDutyFairnessReadModel.ts
@@ -57,28 +57,28 @@
 - GoogleConfigError
 - managerAdoption.ts
 - NotificationBell.tsx
-- buildManagerOverviewReadModel.ts
+- LocalNow
 - readSupabasePublicConfig
 - /graphify Command
 - compilerOptions
-- manager/types.ts
+- dutyAbsenceGrouping.ts
 - ManagerRecentBroadcastsSection.tsx
 - fairnessShiftEngine.ts
 - (app)/fairness/page.tsx
 - shiftCoverageRecommendation.ts
-- shootingRanges/actions.ts
-- managerPerspectives.test.tsx
+- readModels/shootingRangeQualification.ts
+- fairnessGroups.ts
 - Sidebar.tsx
-- notifications/page.test.tsx
+- ManagerAdoptionPersonView
 - recurringRuleDispatch.test.ts
 - NotificationBell.test.tsx
 - PwaInstallProvider.tsx
 - dutyBlocks.ts
 - managerUrl.ts
-- ManagerFixedNotificationsSection
+- ManagerFixedNotificationsSection.tsx
 - SetupSection.tsx
 - dutyAllocationWeight.ts
-- shiftExpectationFactors.ts
+- manager/types.ts
 - dependencies
 - productName.ts
 - scheduleEveryone.ts
@@ -87,25 +87,25 @@
 - LoginHero.tsx
 - CommandPalette.test.tsx
 - potential.test.ts
-- buildPermanentManagerHomeReadModel.test.ts
+- reminders.test.ts
 - operationalIssues.ts
 - reportOne.ts
-- Badge
-- ManagerBroadcastComposer.tsx
-- AppShell.tsx
+- Panel.tsx
+- ManagerScheduledBroadcastsSection.tsx
+- ManagerAttentionSection.tsx
 - components/ Directory Overview
-- shooting-ranges/manager/page.test.tsx
+- ManagerRecurringRuleComposer.tsx
 - ShellUtilityBar.tsx
 - icsRender.ts
-- NotificationBell
+- ManagerSystemRuleEditor.tsx
 - parsers/event.ts
-- CalendarGrid.test.tsx
+- domain/shootingRangeQualification.ts
 - ShiftFairnessCard.tsx
 - buildPersonalScheduleReadModel.test.ts
-- EmergencyScheduleRangeSelector.tsx
-- shiftSchedule.ts
+- emergencyShift.ts
+- shiftCoverage.ts
 - CommandPalette.tsx
-- shooting-ranges/manager/page.tsx
+- AccessDeniedScreen.tsx
 - classifyPersonnelType
 - parseSearchIntent.ts
 - fairnessCards.ts
@@ -114,16 +114,16 @@
 - ruleActions.test.ts
 - parsers/fairness.test.ts
 - shiftFairness.ts
-- managerOverview.ts
+- loadCalendarFeedForToken.ts
 - pipeline.weaponQualificationEmergencyMode.test.ts
-- WeekOverviewSection.tsx
+- changeDetection.ts
 - weaponQualification.test.ts
 - capabilities.ts
 - ReportOneEditorOverlay.tsx
-- sendPush.ts
+- notifications/actions.ts
 - public.push_subscriptions
 - buildManagerOverviewReadModel
-- Avatar.tsx
+- ruleConfig.ts
 - shootingRanges/actions.test.ts
 - ShiftProgress.tsx
 - 20260824090000_create_notification_rules.sql
@@ -131,71 +131,75 @@
 - (dashboard)/page.tsx
 - managerOverview.test.ts
 - readModels/schedule.test.ts
-- buildEmergencyScheduleReadModel.ts
+- buildEmergencyPersonalHome.ts
 - scheduledBroadcastActions.test.ts
-- ScheduleManagerSelector.test.tsx
+- ScheduleManagerSelector.tsx
 - dashboardVisit/actions.ts
 - 20260815130000_create_notification_engine.sql
 - recentDashboardChanges.ts
-- buildSearchReadModel.test.ts
+- buildSearchReadModel.ts
 - dutyFairness.test.ts
 - navigationCaching.test.ts
-- SetupSection.test.tsx
+- emergencySchedule.ts
 - 20260815130000_create_notification_engine.sql
 - reportOne/actions.ts
-- PwaInstallProvider.test.tsx
-- buildShootingRangeManagerReadModel.ts
-- DutyViewToggle.tsx
+- Dashboard.tsx
+- ShootingRangeManagerPanel.tsx
+- ManagerBroadcastComposer.tsx
 - fairnessWorkbookContext.test.ts
 - permanentManagerHome.test.ts
 - personalSchedule.test.ts
 - resolveSearchIntent.test.ts
-- parseCalendarDate
-- domain/event.ts
-- EveryoneMonthGrid.test.tsx
+- dateRange.ts
+- Event
+- ManagerFixedNotificationsSection.test.tsx
 - pipeline.scheduledBroadcasts.test.ts
 - Person
-- Dashboard.tsx
+- RecentChangesPanel.tsx
 - (app)/fairness/page.test.tsx
 - reportOneTomorrow.test.ts
 - notificationServiceRoleBoundary.test.ts
-- notificationCenter.test.ts
+- notificationCenter.ts
 - manualBroadcastActions.test.ts
 - AppRevalidator.test.tsx
 - getAuthenticatedIdentity
 - Duty Fairness integration (PR #3)
-- DutiesHeader.tsx
+- DutyFairnessCard.tsx
 - potentialDutyEvents.test.ts
-- (app)/layout.tsx
+- (app)/layout.test.tsx
 - parseSharedShiftPhrase.ts
 - search.test.ts
 - feedStore.test.ts
 - /graphify query Flow
-- callback/route.ts
-- shiftFairness.test.ts
+- AudienceGroupKey
+- EmergencyPersonalScheduleList.tsx
+- issueRecommendation.ts
 - managerTypes.ts
-- managerEmergencyOverview.test.ts
+- google/index.ts
 - createSupabaseServerClient
 - Mi-Ma-Mo App Symbol
+- resolveSearchIntent
 - inboxActions.test.ts
 - lib/calendar
 - resolveEventShiftInterval
 - shootingRangeManagerOverview.test.ts
-- notifications/actions.test.ts
+- buildEmergencyScheduleReadModel.ts
 - recurringRuleDispatch.ts
 - loadManagerFairnessReadModel
 - --update (Incremental Re-extraction)
 - Extraction Subagent Prompt
 - loginComposition.test.ts
-- weaponQualification.ts
-- CalendarGridCell
+- engine/shootingRanges.ts
+- settings/page.tsx
 - buildManagerOverviewReadModel.test.ts
+- buildShootingRangeQualificationReadModel.test.ts
 - sw.test.ts
 - מי-מה-מו Permanent Engineering Rules
 - public.notification_reads
 - readModels/shootingRangeQualification.test.ts
 - מטווחים (shooting-range qualification)
 - event.ts
+- package.json
 - apiSurface.test.ts
 - manager/fairness/page.tsx
 - Card.tsx
@@ -204,9 +208,10 @@
 - notificationRulesMigration.test.ts
 - scheduledBroadcastClaimWindowMigration.test.ts
 - scheduledBroadcastMigration.test.ts
+- fairnessPeriod.ts
 - 20260821090000_create_manager_scheduled_broadcasts.sql
 - graphify-guard.sh
-- ShootingRangeManagerPanel.tsx
+- shootingRanges/actions.ts
 - brandIcons.test.ts
 - loginBoundary.test.ts
 - DayMeta
@@ -278,38 +283,62 @@
 - 20260825090000_create_dashboard_visit_state.sql
 - public.update_system_rule_configuration_and_invalidate_pending_jobs
 - reportOne/migration.test.ts
-- scheduledBroadcastStore.test.ts
+- emergencyMode/types.ts
+- makeFakeSupabase
 - 20260825100000_create_report_one_reserve_inclusion.sql
 - scheduledWorker.test.ts
 - confirmShootingRangeOccurrencesRpc.integration.test.ts
 - resolveSearchIntent.ts
-- PermanentManagerHome.tsx
+- (dashboard)/page.test.tsx
 - resolveCurrentPerson
-- loadManagerPersonnelContext
+- DashboardVisitSession.tsx
+- emergencyMode/store.ts
 - public.activate_emergency_mode
-- hebrewCalendar.ts
-- ShootingRangeHistoryList.tsx
+- weaponQualification.ts
+- feedStore.ts
+- icsEmergencyItems.ts
+- buildShootingRangeQualificationReadModel.ts
 - 20260827100000_add_audience_groups_and_exclusions.sql
-- ProgressRing.tsx
+- notificationTiming.ts
+- schedule/page.test.tsx
+- (dashboard)/layout.tsx
+- emergencyFairnessTypes.ts
 - shootingRanges/migration.test.ts
 - 20260825110000_create_shooting_range_completions.sql
 - 20260825120000_create_shooting_range_planned_occurrences.sql
+- ManagerBroadcastComposer.scheduling.test.tsx
+- calendar/actions.test.ts
 - settings/page.test.tsx
 - public.emergency_mode_periods
 - emergencyMode/migration.test.ts
 - audienceGroupsMigration.test.ts
 - notificationBaselineOperationalGeneration.migration.test.ts
-- DataFreshnessStatus.tsx
+- PermanentManagerHome.tsx
 - LoginScheduleRing.tsx
+- tick/route.test.ts
 - 20260902130000_add_aggregate_notification_episode_dedupe.sql
 - aggregateNotificationEpisodeMigration.test.ts
 - notification_jobs
-- ManagerBroadcastComposer.test.tsx
-- shooting-ranges/page.tsx
+- CalendarSyncSection.test.tsx
+- jerusalemClock.ts
+- feedOwnerLookup.test.ts
+- sharedShift.ts
 - analyzeUnitShiftCoverage
 - notification_baseline_state
 - public.manager_scheduled_broadcasts
 - public.manager_notification_batches
+- requestOrigin.test.ts
+- eslint-config-next
+- jsdom
+- react-dom
+- server-only
+- @supabase/supabase-js
+- tailwindcss
+- @tailwindcss/postcss
+- @testing-library/react
+- @types/node
+- @vitejs/plugin-react
+- vitest
 
 ## God Nodes (most connected - your core abstractions)
 1. `Person` - 122 edges
@@ -347,107 +376,107 @@
 - **Read-Only Snapshot Architecture Pattern** — claude_engineering_rules, src_components_ui_readme_datafreshnessstatus, src_components_readme_personalschedulereadmodel [INFERRED 0.75]
 - **Google Sheets -> parsers -> domain -> read models read-only pipeline** — src_lib_google_readme_fetchrawworkbooksnapshot, src_lib_sync_readme_workbooksnapshotcache, src_lib_parsers_readme_lib_parsers, src_lib_domain_readme_lib_domain, src_lib_readmodels_readme_lib_readmodels [INFERRED 0.85]
 
-## Communities (313 total, 92 thin omitted)
+## Communities (342 total, 103 thin omitted)
 
 ### Community 0 - "reminders.ts"
-Cohesion: 0.05
-Nodes (67): LocalClockTime, LOGISTICS_WITHDRAWAL_WINDOW, LOGISTICS_WITHDRAWAL_WINDOW_END, LOGISTICS_WITHDRAWAL_WINDOW_START, MinuteWindow, SEMANTIC_CHANGE_DEBOUNCE_MINUTES, WORKER_CADENCE_MINUTES, dayOfWeek() (+59 more)
+Cohesion: 0.12
+Nodes (42): nextCalendarDateString(), buildSupervisorAssignedBody(), buildSupervisorAssignedInformedBody(), buildSupervisorAssignedTodayBody(), buildTeamHelpAssignedBody(), comparePersonRef(), findLogisticsWithdrawalAssignees(), hasAnyAbsence() (+34 more)
 
 ### Community 1 - "duties/page.tsx"
-Cohesion: 0.18
-Nodes (20): buildDutyBlockView(), DutiesPage(), DutiesPageProps, DutySuspendedState(), DutyRow(), actionsForBlock(), clockToMinuteOfDay(), dutyBlockEmoji() (+12 more)
+Cohesion: 0.11
+Nodes (31): buildDutyBlockView(), DutiesPage(), DutiesPageProps, UpcomingSectionProps, DutiesHeader(), DutiesHeaderProps, DutyViewToggle(), DutyViewToggleProps (+23 more)
 
 ### Community 2 - "pipeline.ts"
-Cohesion: 0.06
-Nodes (53): POST(), loadRoute(), runScheduledBroadcastWorkerTick, POST(), loadRoute(), runNotificationWorkerTick, SupabaseServiceRoleConfigError, DeliverySummary (+45 more)
+Cohesion: 0.07
+Nodes (50): POST(), loadRoute(), runScheduledBroadcastWorkerTick, POST(), DeliverySummary, runDelivery(), EMPTY_REMINDERS_SUMMARY, logWorkerTick() (+42 more)
 
-### Community 3 - "hebrewDate.ts"
+### Community 3 - "parseCalendarDate"
 Cohesion: 0.14
-Nodes (22): dynamic, LoginPage(), LoginPageProps, LoginHero(), ShiftOverviewCard(), BARE_WEEKDAY_LABELS, formatDateRange(), formatHebrewDayAndMonth() (+14 more)
+Nodes (27): dynamic, ProtectedLayout(), dynamic, LoginPage(), LoginPageProps, resolveGuardReserveBlockShape(), dayOfWeek(), parseCalendarDate() (+19 more)
 
 ### Community 4 - "calendar/actions.ts"
-Cohesion: 0.08
-Nodes (38): SettingsPage(), CalendarSyncSection(), CalendarSyncSectionProps, ConfirmTarget, disableCalendarSyncAction, enableCalendarSyncAction, LINKS, NEW_LINKS (+30 more)
+Cohesion: 0.28
+Nodes (11): CalendarSyncSection(), CalendarSyncSectionProps, ConfirmTarget, CalendarSyncActionResult, disableCalendarSyncAction(), DisableCalendarSyncResult, enableCalendarSyncAction(), resetCalendarSyncAction() (+3 more)
 
-### Community 5 - "EveryoneMonthGrid.tsx"
-Cohesion: 0.13
-Nodes (26): CalendarGrid(), CALENDAR_CELL_HEIGHT_CLASSES, CalendarDayCell(), CalendarWeekdayHeader(), CalendarWeekRow(), cellBorderClasses(), chunkIntoWeeks(), dayNumberFromDate() (+18 more)
+### Community 5 - "PersonalEventView"
+Cohesion: 0.05
+Nodes (69): PersonalPerspectiveProps, CalendarGrid(), CalendarGridProps, absenceEvent(), activityEvent(), dayMeta(), daysForGrid(), dutyEvent() (+61 more)
 
 ### Community 6 - "labels.ts"
 Cohesion: 0.06
-Nodes (58): CounterpartRow(), TimeRange(), TimeRangeProps, describeEvent(), parseClock(), statusOf(), TimelineItem, TimelineStatus (+50 more)
+Nodes (48): CounterpartRow(), TimeRange(), TimeRangeProps, describeEvent(), parseClock(), statusOf(), dutyEvent(), shiftEvent() (+40 more)
 
 ### Community 7 - "(app)/manager/page.tsx"
-Cohesion: 0.08
-Nodes (44): buildAssignmentView(), buildManagerAbsenceRowView(), buildManagerDutyRowView(), buildManagerIssueRowView(), buildManagerPotentialRowView(), buildManagerShiftDayViews(), buildManagerShiftGroupView(), buildSelectedPersonIssueView() (+36 more)
+Cohesion: 0.07
+Nodes (43): buildAssignmentView(), buildManagerAbsenceRowView(), buildManagerDutyRowView(), buildManagerIssueRowView(), buildManagerPotentialRowView(), buildManagerShiftDayViews(), buildManagerShiftGroupView(), buildSelectedPersonIssueView() (+35 more)
 
 ### Community 8 - "QualificationLiveCard.tsx"
-Cohesion: 0.22
-Nodes (9): PlannedRangeCountdown(), PlannedRangeCountdownProps, QualificationLiveCard(), QualificationLiveCardProps, useLiveClock(), computeRemainingProgress(), DurationParts, formatDurationParts() (+1 more)
+Cohesion: 0.14
+Nodes (14): PlannedRangeCountdown(), PlannedRangeCountdownProps, ProgressRing(), ProgressRingProps, QualificationLiveCard(), QualificationLiveCardProps, useLiveClock(), QualificationStatus (+6 more)
 
-### Community 9 - "Panel.tsx"
-Cohesion: 0.06
-Nodes (49): IssuesPanel(), IssuesPanelProps, IssueRow(), IssueRowProps, RecommendationDisclosure(), renderTextParts(), ROOT_CLASS, CURRENT (+41 more)
+### Community 9 - "IssueRow.tsx"
+Cohesion: 0.10
+Nodes (27): IssuesPanel(), IssuesPanelProps, PulseIndicator(), PulseIndicatorProps, CandidateLink(), IssueRow(), IssueRowProps, RecommendationDisclosure() (+19 more)
 
 ### Community 10 - "ruleActions.ts"
-Cohesion: 0.04
-Nodes (93): AudienceGroupPicker(), ManagerBroadcastComposerProps, audienceLabel(), CustomWeeklyRuleRow(), handleArchive(), handleToggleEnabled(), ERROR_LABELS, errorLabel() (+85 more)
-
-### Community 11 - "LocalNow"
 Cohesion: 0.07
-Nodes (36): PermanentManagerEmergencyHome(), PermanentManagerEmergencyHomeProps, EmergencyManagerOperationalOverview(), EmergencyManagerOperationalOverviewProps, ROLE_TITLE, ROLE_TITLE_CLASS, ROLE_VARIANT, ShiftRole (+28 more)
+Nodes (51): EmergencyModeControl(), formatInstantForDisplay(), pad2(), EmergencyModeControlClient(), handleActivate(), handleDeactivate(), EmergencyModeControlClientProps, EmergencyModeControlProjection (+43 more)
+
+### Community 11 - "emergencyScheduleTypes.ts"
+Cohesion: 0.12
+Nodes (22): PermanentManagerEmergencyHome(), PermanentManagerEmergencyHomeProps, EmergencyManagerOperationalOverview(), EmergencyManagerOperationalOverviewProps, ROLE_TITLE, ROLE_TITLE_CLASS, ROLE_VARIANT, ShiftRole (+14 more)
 
 ### Community 12 - "readModels/types.ts"
-Cohesion: 0.05
-Nodes (46): assignmentEvent(), getRequestPersonalSchedule, shiftEvent(), AdjacentShiftContextRow(), AdjacentShiftContextRowProps, CounterpartPanel(), CounterpartPanelProps, assignment() (+38 more)
+Cohesion: 0.10
+Nodes (25): AdjacentShiftContextRow(), AdjacentShiftContextRowProps, CounterpartPanel(), CounterpartPanelProps, CurrentHero(), describeAssignment(), findMatchingShiftContext(), Hero() (+17 more)
 
-### Community 13 - "AudienceGroupKey"
-Cohesion: 0.08
-Nodes (35): AudienceGroupOption, AudienceGroupPickerProps, ROLE_OPTIONS, SERVICE_TYPE_OPTIONS, AUDIENCE_GROUP_KEY_SET, AUDIENCE_GROUP_KEYS, AudienceGroupable, AudienceGroupKey (+27 more)
+### Community 13 - "audienceGroups.ts"
+Cohesion: 0.19
+Nodes (13): AUDIENCE_GROUP_KEY_SET, AUDIENCE_GROUP_KEYS, AudienceGroupable, personMatchesAnyAudienceGroup(), personMatchesAudienceGroup(), resolveAudienceGroupMembers(), ALL_ELIGIBLE_AUDIENCE_SELECTION, NotificationAudienceMode (+5 more)
 
 ### Community 14 - "buildPersonalScheduleReadModel.ts"
-Cohesion: 0.10
-Nodes (39): classifyAssignmentTemporalState(), classifyDutyTemporalState(), classifyShiftTemporalState(), isEventStillRelevant(), resolveNowMinuteOnEventTimeline(), baseEvent(), dutyEvent(), nextCell() (+31 more)
+Cohesion: 0.09
+Nodes (44): classifyAssignmentTemporalState(), classifyDutyTemporalState(), classifyShiftTemporalState(), isEventStillRelevant(), resolveNowMinuteOnEventTimeline(), baseEvent(), dutyEvent(), nextCell() (+36 more)
 
 ### Community 15 - "engine/store.test.ts"
 Cohesion: 0.06
 Nodes (17): diffSemanticFacts(), FactChange, SemanticFact, SemanticFactCategory, SemanticFactValue, ClaimedPendingChange, EVENING, FakeBatchRow (+9 more)
 
-### Community 16 - "personnel.ts"
-Cohesion: 0.05
-Nodes (70): getEmergencyDateSet, parseLocalDate(), toIsoDate(), EmergencyFairnessGroupLabel, emptyMembership(), parseEmergencyFairnessGroups(), buildNormalizedNameIndex(), isRowEntirelyBlank() (+62 more)
+### Community 16 - "dutyFairness.ts"
+Cohesion: 0.08
+Nodes (44): parseLocalDate(), toIsoDate(), EmergencyFairnessGroupLabel, emptyMembership(), parseEmergencyFairnessGroups(), EMPTY_TARGETS, FAIRNESS_HEADER_LABELS, FairnessHeaderLocation (+36 more)
 
-### Community 17 - "google/index.ts"
-Cohesion: 0.05
-Nodes (58): getGoogleSheetsContext(), getGoogleEmergencySheetsContext(), ALL_EMERGENCY_SHEET_SOURCE_KEYS, EMERGENCY_SHEET_SOURCES, EmergencySheetSourceKey, fetchRawEmergencyWorkbookSnapshot(), fetchRawWorkbookSnapshot(), ALL_SHEET_SOURCE_KEYS (+50 more)
+### Community 17 - "managerOverview.ts"
+Cohesion: 0.08
+Nodes (41): timedStage(), timedSyncStage(), getGoogleEmergencySheetsContext(), EmergencySheetSourceKey, fetchRawEmergencyWorkbookSnapshot(), ENV_KEYS, ALL_SHEET_SOURCE_KEYS, parseSourcePeriodYear() (+33 more)
 
 ### Community 18 - "emergencyAgenda.ts"
-Cohesion: 0.14
-Nodes (16): EmergencyPersonalScheduleList(), TODAY, buildEmergencyPersonalAgenda(), buildEmergencyScheduleAgendaView(), compareShiftEntries(), DEFAULT_EMERGENCY_SCHEDULE_RANGE, EmergencyAgendaDayGroup, EmergencyPersonalAgenda (+8 more)
+Cohesion: 0.11
+Nodes (21): EmergencyPersonalScheduleList(), EmergencyPersonalScheduleListProps, TODAY, EmergencyScheduleRangeSelector(), EmergencyScheduleRangeSelectorProps, RANGE_OPTIONS, rangeHref(), buildEmergencyPersonalAgenda() (+13 more)
 
-### Community 19 - "engine/scheduledBroadcast.ts"
-Cohesion: 0.06
-Nodes (61): extractAvatarUrl(), BroadcastUnresolvedPerson, isSameLogicalBroadcastRequest(), MANAGER_BROADCAST_CATEGORY, resolveAudience(), sameIdSet(), SendManagerBroadcastInput, sendManagerBroadcastNotification() (+53 more)
+### Community 19 - "getNotificationServiceClient"
+Cohesion: 0.05
+Nodes (88): BroadcastUnresolvedPerson, isSameLogicalBroadcastRequest(), MANAGER_BROADCAST_CATEGORY, resolveAudience(), sameIdSet(), SendManagerBroadcastInput, sendManagerBroadcastNotification(), SendManagerBroadcastOutcome (+80 more)
 
 ### Community 20 - "ThemeProvider.tsx"
-Cohesion: 0.09
-Nodes (29): IdentityFooterThemeAction(), MobileIdentityBarProps, MobileProfileMenu(), MobileTopBarThemeAction(), OPTIONS, ThemeToggle(), ThemeToggleProps, applyThemeAttribute() (+21 more)
+Cohesion: 0.12
+Nodes (26): IdentityFooterThemeAction(), MobileTopBarThemeAction(), OPTIONS, ThemeToggle(), ThemeToggleProps, applyThemeAttribute(), EffectiveTheme, getEffectiveThemeServerSnapshot() (+18 more)
 
-### Community 21 - "EventPeriod"
-Cohesion: 0.16
-Nodes (19): EVENT_COLOR_KEYWORD, IcsColorInput, icsEventColor(), RFC-7986, IcsEmojiInput, AbsenceKind, EventCategory, EventPeriod (+11 more)
+### Community 21 - "domain/event.ts"
+Cohesion: 0.09
+Nodes (39): EVENT_COLOR_KEYWORD, IcsColorInput, icsEventColor(), RFC-7986, ABSENCE_EMOJI, DUTY_FAMILY_EMOJI, IcsEmojiInput, icsEventEmoji() (+31 more)
 
 ### Community 22 - "managerWorkbookContext.test.ts"
 Cohesion: 0.31
 Nodes (9): getRequestAuthenticatedIdentity, getWorkbookSnapshot, MANAGER_PERSONNEL_ROWS, managerSnapshot(), personnelOnlySnapshot(), personnelSheet(), potentialSheet(), scheduleSheet() (+1 more)
 
 ### Community 23 - "notifications/page.tsx"
-Cohesion: 0.13
-Nodes (17): NotificationCenterPage(), NotificationCenterPageProps, SearchParamValue, NotificationCenterHeader(), NotificationCenterNav(), NotificationCenterNavProps, SECTION_OPTIONS, linkStatus (+9 more)
+Cohesion: 0.14
+Nodes (15): NotificationCenterPage(), NotificationCenterPageProps, SearchParamValue, NotificationCenterHeader(), NotificationCenterNav(), NotificationCenterNavProps, SECTION_OPTIONS, linkStatus (+7 more)
 
-### Community 24 - "managerEventProjections.test.ts"
-Cohesion: 0.29
-Nodes (9): DATES, nextPersonId(), schedule, shiftEvent(), supervisorDay(), supervisorGeneric(), supervisorNight(), technicianDay() (+1 more)
+### Community 24 - "managerEventProjections.ts"
+Cohesion: 0.09
+Nodes (28): buildPermanentManagerHomeReadModel(), nextCell(), schedule, shiftEvent(), toAbsenceView(), toDutyView(), toPersonalProfile(), buildManagerAbsenceEntries() (+20 more)
 
 ### Community 25 - "presentation/dischargeCountdown.ts"
 Cohesion: 0.12
@@ -457,69 +486,69 @@ Nodes (22): CountdownPage(), renderEmptyState(), getRequestDischargeCountdown, r
 Cohesion: 0.13
 Nodes (15): PersonPicker(), closeMenu(), handleButtonKeyDown(), handlePointerDown(), handlePopupKeyDown(), openMenu(), renderOptionRow(), selectRow() (+7 more)
 
-### Community 27 - "DayMeta"
+### Community 27 - "shiftSchedule.ts"
 Cohesion: 0.09
-Nodes (20): PeriodColumn(), CalendarDayCellProps, SELECTED_DAY_PANEL_MIN_HEIGHT_CLASS, EveryoneMonthGridProps, EveryoneSelectedDayPanel(), EveryoneSelectedDayPanelProps, PeriodDetail(), ScheduleEveryoneCalendar() (+12 more)
+Nodes (28): ManagerShiftSnapshotSection(), ManagerShiftSnapshotSectionProps, shift(), triad(), AdjacentShiftPeriod, mapClockOntoWindow(), nextShiftPeriod(), parseClockToMinuteOfDay() (+20 more)
 
 ### Community 28 - "Person"
-Cohesion: 0.05
-Nodes (40): fetchRawWorkbookSnapshot, getAuthenticatedIdentity, Person, activateEmergencyMode, deactivateEmergencyMode, getRequestAuthenticatedIdentity, loadManagerPersonnelContext, MANAGER (+32 more)
+Cohesion: 0.04
+Nodes (51): AuthIdentityResult, extractAvatarUrl(), createSupabaseServerClient, getUser, findPersonByEmail(), normalizeEmailForComparison(), PersonEmailLookupResult, ResolveCurrentPersonResult (+43 more)
 
 ### Community 29 - "createSupabaseServiceRoleClient"
-Cohesion: 0.19
-Nodes (9): CalendarFeedOwnerLookupResult, resolveCalendarFeedOwnerByToken(), feedLookupMock, getCalendarFeedServiceClient, getUserByIdMock, makeFakeServiceClient(), getCalendarFeedServiceClient(), createSupabaseServiceRoleClient() (+1 more)
+Cohesion: 0.27
+Nodes (5): CalendarFeedOwnerLookupResult, resolveCalendarFeedOwnerByToken(), getCalendarFeedServiceClient(), createSupabaseServiceRoleClient(), SupabaseServiceRoleConfigError
 
 ### Community 30 - "pipeline.emergencyMode.test.ts"
 Cohesion: 0.09
 Nodes (20): fetchFreshWorkbookRead, findDueCustomWeeklyOccurrences, loadModule(), loadNotificationRuleConfig, peekDueJobsCount, peekDueManagerScheduledBroadcastsCount, peekLastOperationalGeneration, PEOPLE (+12 more)
 
-### Community 31 - "duties/page.test.tsx"
-Cohesion: 0.15
-Nodes (5): getRequestDutyFairness, getRequestPersonalSchedule, resolveOperationalMode, DerivedDutyActionType, PersonalDutyAction
+### Community 31 - "dutyFairnessTypes.ts"
+Cohesion: 0.12
+Nodes (11): getRequestDutyFairness, getRequestPersonalSchedule, resolveOperationalMode, DutyPaceStatus, DutyFairnessStatus, DutyFairnessExemptionView, DutyFairnessGroupKey, DutyFairnessGroupView (+3 more)
 
-### Community 32 - "inboxActions.ts"
-Cohesion: 0.13
-Nodes (24): NotificationInboxStatus, useNotificationInbox(), clearNotificationInbox(), getInboxClearedBefore(), getInboxJobsForRecipient(), getReadJobIds(), InboxJobRow, isEligibleInboxJobForRecipient() (+16 more)
+### Community 32 - "getAuthenticatedIdentity"
+Cohesion: 0.15
+Nodes (22): NotificationInboxStatus, useNotificationInbox(), getAuthenticatedIdentity(), resolveCurrentPersonFromPeople(), clearNotificationInbox(), getInboxClearedBefore(), getInboxJobsForRecipient(), getReadJobIds() (+14 more)
 
 ### Community 33 - "engine/store.ts"
 Cohesion: 0.05
-Nodes (82): CATEGORY_TO_JOB_CATEGORY, ChangeDetectionSummary, resolveBaselineTransition(), resolvePersonRecipient(), runChangeDetection(), settleOneChange(), SILENT_SUMMARY_BASE, JobOutcome (+74 more)
+Nodes (51): JobOutcome, processJob(), loadModule(), sendPush, store, loadModule(), Row, ABSENT_MARKER (+43 more)
 
 ### Community 34 - "usePushSubscription.ts"
-Cohesion: 0.09
-Nodes (29): getCurrentSubscription(), getOrCreateSubscription(), disablePushNotificationsAction, enableFirst(), enablePushNotificationsAction, FakePushSubscription, getPushSubscriptionStatusAction, installBrowserPushEnvironment() (+21 more)
+Cohesion: 0.11
+Nodes (24): getCurrentSubscription(), getOrCreateSubscription(), disablePushNotificationsAction, enableFirst(), enablePushNotificationsAction, FakePushSubscription, getPushSubscriptionStatusAction, installBrowserPushEnvironment() (+16 more)
 
 ### Community 35 - "buildDutyFairnessReadModel.ts"
-Cohesion: 0.06
-Nodes (52): DutyPaceStatus, ALLOCATION_ROLE_BY_LABEL, computeGapToTarget(), computeNormalizedLoad(), computeScoreDelta(), DutyFairnessStatus, FairnessAllocationRole, FairnessDisplayedRowsSum (+44 more)
+Cohesion: 0.09
+Nodes (35): ALLOCATION_ROLE_BY_LABEL, computeGapToTarget(), computeNormalizedLoad(), computeScoreDelta(), FairnessAllocationRole, FairnessDisplayedRowsSum, resolveComparisonTarget(), resolveDutyFairnessStatus() (+27 more)
 
 ### Community 36 - "schedule/page.tsx"
-Cohesion: 0.12
-Nodes (25): firstParam(), scheduleHref(), SchedulePage(), SchedulePageProps, SearchParamValue, ActiveMonthNav(), FIXED_RANGE_OPTIONS, ManagerRangeSelectorProps (+17 more)
+Cohesion: 0.09
+Nodes (38): renderShiftFairnessView(), buildDayMeta(), firstParam(), scheduleHref(), SchedulePage(), SchedulePageProps, SearchParamValue, Header() (+30 more)
 
 ### Community 37 - "semanticFacts.ts"
 Cohesion: 0.11
 Nodes (33): buildCoverageGapCopy(), buildDutyChangeCopy(), buildEmergencyShiftChangeCopy(), buildEmergencyTeamChangeCopy(), buildSettledChangeCopy(), buildShiftChangeCopy(), buildTeamChangeCopy(), NotificationCopy (+25 more)
 
 ### Community 38 - "devDependencies"
-Cohesion: 0.06
-Nodes (33): eslint, eslint-config-next, jsdom, devDependencies, eslint, eslint-config-next, jsdom, pg (+25 more)
+Cohesion: 0.12
+Nodes (17): eslint, devDependencies, eslint, pg, @testing-library/jest-dom, @types/pg, @types/react, @types/react-dom (+9 more)
 
 ### Community 39 - "GoogleConfigError"
-Cohesion: 0.20
-Nodes (12): GoogleSheetsContext, SHEETS_READONLY_SCOPE, GoogleServiceAccountConfig, normalizePrivateKey(), readGoogleServiceAccountConfig(), ENV_KEYS, originalEnv, readGoogleEmergencyServiceAccountConfig() (+4 more)
+Cohesion: 0.21
+Nodes (12): getGoogleSheetsContext(), GoogleSheetsContext, SHEETS_READONLY_SCOPE, GoogleServiceAccountConfig, normalizePrivateKey(), readGoogleServiceAccountConfig(), ENV_KEYS, originalEnv (+4 more)
 
 ### Community 40 - "managerAdoption.ts"
 Cohesion: 0.10
 Nodes (19): ManagerAdoptionSection(), ManagerAdoptionSectionProps, ManagerAdoptionSummary(), ManagerAdoptionSummaryProps, AdoptionGroupView, AdoptionPersonRowView, AdoptionStatView, buildHeadline() (+11 more)
 
 ### Community 41 - "NotificationBell.tsx"
-Cohesion: 0.09
-Nodes (14): BellOnboardingCard, BellOnboardingInput, deriveBellOnboardingCard(), deriveInstallGuidance(), InstallGuidance, BASE, BellView, ICON_SIZE_CLASSES (+6 more)
+Cohesion: 0.07
+Nodes (27): BellOnboardingCard, BellOnboardingInput, deriveBellOnboardingCard(), deriveInstallGuidance(), BASE, BellView, formatBadgeCount(), ICON_SIZE_CLASSES (+19 more)
 
-### Community 42 - "buildManagerOverviewReadModel.ts"
-Cohesion: 0.06
-Nodes (60): ManagerDateRange, isShiftCapable(), PotentialAllocation, buildPotentialDutyEvents(), buildPotentialDutyEventsForRoster(), buildPotentialDutyEventsFromPersonAllocations(), compareAllocationsForReconciliation(), isSameCalendarWeek() (+52 more)
+### Community 42 - "LocalNow"
+Cohesion: 0.05
+Nodes (66): ManagerDateRange, LocalNow, isShiftCapable(), PotentialAllocation, buildPotentialDutyEvents(), buildPotentialDutyEventsForRoster(), buildPotentialDutyEventsFromPersonAllocations(), compareAllocationsForReconciliation() (+58 more)
 
 ### Community 43 - "readSupabasePublicConfig"
 Cohesion: 0.09
@@ -533,197 +562,197 @@ Nodes (15): Graphify Skill Trigger, --watch Flow, Token Reduction Benchmark (Ste
 Cohesion: 0.07
 Nodes (28): dom, dom.iterable, esnext, **/*.mts, .next/dev/types/**/*.ts, next-env.d.ts, .next/types/**/*.ts, node_modules (+20 more)
 
-### Community 46 - "manager/types.ts"
-Cohesion: 0.12
-Nodes (16): ManagerDutiesAbsencesSection(), ManagerDutiesAbsencesSectionProps, ManagerPotentialRow(), ROOT_CLASS, STATUS_ICON, STATUS_LABEL, STATUS_TEXT_CLASS, ManagerPotentialSection() (+8 more)
+### Community 46 - "dutyAbsenceGrouping.ts"
+Cohesion: 0.18
+Nodes (11): ManagerDutiesAbsencesSection(), ManagerDutiesAbsencesSectionProps, ManagerSelectedPersonViewProps, ManagerAbsenceRowView, ManagerDutyRowView, ABSENCE_KIND_ORDER, DUTY_FAMILY_ORDER, groupManagerAbsences() (+3 more)
 
 ### Community 47 - "ManagerRecentBroadcastsSection.tsx"
-Cohesion: 0.12
-Nodes (24): audienceLabel(), buildTimingLine(), fallbackDeliveryLabel(), isUnresolvedPushCapable(), ManagerRecentBroadcastsSection(), handleClear(), load(), scheduleNextLoad() (+16 more)
+Cohesion: 0.11
+Nodes (25): audienceLabel(), buildTimingLine(), fallbackDeliveryLabel(), isUnresolvedPushCapable(), ManagerRecentBroadcastsSection(), handleClear(), load(), scheduleNextLoad() (+17 more)
 
 ### Community 48 - "fairnessShiftEngine.ts"
-Cohesion: 0.07
-Nodes (59): combineFairnessDataCompleteness(), COMPLETE_FAIRNESS_DATA, countFairnessWeekendDates(), FAIRNESS_MODEL_VERSION, fairnessDataCompleteness, FairnessDataCompletenessReason, fairnessWeekendBucketKey(), isFairnessWeekendDate() (+51 more)
+Cohesion: 0.09
+Nodes (39): combineFairnessDataCompleteness(), COMPLETE_FAIRNESS_DATA, countFairnessWeekendDates(), FAIRNESS_MODEL_VERSION, FairnessPeriodStatus, fairnessWeekendBucketKey(), isFairnessWeekendDate(), resolveFairnessPeriodStatus() (+31 more)
 
 ### Community 49 - "(app)/fairness/page.tsx"
 Cohesion: 0.08
-Nodes (37): DUTY_GROUP_LABEL, FairnessAuthFailureStatus, FairnessPage(), FairnessPageProps, firstParam(), renderAuthFailure(), renderDutyFairnessView(), renderEmergencyFairnessUnavailable() (+29 more)
+Nodes (34): DUTY_GROUP_LABEL, FairnessAuthFailureStatus, FairnessPage(), FairnessPageProps, firstParam(), renderAuthFailure(), renderDutyFairnessView(), renderEmergencyFairnessUnavailable() (+26 more)
 
 ### Community 50 - "shiftCoverageRecommendation.ts"
-Cohesion: 0.22
-Nodes (17): findShiftGroupEvents(), buildShiftCoverageRecommendation(), combineRegularThenReserve(), compareCandidates(), datesTouchedByMissingIntervals(), dayOffsetMinutes(), hasBlockingAbsence(), hasConflictingOrUnresolvedShift() (+9 more)
+Cohesion: 0.12
+Nodes (29): buildShiftCoverageRecommendation(), combineRegularThenReserve(), compareCandidates(), datesTouchedByMissingIntervals(), dayOffsetMinutes(), hasBlockingAbsence(), hasConflictingOrUnresolvedShift(), hasRecentConfirmedSameRoleShift() (+21 more)
 
-### Community 51 - "shootingRanges/actions.ts"
-Cohesion: 0.05
-Nodes (83): codePoints(), main(), RoleGroupable, addCalendarMonths(), classifyQualificationStatus(), computeQualificationExpiryDate(), ELIGIBLE_SERVICE_CATEGORIES, EXPIRING_SOON_THRESHOLD_DAYS (+75 more)
+### Community 51 - "readModels/shootingRangeQualification.ts"
+Cohesion: 0.11
+Nodes (39): codePoints(), main(), classifyQualificationStatus(), isEligibleForShootingRanges(), findColumnIndexByHeader(), toA1Cell(), buildNormalizedNameIndex(), findHeaderRowIndex() (+31 more)
 
-### Community 52 - "managerPerspectives.test.tsx"
-Cohesion: 0.23
-Nodes (7): getRequestSchedule, managerSelfModel(), personalModel(), roster(), scheduleModel(), useRouterPush, useSearchParamsValue
+### Community 52 - "fairnessGroups.ts"
+Cohesion: 0.11
+Nodes (25): fairnessDataCompleteness, buildFairnessComparisonGroups(), buildFairnessPersonContext(), FairnessComparisonGroup, FairnessPersonContext, GROUP_ORDER, resolveFairnessComparisonGroupKey(), FairnessEligibilityRole (+17 more)
 
 ### Community 53 - "Sidebar.tsx"
-Cohesion: 0.08
-Nodes (21): linkStatus, BottomNav(), BottomNavLinkProps, BottomNavProps, MoreNavButtonProps, linkStatus, usePathname, MoreSheet() (+13 more)
+Cohesion: 0.09
+Nodes (20): linkStatus, BottomNav(), BottomNavLinkProps, BottomNavProps, MoreNavButtonProps, linkStatus, usePathname, MoreSheet() (+12 more)
 
-### Community 54 - "notifications/page.test.tsx"
-Cohesion: 0.20
-Nodes (7): ADOPTION, composerProps, fixedSectionProps, getRequestNotificationCenterContext, linkStatus, ROSTER, scheduleSectionProps
+### Community 54 - "ManagerAdoptionPersonView"
+Cohesion: 0.09
+Nodes (26): ADOPTION, composerProps, fixedSectionProps, getRequestNotificationCenterContext, linkStatus, ROSTER, scheduleSectionProps, ManagerBroadcastComposerProps (+18 more)
 
 ### Community 55 - "recurringRuleDispatch.test.ts"
 Cohesion: 0.11
-Nodes (20): batchStore, claimStore, createFakeBatchStore(), getById(), createFakeClaimStore(), claim(), complete(), listRecoverable() (+12 more)
+Nodes (19): batchStore, claimStore, createFakeBatchStore(), getById(), createFakeClaimStore(), claim(), complete(), listRecoverable() (+11 more)
 
 ### Community 56 - "NotificationBell.test.tsx"
 Cohesion: 0.09
 Nodes (16): clearNotificationInboxAction, disablePushNotificationsAction, enableFirst(), enablePushNotificationsAction, FakeBeforeInstallPromptEvent, FakePushSubscription, getNotificationInboxAction, getPushSubscriptionStatusAction (+8 more)
 
 ### Community 57 - "PwaInstallProvider.tsx"
-Cohesion: 0.12
-Nodes (16): alwaysReady(), DEFAULT_PWA_INSTALL_STATE, InstallPromptOutcome, notIosOnFirstRender(), notStandaloneOnFirstRender(), notYetReady(), PwaInstallContext, PwaInstallContextValue (+8 more)
+Cohesion: 0.08
+Nodes (21): alwaysReady(), DEFAULT_PWA_INSTALL_STATE, InstallPromptOutcome, notIosOnFirstRender(), notStandaloneOnFirstRender(), notYetReady(), PwaInstallContext, PwaInstallContextValue (+13 more)
 
 ### Community 58 - "dutyBlocks.ts"
 Cohesion: 0.13
-Nodes (26): addOneDay(), buildBlockFromEvents(), buildDutyBlocks(), compareDutyBlocks(), compareEventsForBlockOrder(), computeWeekendCompleteness(), daysBetweenCalendarDates(), daysInMonth() (+18 more)
+Nodes (27): addOneDay(), buildBlockFromEvents(), buildDutyBlocks(), compareDutyBlocks(), compareEventsForBlockOrder(), computeWeekendCompleteness(), daysBetweenCalendarDates(), daysInMonth() (+19 more)
 
 ### Community 59 - "managerUrl.ts"
 Cohesion: 0.06
-Nodes (34): CandidateLink(), CATEGORY_OPTIONS, ManagerCategoryNav(), ManagerCategoryNavProps, BASE, linkStatus, ManagerCommandBar(), ManagerCommandBarProps (+26 more)
+Nodes (40): CATEGORY_OPTIONS, ManagerCategoryNav(), ManagerCategoryNavProps, BASE, linkStatus, ManagerCommandBar(), ManagerCommandBarProps, CURRENT (+32 more)
 
-### Community 60 - "ManagerFixedNotificationsSection"
-Cohesion: 0.50
-Nodes (4): ManagerFixedNotificationsSection(), handleSystemRuleChanged(), handleSystemRuleSaved(), load()
+### Community 60 - "ManagerFixedNotificationsSection.tsx"
+Cohesion: 0.17
+Nodes (15): audienceLabel(), CustomWeeklyRuleRow(), handleArchive(), handleToggleEnabled(), ERROR_LABELS, errorLabel(), ManagerFixedNotificationsSection(), handleSystemRuleChanged() (+7 more)
 
 ### Community 61 - "SetupSection.tsx"
-Cohesion: 0.23
-Nodes (11): installGuidanceText(), SetupItemRowProps, SetupSection(), skip(), SetupSectionProps, ALL_SETUP_ITEM_KEYS, markSetupItemSkipped(), readSkippedItemsList() (+3 more)
+Cohesion: 0.11
+Nodes (19): installGuidanceText(), SetupItemRowProps, SetupSection(), skip(), SetupSectionProps, disablePushNotificationsAction, enablePushNotificationsAction, FakePushSubscription (+11 more)
 
 ### Community 62 - "dutyAllocationWeight.ts"
 Cohesion: 0.13
-Nodes (23): ActiveDutyBlockInfo, CompletedDutyAllocationResult, computeCompletedDutyAllocation(), datesOverlap(), DayBasedDutyFamily, DUTY_ALLOCATION_WEIGHT_BY_FAMILY, EMPTY_EXCLUDED_DATES, FlatAllocationDutyFamily (+15 more)
+Nodes (22): ActiveDutyBlockInfo, CompletedDutyAllocationResult, computeCompletedDutyAllocation(), datesOverlap(), DayBasedDutyFamily, DUTY_ALLOCATION_WEIGHT_BY_FAMILY, EMPTY_EXCLUDED_DATES, FlatAllocationDutyFamily (+14 more)
 
-### Community 63 - "shiftExpectationFactors.ts"
-Cohesion: 0.27
-Nodes (9): BLOCKING_ABSENCE_KINDS, computeShiftExpectationFactors(), countDistinctDates(), EMPTY_EXCLUDED_DATES, EMPTY_FACTORS, absence(), baseEvent(), constraint() (+1 more)
+### Community 63 - "manager/types.ts"
+Cohesion: 0.10
+Nodes (21): CARD_ACCENT_CLASS, DayCard(), ManagerCoverageSection(), ManagerCoverageSectionProps, ROLE_TONE_CLASS, coverage(), dayView(), group() (+13 more)
 
 ### Community 64 - "dependencies"
-Cohesion: 0.08
-Nodes (25): client-only, googleapis, @hebcal/core, lucide-react, next, dependencies, client-only, googleapis (+17 more)
+Cohesion: 0.11
+Nodes (19): client-only, googleapis, @hebcal/core, lucide-react, next, dependencies, client-only, googleapis (+11 more)
 
 ### Community 65 - "productName.ts"
-Cohesion: 0.15
-Nodes (14): heebo, metadata, viewport, manifest(), PUBLIC_DIR, BrandMark(), BrandMarkProps, SIZE_CLASSES (+6 more)
+Cohesion: 0.12
+Nodes (17): heebo, metadata, viewport, manifest(), PUBLIC_DIR, BrandMark(), BrandMarkProps, SIZE_CLASSES (+9 more)
 
 ### Community 66 - "scheduleEveryone.ts"
-Cohesion: 0.06
-Nodes (49): ROLE_MESSAGE_TONE_CLASS, RoleCoverageMessage(), ShiftSnapshotCard(), ShiftSnapshotCardProps, RESOLVED_TIMING, TodayOperationalContext(), TodayOperationalContextProps, CARD_ACCENT_CLASS (+41 more)
+Cohesion: 0.07
+Nodes (32): ROLE_MESSAGE_TONE_CLASS, RoleCoverageMessage(), ShiftSnapshotCard(), ShiftSnapshotCardProps, RESOLVED_TIMING, PeriodColumn(), SELECTED_DAY_PANEL_MIN_HEIGHT_CLASS, EveryoneSelectedDayPanel() (+24 more)
 
 ### Community 67 - "IdentityFooter.tsx"
-Cohesion: 0.09
-Nodes (20): name, private, scripts, build, dev, lint, start, test (+12 more)
+Cohesion: 0.10
+Nodes (14): IdentityFooter(), IdentityFooterProps, IdentityFooterSignOutButton(), MobileProfileMenu(), MobileProfileMenuProps, SignOutMenuItem(), PushEndpointHiddenField(), getCurrentPushEndpoint (+6 more)
 
 ### Community 68 - "scheduledBroadcast.test.ts"
 Cohesion: 0.09
 Nodes (20): cancelManagerScheduledBroadcastIfEditable, claimDueManagerScheduledBroadcasts, claimManagerScheduledBroadcastNow, fetchAllSubscribedUserIds, fetchAllUserIdsByEmail, getManagerNotificationBatchById, getManagerScheduledBroadcastByCreateIdempotencyKey, getManagerScheduledBroadcastById (+12 more)
 
 ### Community 69 - "LoginHero.tsx"
-Cohesion: 0.17
-Nodes (13): signInWithOAuth, LoginErrorNotice(), ICON_TONE, ICONS, LoginFeatureStrip(), LoginHeroProps, LOGIN_AUTH_NOTE, LOGIN_ERROR_MESSAGE (+5 more)
+Cohesion: 0.16
+Nodes (14): signInWithOAuth, LoginErrorNotice(), ICON_TONE, ICONS, LoginFeatureStrip(), LoginHero(), LoginHeroProps, LOGIN_AUTH_NOTE (+6 more)
 
 ### Community 70 - "CommandPalette.test.tsx"
-Cohesion: 0.13
-Nodes (14): CommandPaletteProps, ambiguousRosterModel(), fixtureModel(), push, roniWeissModel(), SearchPaletteContext, SearchPaletteContextValue, SearchPaletteProvider() (+6 more)
+Cohesion: 0.14
+Nodes (12): ambiguousRosterModel(), fixtureModel(), push, roniWeissModel(), SearchPaletteContext, SearchPaletteContextValue, SearchPaletteProvider(), SearchPaletteProviderProps (+4 more)
 
 ### Community 71 - "potential.test.ts"
 Cohesion: 0.24
 Nodes (7): EITAN, fullDataRow(), h1Sheet(), h1SheetWithFairnessTable(), MARTIN, personnel, REAL_HEADER_ROW
 
-### Community 72 - "buildPermanentManagerHomeReadModel.test.ts"
-Cohesion: 0.33
-Nodes (3): nextCell(), schedule, shiftEvent()
+### Community 72 - "reminders.test.ts"
+Cohesion: 0.09
+Nodes (17): daySupervisorShift(), dayTechnicianShift(), defaultRuleConfig(), dutyEvent(), emptyRecipientResolution, event(), fetchAllSubscribedUserIds, loadModule() (+9 more)
 
 ### Community 73 - "operationalIssues.ts"
-Cohesion: 0.09
-Nodes (36): buildIssueDedupeKey(), dedupeIssues(), detectBlockingAbsenceIssues(), detectCapabilityMismatchIssues(), detectOperationalIssues(), detectShiftTimingIssues(), groupByPersonAndDate(), isAssignmentEvent() (+28 more)
+Cohesion: 0.14
+Nodes (22): buildIssueDedupeKey(), dedupeIssues(), detectBlockingAbsenceIssues(), detectCapabilityMismatchIssues(), detectOperationalIssues(), detectShiftTimingIssues(), groupByPersonAndDate(), isAssignmentEvent() (+14 more)
 
 ### Community 74 - "reportOne.ts"
+Cohesion: 0.09
+Nodes (29): BLOCKING_ABSENCE_WORDING, BuildReportOneDraftInput, DUTY_FAMILY_ORDER, DUTY_FAMILY_WORDING, dutyAddendumText(), EXCLUDED_REPORT_ONE_NAMES, isAdditiveDutyEvent(), isAssignmentEvent() (+21 more)
+
+### Community 75 - "Panel.tsx"
+Cohesion: 0.12
+Nodes (16): ConfigurationErrorState(), DutyBlockList(), DutyBlockListProps, DutyBlockRow(), DutyBlockRowProps, DutyFocusSection(), DutyFocusSectionProps, DutySuspendedState() (+8 more)
+
+### Community 76 - "ManagerScheduledBroadcastsSection.tsx"
 Cohesion: 0.10
-Nodes (28): BLOCKING_ABSENCE_WORDING, BuildReportOneDraftInput, DUTY_FAMILY_ORDER, DUTY_FAMILY_WORDING, dutyAddendumText(), EXCLUDED_REPORT_ONE_NAMES, isAdditiveDutyEvent(), isAssignmentEvent() (+20 more)
+Nodes (22): audienceLabel(), ERROR_LABELS, errorLabel(), ManagerScheduledBroadcastsSection(), handleConfirmCancel(), handleSendNow(), load(), ManagerScheduledBroadcastsSectionProps (+14 more)
 
-### Community 75 - "Badge"
-Cohesion: 0.21
-Nodes (10): DutyBlockList(), DutyBlockListProps, DutyBlockRow(), DutyBlockRowProps, DutyFocusSection(), DutyFocusSectionProps, DutyBlockView, Badge() (+2 more)
-
-### Community 76 - "ManagerBroadcastComposer.tsx"
-Cohesion: 0.05
-Nodes (57): AUDIENCE_OPTIONS, AudienceKind, ERROR_LABELS, errorLabel(), ManagerBroadcastComposer(), handleSubmit(), resetAfterSend(), resetToDefaultState() (+49 more)
-
-### Community 77 - "AppShell.tsx"
-Cohesion: 0.28
-Nodes (4): AppShell(), AppShellProps, EmergencyModeBanner(), MobileIdentityBar()
+### Community 77 - "ManagerAttentionSection.tsx"
+Cohesion: 0.12
+Nodes (18): AttentionGroup(), ManagerAttentionSection(), ManagerAttentionSectionProps, CURRENT, issueItem(), issueView(), potentialItem(), potentialView() (+10 more)
 
 ### Community 78 - "components/ Directory Overview"
 Cohesion: 0.11
 Nodes (20): Project Layout, BottomNav, GoogleSignInButton, IdentityFooter, MonthNav, components/ Directory Overview, PersonalScheduleReadModel, ScheduleHeader (+12 more)
 
-### Community 79 - "shooting-ranges/manager/page.test.tsx"
-Cohesion: 0.36
-Nodes (7): emptyModel(), loadShootingRangeManagerOverview, manager(), redirect, renderRow(), row(), ShootingRangeManagerReadModel
+### Community 79 - "ManagerRecurringRuleComposer.tsx"
+Cohesion: 0.13
+Nodes (14): AUDIENCE_OPTIONS, AudienceKind, ERROR_LABELS, errorLabel(), ManagerRecurringRuleComposer(), minuteOfDayToTimeValue(), parseTimeValue(), WEEKDAY_OPTIONS (+6 more)
 
 ### Community 80 - "ShellUtilityBar.tsx"
 Cohesion: 0.13
 Nodes (13): ShellUtilityBar(), ShellUtilityBarProps, LoginClockReadout(), LoginClockReadoutProps, clockFormatter, LiveClock(), LiveClockProps, SIZE_CLASSES (+5 more)
 
 ### Community 81 - "icsRender.ts"
-Cohesion: 0.20
-Nodes (14): buildIcsLine(), escapeIcsText(), foldIcsLine(), RFC-5545, formatIcsDateOnly(), formatIcsDateTimeUtc(), IcsEventTiming, IcsFeedInput (+6 more)
+Cohesion: 0.19
+Nodes (16): buildIcsLine(), escapeIcsText(), foldIcsLine(), RFC-5545, exclusiveAllDayEnd(), formatIcsDateOnly(), formatIcsDateTimeUtc(), IcsCalendarItem (+8 more)
 
-### Community 82 - "NotificationBell"
-Cohesion: 0.22
-Nodes (14): formatBadgeCount(), noStoredDismissalOnFirstRender(), NotificationBell(), closePopover(), dismissInstallCard(), handleItemClick(), handleKeyDown(), handlePointerDown() (+6 more)
+### Community 82 - "ManagerSystemRuleEditor.tsx"
+Cohesion: 0.11
+Nodes (16): AUDIENCE_OPTIONS, ERROR_LABELS, errorLabel(), ManagerSystemRuleEditor(), handleSubmit(), minuteOfDayToTimeValue(), parseTimeValue(), SystemAudienceMode (+8 more)
 
 ### Community 83 - "parsers/event.ts"
-Cohesion: 0.15
-Nodes (16): ABSENCE_KIND_BY_PHRASE, classify(), CONSTRAINT_PERIOD_TOKENS, CONTEXT_PHRASES, EXACT_DUTY_PHRASES, isChangeNote(), normalizeText(), normalizeTime() (+8 more)
+Cohesion: 0.06
+Nodes (50): main(), resolveCurrentPerson(), buildReportOneDraft(), resolveReportOneTargetDate(), MANAGER, rawScheduleSheet(), runRawPipeline(), TECHNICIAN (+42 more)
 
-### Community 84 - "CalendarGrid.test.tsx"
-Cohesion: 0.16
-Nodes (16): absenceEvent(), activityEvent(), dayMeta(), daysForGrid(), dutyEvent(), HOLIDAY, shiftEvent(), WEEK_DATES (+8 more)
+### Community 84 - "domain/shootingRangeQualification.ts"
+Cohesion: 0.15
+Nodes (14): CalendarDate, addCalendarMonths(), computeQualificationExpiryDate(), ELIGIBLE_SERVICE_CATEGORIES, EXPIRING_SOON_THRESHOLD_DAYS, EXPIRING_VERY_SOON_THRESHOLD_DAYS, QUALIFICATION_VALIDITY_MONTHS, requiresWeaponQualification() (+6 more)
 
 ### Community 85 - "ShiftFairnessCard.tsx"
-Cohesion: 0.08
-Nodes (20): FairnessMetric(), FairnessMetricProps, FairnessStatusBadge(), FairnessStatusBadgeProps, fairnessStatusTintTextClass(), STATUS_TINT_CLASSES, ShiftFairnessCard(), METRIC_EXPLANATIONS (+12 more)
+Cohesion: 0.09
+Nodes (18): FairnessStatusBadge(), FairnessStatusBadgeProps, fairnessStatusTintTextClass(), STATUS_TINT_CLASSES, ShiftFairnessCard(), METRIC_EXPLANATIONS, ShiftFairnessCardInfo(), ShiftFairnessDetail() (+10 more)
 
 ### Community 86 - "buildPersonalScheduleReadModel.test.ts"
 Cohesion: 0.21
 Nodes (12): allocation(), baseEvent(), build(), colleagueShift(), FORBIDDEN_KEYS, localNow(), me(), myAbsence() (+4 more)
 
-### Community 87 - "EmergencyScheduleRangeSelector.tsx"
-Cohesion: 0.36
-Nodes (6): EmergencyPersonalScheduleListProps, EmergencyScheduleRangeSelector(), EmergencyScheduleRangeSelectorProps, RANGE_OPTIONS, rangeHref(), EmergencyScheduleRangeKey
+### Community 87 - "emergencyShift.ts"
+Cohesion: 0.17
+Nodes (11): computeEmergencyFairnessCounts(), EmergencyFairnessCount, EmergencyAssignment, EMERGENCY_FAIRNESS_GROUP_LABELS, EmergencyFairnessGroupMembership, buildEmergencyFairnessReadModel(), BuildEmergencyFairnessReadModelInput, comparePersonRows() (+3 more)
 
-### Community 88 - "shiftSchedule.ts"
-Cohesion: 0.08
-Nodes (47): computeAssignmentTiming(), computeIntervalTiming(), minuteOfDayToClock(), schedule, OperationalIssue, analyzeRoleCoverage(), analyzeShiftCounterparts(), analyzeUnitShiftCoverage() (+39 more)
+### Community 88 - "shiftCoverage.ts"
+Cohesion: 0.15
+Nodes (28): OperationalIssue, analyzeRoleCoverage(), analyzeShiftCounterparts(), analyzeUnitShiftCoverage(), canonicalWindowForPeriod(), clipInterval(), computeMissingIntervals(), findShiftGroupEvents() (+20 more)
 
 ### Community 89 - "CommandPalette.tsx"
 Cohesion: 0.14
-Nodes (16): CommandPalette(), activate(), handleInputKeyDown(), handleKeyDown(), EXAMPLE_QUERIES, getFocusableElements(), NO_SHARED_SHIFT_OVERRIDES, periodEmoji() (+8 more)
+Nodes (16): CommandPalette(), activate(), handleInputKeyDown(), handleKeyDown(), CommandPaletteProps, EXAMPLE_QUERIES, getFocusableElements(), NO_SHARED_SHIFT_OVERRIDES (+8 more)
 
-### Community 90 - "shooting-ranges/manager/page.tsx"
-Cohesion: 0.27
-Nodes (6): ShootingRangeManagerPage(), AccessDeniedScreen(), ManagerForbiddenState(), ShootingRangeManagerPanel(), ViewSwitchLink(), ViewSwitchLinkProps
+### Community 90 - "AccessDeniedScreen.tsx"
+Cohesion: 0.22
+Nodes (7): ShootingRangeManagerPage(), AccessDeniedScreen(), AccessDeniedSignOutButton(), ManagerForbiddenState(), ShootingRangeManagerPanel(), ViewSwitchLink(), ViewSwitchLinkProps
 
 ### Community 91 - "classifyPersonnelType"
 Cohesion: 0.21
 Nodes (11): classifyPersonnelType(), classifyRoleGroup(), FairnessRoleGroupKey, groupRosterHierarchy(), PERSONNEL_TYPE_GROUP_LABEL, REGULAR_ROLE_GROUP_LABEL, REGULAR_SUBGROUP_ORDER, RosterPersonnelTypeGroup (+3 more)
 
 ### Community 92 - "parseSearchIntent.ts"
-Cohesion: 0.19
-Nodes (15): parseHebrewWeekdayName(), normalizeSearchQuery(), classifyToken(), FILLER_WORDS, parseExplicitDateToken(), parseSearchIntent(), PERIOD_WORDS, ScannedTokens (+7 more)
+Cohesion: 0.20
+Nodes (14): parseHebrewWeekdayName(), normalizeSearchQuery(), classifyToken(), FILLER_WORDS, parseExplicitDateToken(), parseSearchIntent(), PERIOD_WORDS, ScannedTokens (+6 more)
 
 ### Community 93 - "fairnessCards.ts"
-Cohesion: 0.10
-Nodes (35): DUTY_STATUS_TINT_CLASSES, DutyFairnessCard(), DutyFairnessDetail(), DutyFairnessDetailProps, DutyProgressBar(), DutyStatusState, exemptionBadgeLabel(), formatDutyStatusLabel() (+27 more)
+Cohesion: 0.17
+Nodes (29): exemptionBadgeLabel(), formatDutyStatusLabel(), formatFairnessDelta(), formatFairnessDeviationState(), formatFairnessExpectedValue(), formatFairnessGap(), formatFairnessScore(), formatFairnessWeekendCount() (+21 more)
 
 ### Community 94 - "loadCalendarFeedForToken.test.ts"
 Cohesion: 0.12
@@ -742,20 +771,20 @@ Cohesion: 0.16
 Nodes (16): buildFairnessSheet(), EITAN, FAIRNESS_HEADER, fairnessRow(), FairnessRowInput, H1_TARGET_LEGEND_ROW, H1_TARGET_VALUE_ROW, h1Sheet() (+8 more)
 
 ### Community 98 - "shiftFairness.ts"
-Cohesion: 0.08
-Nodes (37): AuthIdentityResult, getAuthenticatedIdentity(), createSupabaseServerClient, getUser, getAuthenticatedIdentity, findPersonByEmail(), normalizeEmailForComparison(), PersonEmailLookupResult (+29 more)
+Cohesion: 0.15
+Nodes (18): deriveReserveRoleParticipation(), resolveReserveRoleParticipation(), getFairnessWorkbookSheet(), loadFairnessWorkbookContext(), getRequestShiftFairness, loadShiftFairnessReadModel(), reserveParticipationSource(), ShiftFairnessLoadResult (+10 more)
 
-### Community 99 - "managerOverview.ts"
-Cohesion: 0.06
-Nodes (76): main(), GET(), loadCalendarFeedForToken, loadRoute(), VALID_TOKEN, EmergencyModeControl(), formatInstantForDisplay(), pad2() (+68 more)
+### Community 99 - "loadCalendarFeedForToken.ts"
+Cohesion: 0.08
+Nodes (34): GET(), loadCalendarFeedForToken, loadRoute(), VALID_TOKEN, CalendarFeedLoadResult, getSheetByKey(), loadCalendarFeedForToken(), loadEmergencyCalendarFeed() (+26 more)
 
 ### Community 100 - "pipeline.weaponQualificationEmergencyMode.test.ts"
 Cohesion: 0.07
 Nodes (30): dutyEvent(), expiredCompletion(), FakeJob, fakeJobsByDedupeKey, fetchFreshWorkbookRead, findDueCustomWeeklyOccurrences, getCompletionsForPersonIds, loadModule() (+22 more)
 
-### Community 101 - "WeekOverviewSection.tsx"
-Cohesion: 0.23
-Nodes (10): WeekOverviewAutoScroll(), WeekOverviewAutoScrollProps, dayElementId(), WeekDayCard(), WeekDayCardProps, WeekOverviewSection(), WeekOverviewSectionProps, formatCompactDate() (+2 more)
+### Community 101 - "changeDetection.ts"
+Cohesion: 0.16
+Nodes (21): CATEGORY_TO_JOB_CATEGORY, ChangeDetectionSummary, resolveBaselineTransition(), resolvePersonRecipient(), runChangeDetection(), settleOneChange(), SILENT_SUMMARY_BASE, advanceNotificationBaseline() (+13 more)
 
 ### Community 102 - "weaponQualification.test.ts"
 Cohesion: 0.15
@@ -766,12 +795,12 @@ Cohesion: 0.22
 Nodes (9): ServiceWorkerManager(), FakeEventTarget, FakeRegistration, getPwaCapabilities(), isBrowser(), PwaCapabilities, supportsNotifications(), supportsPushManager() (+1 more)
 
 ### Community 104 - "ReportOneEditorOverlay.tsx"
-Cohesion: 0.14
-Nodes (19): buildGeneratedStatusMap(), buildReserveIncludedMap(), getFocusableElements(), ReportOneEditorOverlay(), handleKeyDown(), ReportOneEditorOverlayProps, setReserveInclusionPreferenceAction, useMounted() (+11 more)
+Cohesion: 0.16
+Nodes (17): buildGeneratedStatusMap(), buildReserveIncludedMap(), getFocusableElements(), ReportOneEditorOverlay(), handleKeyDown(), ReportOneEditorOverlayProps, setReserveInclusionPreferenceAction, useMounted() (+9 more)
 
-### Community 105 - "sendPush.ts"
-Cohesion: 0.07
-Nodes (23): RFC-8030, readVapidServerConfig(), ENV_KEYS, originalEnv, VapidConfigError, VapidServerConfig, resolveSafeNotificationPath(), buildNotificationPayload() (+15 more)
+### Community 105 - "notifications/actions.ts"
+Cohesion: 0.06
+Nodes (34): RFC-8030, DisablePushResult, EnablePushResult, PushSubscriptionStatus, sendTestNotificationAction(), SendTestNotificationResult, AUTHENTICATED, deletePushSubscriptionForCurrentUser (+26 more)
 
 ### Community 106 - "public.push_subscriptions"
 Cohesion: 0.50
@@ -781,9 +810,9 @@ Nodes (4): public.push_subscriptions, public.upsert_push_subscription(), auth, a
 Cohesion: 0.17
 Nodes (16): analyzeShiftCounterparts, buildPotentialDutyEventsForRoster, deriveDutyActions, buildDutyBlocks, detectOperationalIssues, buildPotentialDutyEvents, reconcilePotentialAllocations, classifyPotentialSourceOwnership / scopeManagerPotentialAllocation (+8 more)
 
-### Community 108 - "Avatar.tsx"
-Cohesion: 0.48
-Nodes (3): Avatar(), AvatarProps, initialsOf()
+### Community 108 - "ruleConfig.ts"
+Cohesion: 0.10
+Nodes (16): OperationalWeek, ChangeDetectionInput, loadModule(), now, schedule, store, week, RecipientResolution (+8 more)
 
 ### Community 109 - "shootingRanges/actions.test.ts"
 Cohesion: 0.11
@@ -802,8 +831,8 @@ Cohesion: 0.18
 Nodes (12): createSupabaseServerClient, deleteEqMock, makeFakeSupabaseClient(), rpcMock, selectMaybeSingleMock, SUBSCRIPTION, isReasonableBase64Url(), parseBrowserSubscription() (+4 more)
 
 ### Community 113 - "(dashboard)/page.tsx"
-Cohesion: 0.21
-Nodes (8): DashboardPage(), ConfigurationErrorState(), EmergencyUnavailableState(), isEligibleForOnboarding(), ONBOARDING_ROLLOUT_CUTOFF, getRequestPermanentManagerHome, getRequestDashboardVisitRecap, getRequestReportOneTomorrow
+Cohesion: 0.29
+Nodes (7): DashboardPage(), getCalendarFeedForCurrentUser(), isEligibleForOnboarding(), ONBOARDING_ROLLOUT_CUTOFF, getRequestPermanentManagerHome, getRequestDashboardVisitRecap, getRequestReportOneTomorrow
 
 ### Community 114 - "managerOverview.test.ts"
 Cohesion: 0.17
@@ -813,17 +842,17 @@ Nodes (14): AUTHENTICATED_MANAGER, computeNotificationReadiness, DEFAULT_PARAMS,
 Cohesion: 0.15
 Nodes (14): ScheduleParams, DEFAULT_PARAMS, getAuthenticatedIdentity, getRequestPersonalSchedule, getWorkbookSnapshot, MANAGER_PERSONNEL_ROWS, managerSnapshot(), personnelSheet() (+6 more)
 
-### Community 116 - "buildEmergencyScheduleReadModel.ts"
-Cohesion: 0.05
-Nodes (56): EmergencyDashboard(), EmergencyDashboardProps, PERIOD_LABEL, ShiftCard(), buildEmergencyShiftCalendarItem(), emergencyShiftEventUid(), PERIOD_LABEL, SCHEDULE (+48 more)
+### Community 116 - "buildEmergencyPersonalHome.ts"
+Cohesion: 0.14
+Nodes (19): EmergencyDashboard(), EmergencyDashboardProps, PERIOD_LABEL, ShiftCard(), EmergencyShiftPeriod, EmergencyModePeriod, EmergencyShiftFactEntry, EmergencyParseDiagnostic (+11 more)
 
 ### Community 117 - "scheduledBroadcastActions.test.ts"
 Cohesion: 0.14
 Nodes (9): cancelScheduledBroadcast, createScheduledBroadcast, editScheduledBroadcast, listActiveManagerScheduledBroadcasts, loadManagerPersonnelContext, loadManagerWorkbookContext, MANAGER, PEOPLE (+1 more)
 
-### Community 118 - "ScheduleManagerSelector.test.tsx"
-Cohesion: 0.25
-Nodes (5): ScheduleManagerSelector(), PEOPLE, push, useRouter, useSearchParams
+### Community 118 - "ScheduleManagerSelector.tsx"
+Cohesion: 0.22
+Nodes (7): ScheduleManagerSelector(), ScheduleManagerSelectorProps, PEOPLE, push, useRouter, useSearchParams, ScheduleRosterOption
 
 ### Community 119 - "dashboardVisit/actions.ts"
 Cohesion: 0.17
@@ -834,12 +863,12 @@ Cohesion: 0.15
 Nodes (13): signOutAction, resolveCalendarFeedOwnerByToken, calendar serviceClient.ts, lib/notifications/engine, engine serviceClient.ts, store.ts, lib/notifications, subscriptionStore.ts (+5 more)
 
 ### Community 121 - "recentDashboardChanges.ts"
-Cohesion: 0.14
-Nodes (15): getRecentSettledJobsForRecipient(), RecentSettledJobRow, RecentSettledJobsResult, CATEGORY_FALLBACK_HREF, DASHBOARD_VISIT_RECAP_VISIBLE_LIMIT, deriveHref(), EMPTY_RECAP_AT(), extractSafeDate() (+7 more)
+Cohesion: 0.27
+Nodes (10): getRecentSettledJobsForRecipient(), CATEGORY_FALLBACK_HREF, DASHBOARD_VISIT_RECAP_VISIBLE_LIMIT, deriveHref(), EMPTY_RECAP_AT(), extractSafeDate(), loadDashboardVisitRecap(), PERSONAL_CHANGE_CATEGORIES (+2 more)
 
-### Community 122 - "buildSearchReadModel.test.ts"
-Cohesion: 0.33
-Nodes (3): nextCell(), schedule, shiftEvent()
+### Community 122 - "buildSearchReadModel.ts"
+Cohesion: 0.18
+Nodes (12): AssignmentTemporalState, buildSearchReadModel(), compareRosterPeople(), compareShiftEvents(), nextCell(), schedule, shiftEvent(), toSearchRosterPerson() (+4 more)
 
 ### Community 123 - "dutyFairness.test.ts"
 Cohesion: 0.19
@@ -849,9 +878,9 @@ Nodes (13): contextFor(), contextForSwap(), contextWithFormerEmployee(), FAIRNES
 Cohesion: 0.20
 Nodes (13): { fakeUnstableCache, fakeRevalidateTag }, fetchRawWorkbookSnapshot, getAuthenticatedIdentity, getJerusalemLocalNow, PERSONNEL_ROWS, personnelSheet(), potentialH1Sheet(), potentialH2Sheet() (+5 more)
 
-### Community 125 - "SetupSection.test.tsx"
-Cohesion: 0.20
-Nodes (7): disablePushNotificationsAction, enablePushNotificationsAction, FakePushSubscription, getPushSubscriptionStatusAction, installDisplayModeStub(), renderSetup(), sendTestNotificationAction
+### Community 125 - "emergencySchedule.ts"
+Cohesion: 0.15
+Nodes (13): EMERGENCY_ACTIVE_DESK_COLUMNS, EMERGENCY_SHEET_COLUMNS, buildNormalizedNameIndex(), isRowEntirelyBlank(), normalizeName(), parseEmergencyScheduleSheet(), ParseEmergencyScheduleSheetResult, PERIOD_LABELS (+5 more)
 
 ### Community 126 - "20260815130000_create_notification_engine.sql"
 Cohesion: 0.20
@@ -861,17 +890,17 @@ Nodes (9): public.push_subscriptions, public.advance_notification_baseline(), pu
 Cohesion: 0.16
 Nodes (13): classifyReportOneSection(), SetReserveInclusionActionResult, setReserveInclusionPreferenceAction(), loadManagerPersonnelContext, MANAGER, REGULAR_TECHNICIAN, RESERVE_PERSON, setReserveInclusionPreference (+5 more)
 
-### Community 128 - "PwaInstallProvider.test.tsx"
-Cohesion: 0.22
-Nodes (5): Capture(), FakeBeforeInstallPromptEvent, serverRenderThenHydrate(), tree(), usePwaInstall()
+### Community 128 - "Dashboard.tsx"
+Cohesion: 0.15
+Nodes (9): Dashboard(), findVacationEvent(), assignment(), baseEvent(), dutyAssignment(), recordDashboardVisitAction, ReportOneQuickAction(), buildPersonalWeekOverview() (+1 more)
 
-### Community 129 - "buildShootingRangeManagerReadModel.ts"
-Cohesion: 0.12
-Nodes (18): loadShootingRangeQualification, redirect, ShootingRangeManagerPanelProps, SUMMARY, buildShootingRangeManagerReadModel(), classifyShootingRangeRoleGroup(), ManagerPendingSelfReportRow, ManagerShootingRangePersonInput (+10 more)
+### Community 129 - "ShootingRangeManagerPanel.tsx"
+Cohesion: 0.10
+Nodes (22): emptyModel(), loadShootingRangeManagerOverview, manager(), redirect, renderRow(), row(), CreatePlannedRangeForm(), PendingConfirmationPanel() (+14 more)
 
-### Community 130 - "DutyViewToggle.tsx"
-Cohesion: 0.60
-Nodes (3): DutyViewToggle(), DutyViewToggleProps, DutyView
+### Community 130 - "ManagerBroadcastComposer.tsx"
+Cohesion: 0.15
+Nodes (14): AUDIENCE_OPTIONS, AudienceKind, ERROR_LABELS, errorLabel(), ManagerBroadcastComposer(), handleSubmit(), resetAfterSend(), resetToDefaultState() (+6 more)
 
 ### Community 131 - "fairnessWorkbookContext.test.ts"
 Cohesion: 0.21
@@ -889,17 +918,17 @@ Nodes (12): getAuthenticatedIdentity, getJerusalemLocalNow, getWorkbookSnapshot,
 Cohesion: 0.32
 Nodes (8): ilay2(), me(), model(), roniWeissModel(), rosterPerson(), SELF_REF, tuviaModel(), twoMatchesModel()
 
-### Community 135 - "parseCalendarDate"
-Cohesion: 0.09
-Nodes (42): minuteOnDateToInstant(), exclusiveAllDayEnd(), ICS_FEED_PAST_WINDOW_DAYS, icsFeedCutoffDate(), isWithinIcsFeedWindow(), NOW, AssignmentTemporalState, daysInCalendarMonth() (+34 more)
+### Community 135 - "dateRange.ts"
+Cohesion: 0.13
+Nodes (27): ICS_FEED_PAST_WINDOW_DAYS, icsFeedCutoffDate(), isWithinIcsFeedWindow(), NOW, daysInCalendarMonth(), addCalendarDays(), FIXED_RANGE_DAY_COUNTS, formatCalendarDate() (+19 more)
 
-### Community 136 - "domain/event.ts"
-Cohesion: 0.09
-Nodes (31): ABSENCE_EMOJI, DUTY_FAMILY_EMOJI, icsEventEmoji(), withEmojiPrefix(), buildAbsenceSummary(), buildCalendarItem(), buildDutyOrAbsenceDescription(), buildDutySummary() (+23 more)
+### Community 136 - "Event"
+Cohesion: 0.14
+Nodes (20): compareDutyActions(), DerivedDutyAction, deriveDutyActions(), baseEvent(), dutyEvent(), guardEvent(), nextCell(), reserveEvent() (+12 more)
 
-### Community 137 - "EveryoneMonthGrid.test.tsx"
-Cohesion: 0.22
-Nodes (5): dayMeta(), daysForGrid(), WEEK_DATES, WEEK_GRID, weekDays()
+### Community 137 - "ManagerFixedNotificationsSection.test.tsx"
+Cohesion: 0.11
+Nodes (13): ADOPTION, archiveCustomWeeklyRuleAction, composerCalls, listNotificationRulesAction, ROSTER, setCustomWeeklyRuleEnabledAction, systemEditorCalls, updateSystemRuleAction (+5 more)
 
 ### Community 138 - "pipeline.scheduledBroadcasts.test.ts"
 Cohesion: 0.10
@@ -909,13 +938,13 @@ Nodes (19): fetchFreshWorkbookRead, findDueCustomWeeklyOccurrences, loadModule()
 Cohesion: 0.20
 Nodes (11): Person, recipients.ts, personnel.ts, lib/notifications/engine/readiness.ts computeNotificationReadiness, dutyFairness.ts, fairnessAvatarLookup.ts, lib/presentation/fairnessCards.ts, fairnessWorkbookContext.ts (+3 more)
 
-### Community 141 - "Dashboard.tsx"
-Cohesion: 0.11
-Nodes (19): Dashboard(), DashboardProps, findVacationEvent(), DashboardVisitSession(), DashboardVisitSessionProps, ORIGINAL_RECAP, recordDashboardVisitAction, CATEGORY_EMOJI (+11 more)
+### Community 141 - "RecentChangesPanel.tsx"
+Cohesion: 0.16
+Nodes (10): CATEGORY_EMOJI, formatChangeCountLabel(), formatMoreChangesLabel(), RecentChangesPanel(), RecentChangesPanelProps, NOW, InboxItemRow(), formatRecentChangeRelativeTime() (+2 more)
 
 ### Community 142 - "(app)/fairness/page.test.tsx"
-Cohesion: 0.13
-Nodes (21): dutyModel(), dutyRow(), getRequestDutyFairness, getRequestEmergencyFairness, getRequestShiftFairness, noTargetModel(), ratzModel(), redirect (+13 more)
+Cohesion: 0.18
+Nodes (15): dutyModel(), dutyRow(), getRequestDutyFairness, getRequestEmergencyFairness, getRequestShiftFairness, noTargetModel(), ratzModel(), redirect (+7 more)
 
 ### Community 143 - "reportOneTomorrow.test.ts"
 Cohesion: 0.21
@@ -925,9 +954,9 @@ Nodes (11): getAuthenticatedIdentity, getJerusalemLocalNow, getReserveInclusionP
 Cohesion: 0.15
 Nodes (10): ALLOWED_SERVICE_ROLE_REFERENCE_FILES, CALENDAR_SERVICE_ROLE_CALL_SITE_FILE, DASHBOARD_VISIT_SERVICE_ROLE_CALL_SITE_FILE, EMERGENCY_MODE_SERVICE_ROLE_CALL_SITE_FILE, NOTIFICATION_SERVICE_ROLE_CALL_SITE_FILE, REPORT_ONE_SERVICE_ROLE_CALL_SITE_FILE, SERVICE_ROLE_DEFINITION_FILE, SHOOTING_RANGES_SERVICE_ROLE_CALL_SITE_FILE (+2 more)
 
-### Community 145 - "notificationCenter.test.ts"
-Cohesion: 0.40
-Nodes (4): computeNotificationReadiness, loadManagerPersonnelContext, MANAGER, MARTIN
+### Community 145 - "notificationCenter.ts"
+Cohesion: 0.13
+Nodes (20): computeNotificationReadiness(), PersonReadinessResult, getRequestNotificationCenterContext, loadNotificationCenterContext, buildManagerRoster(), compareAdoptionPeople(), compareRosterEntries(), toManagerAdoptionPerson() (+12 more)
 
 ### Community 146 - "manualBroadcastActions.test.ts"
 Cohesion: 0.15
@@ -945,17 +974,21 @@ Nodes (10): getAuthenticatedIdentity, calendar actions.ts, fetchRawWorkbookSnaps
 Cohesion: 0.20
 Nodes (10): Duty Fairness integration (PR #3), fairnessAnalysis.ts, fairnessExemptions.ts, fairnessFoundation.ts, fairnessParticipation.ts, fairnessPeriod.ts, fairnessShiftEngine.ts, fairnessTable.ts (+2 more)
 
+### Community 150 - "DutyFairnessCard.tsx"
+Cohesion: 0.16
+Nodes (9): DUTY_STATUS_TINT_CLASSES, DutyFairnessCard(), DutyFairnessDetail(), DutyFairnessDetailProps, DutyProgressBar(), FairnessMetric(), FairnessMetricProps, DutyStatusState (+1 more)
+
 ### Community 151 - "potentialDutyEvents.test.ts"
 Cohesion: 0.07
 Nodes (35): allocation(), DANIEL_A, DANIEL_B, dutyEvent(), guardAllocation(), NADAV, nextCell(), PERSONNEL (+27 more)
 
-### Community 152 - "(app)/layout.tsx"
-Cohesion: 0.15
-Nodes (11): dynamic, ProtectedLayout(), getRequestPersonalSchedule, getRequestSearchReadModel, redirect, resolveOperationalMode, formatMinuteInterval(), formatMissingIntervals() (+3 more)
+### Community 152 - "(app)/layout.test.tsx"
+Cohesion: 0.12
+Nodes (8): getRequestPersonalSchedule, getRequestSearchReadModel, redirect, resolveOperationalMode, AppShell(), AppShellProps, EmergencyModeBanner(), PersonalProfile
 
 ### Community 153 - "parseSharedShiftPhrase.ts"
 Cohesion: 0.24
-Nodes (9): ALL_PATTERNS, PERSON_PERSON_PATTERNS, query(), SELF, SELF_PATTERNS, SharedShiftPattern, splitConjunctionCandidates(), SearchPersonReference (+1 more)
+Nodes (9): ALL_PATTERNS, parseSharedShiftPhrase(), PERSON_PERSON_PATTERNS, query(), SELF, SELF_PATTERNS, SharedShiftPattern, splitConjunctionCandidates() (+1 more)
 
 ### Community 154 - "search.test.ts"
 Cohesion: 0.26
@@ -969,29 +1002,37 @@ Nodes (6): createSupabaseServerClient, deleteEqMock, insertMock, makeFakeSupabas
 Cohesion: 0.28
 Nodes (9): /graphify explain Flow, LESSONS.md, /graphify path Flow, /graphify query Flow, Work Memory / save-result Self-Improving Loop, Constrained Query Expansion (Step 0), Graphify Integration Section, graphify reflect (CLI) (+1 more)
 
-### Community 157 - "callback/route.ts"
-Cohesion: 0.36
-Nodes (4): GET(), createSupabaseServerClient, exchangeCodeForSession, sanitizeNextPath()
+### Community 157 - "AudienceGroupKey"
+Cohesion: 0.14
+Nodes (15): AudienceGroupOption, AudienceGroupPicker(), AudienceGroupPickerProps, ROLE_OPTIONS, SERVICE_TYPE_OPTIONS, AudienceGroupKey, CustomWeeklyRuleEdit, ManagerNotificationBatchRow (+7 more)
 
-### Community 158 - "shiftFairness.test.ts"
-Cohesion: 0.24
-Nodes (9): fairnessSheet(), getEmergencyDateSet, getJerusalemLocalNow, loadFairnessWorkbookContext, okContext(), parseEvent, parseScheduleSheet, person() (+1 more)
+### Community 158 - "EmergencyPersonalScheduleList.tsx"
+Cohesion: 0.20
+Nodes (13): DayCard(), formatOwnDesks(), formatRosterSummary(), PeriodColumn(), buildDayIndicators(), CalendarDayIndicator, eventIndicator(), eventIndicatorEmoji() (+5 more)
+
+### Community 159 - "issueRecommendation.ts"
+Cohesion: 0.22
+Nodes (11): buildIssueRecommendationView(), candidateLinkPart(), intervalSuffix(), IssueRecommendationLastResortView, IssueRecommendationTextPart, joinCandidateParts(), textPart(), formatMinuteInterval() (+3 more)
 
 ### Community 160 - "managerTypes.ts"
-Cohesion: 0.05
-Nodes (50): EMERGENCY_PERIOD, getRequestManagerOverview, loadManagerEmergencyOverview, resolveOperationalMode, shiftSnapshotShift(), shiftSnapshotTriad(), usePathname, useRouter (+42 more)
+Cohesion: 0.06
+Nodes (35): EMERGENCY_PERIOD, getRequestManagerOverview, loadManagerEmergencyOverview, resolveOperationalMode, shiftSnapshotShift(), shiftSnapshotTriad(), usePathname, useRouter (+27 more)
 
-### Community 161 - "managerEmergencyOverview.test.ts"
-Cohesion: 0.22
-Nodes (10): getJerusalemLocalNow, getWorkbookSnapshot, MANAGER, MARTIN_ID, PERIOD, PERSONNEL_ROWS, personnelSheet(), resolveOperationalRoster (+2 more)
+### Community 161 - "google/index.ts"
+Cohesion: 0.05
+Nodes (45): ALL_EMERGENCY_SHEET_SOURCE_KEYS, EMERGENCY_SHEET_SOURCES, RawSheet, normalizeName(), resolveHistoricalDutyPersonnel(), currentPeople, DANI, DISCHARGE_DATE_HEADERS (+37 more)
 
 ### Community 162 - "createSupabaseServerClient"
-Cohesion: 0.16
-Nodes (15): AccessDeniedSignOutButton(), MobileProfileMenuProps, signOutAction(), createSupabaseServerClient, deletePushSubscriptionForCurrentUser, redirect, signOut, withTimeout() (+7 more)
+Cohesion: 0.14
+Nodes (17): GET(), createSupabaseServerClient, exchangeCodeForSession, signOutAction(), createSupabaseServerClient, deletePushSubscriptionForCurrentUser, redirect, signOut (+9 more)
 
 ### Community 163 - "Mi-Ma-Mo App Symbol"
 Cohesion: 0.43
 Nodes (8): Mi-Ma-Mo Full Logo Lockup, Mi-Ma-Mo Wordmark Logo, Mi-Ma-Mo App Symbol, PWA Icon 192x192, PWA Icon 512x512, PWA Maskable Icon 512x512, Apple Touch Icon, Next.js App Icon
+
+### Community 164 - "resolveSearchIntent"
+Cohesion: 0.22
+Nodes (15): buildSplitDisambiguationResults(), choosePersonPair(), findMatchingPeople(), peopleOnShift(), personReferenceHasAnyRosterMatch(), personReferenceText(), resolveDateIntent(), resolveDateSpec() (+7 more)
 
 ### Community 165 - "inboxActions.test.ts"
 Cohesion: 0.18
@@ -1009,9 +1050,9 @@ Nodes (8): classifyAssignmentTemporalState, computeAssignmentTiming, fairnessGro
 Cohesion: 0.20
 Nodes (9): fetchEmailToAvatarUrl, getCompletionsForPersonIds, getJerusalemLocalNow, getPlannedOccurrencesForPersonIds, loadManagerWorkbookContext, MANAGER, okContext(), resolveAvatarUrlsByPersonId (+1 more)
 
-### Community 169 - "notifications/actions.test.ts"
-Cohesion: 0.25
-Nodes (7): AUTHENTICATED, deletePushSubscriptionForCurrentUser, findPushSubscriptionForCurrentUser, getAuthenticatedIdentity, sendPush, upsertPushSubscriptionForCurrentUser, VALID_RAW_SUBSCRIPTION
+### Community 169 - "buildEmergencyScheduleReadModel.ts"
+Cohesion: 0.22
+Nodes (10): groupEmergencyAssignmentsIntoShifts(), buildEmergencyScheduleReadModel(), buildRosterOptions(), compareRosterOptions(), EmergencyScheduleManagerIdentity, ResolvedPerspective, resolvePerspective(), PERIOD (+2 more)
 
 ### Community 170 - "recurringRuleDispatch.ts"
 Cohesion: 0.32
@@ -1033,17 +1074,21 @@ Nodes (7): Confidence Score Rubric, Hyperedge Extraction Rule, Node ID Format Ru
 Cohesion: 0.29
 Nodes (6): ALL_LOGIN_SOURCE, componentsDir, globalsCss, googleButtonSource, loginComponentFiles, pageSource
 
-### Community 175 - "weaponQualification.ts"
-Cohesion: 0.10
-Nodes (29): detectWeaponQualificationIssues(), filterManagerRecipients(), RecipientResolution, ResolvedRecipient, resolveNotificationRecipients(), cancelManagerConfirmationRequiredJob(), confirmationRequiredDedupeKey(), formatDdMm() (+21 more)
+### Community 175 - "engine/shootingRanges.ts"
+Cohesion: 0.30
+Nodes (14): filterManagerRecipients(), resolveNotificationRecipients(), cancelManagerConfirmationRequiredJob(), confirmationRequiredDedupeKey(), formatDdMm(), formatDdMmYyyy(), normalizePersonEmail(), notifyManagersOfSelfReportSubmitted() (+6 more)
 
-### Community 176 - "CalendarGridCell"
-Cohesion: 0.17
-Nodes (11): PersonalPerspectiveProps, CalendarGridProps, CalendarWeekRowProps, OutOfMonthCellProps, ScheduleCalendar(), ScheduleCalendarProps, dayMeta(), WEEK_DATES (+3 more)
+### Community 176 - "settings/page.tsx"
+Cohesion: 0.40
+Nodes (9): SettingsPage(), appleCalendarSubscribeUrl(), buildCalendarFeedLinks(), calendarFeedHttpsUrl(), calendarFeedPath(), googleCalendarSubscribeUrl(), resolveOriginFromHeaders(), resolveRequestOrigin() (+1 more)
 
 ### Community 177 - "buildManagerOverviewReadModel.test.ts"
 Cohesion: 0.15
 Nodes (12): allocation(), buildModel(), EITAN, EMPTY_SOURCE, event(), MANAGER, MARTIN, nextCell() (+4 more)
+
+### Community 178 - "buildShootingRangeQualificationReadModel.test.ts"
+Cohesion: 0.24
+Nodes (7): FreshWorkbookRead, ShootingRangeRelevanceRecord, ShootingRangeSheetRecord, BuildShootingRangeQualificationReadModelInput, WeaponQualificationIndexInput, CompletionRow, PlannedOccurrenceRow
 
 ### Community 180 - "sw.test.ts"
 Cohesion: 0.33
@@ -1069,6 +1114,10 @@ Nodes (11): Bulk manager confirmation is one atomic database statement, Notifica
 Cohesion: 0.40
 Nodes (5): Event, logisticsWithdrawal.ts, event.ts, schedule.ts, RawAssignment
 
+### Community 186 - "package.json"
+Cohesion: 0.17
+Nodes (11): name, private, scripts, build, dev, lint, start, test (+3 more)
+
 ### Community 190 - "emoji.ts / assignmentEmoji"
 Cohesion: 0.50
 Nodes (4): icsEventColor, icsEventEmoji, emoji.ts / assignmentEmoji, eventColor.ts
@@ -1077,9 +1126,13 @@ Nodes (4): icsEventColor, icsEventEmoji, emoji.ts / assignmentEmoji, eventColor.
 Cohesion: 0.33
 Nodes (7): ManagerRangeKey, parseManagerRangeParam(), firstParam(), ManagerOverviewParams, parseManagerOverviewSearchParams(), SearchParamValue, ManagerRangeView
 
-### Community 198 - "ShootingRangeManagerPanel.tsx"
-Cohesion: 0.17
-Nodes (10): CreatePlannedRangeForm(), PendingConfirmationPanel(), SelfReportQueue(), decide(), StatusBadge(), QualificationStatus, presentQualificationStatus(), QualificationStatusPresentation (+2 more)
+### Community 195 - "fairnessPeriod.ts"
+Cohesion: 0.36
+Nodes (10): fairnessPeriodEndDate(), fairnessPeriodIdentityLabel(), fairnessPeriodLabel(), fairnessPeriodStartDate(), parseFairnessPeriodParam(), periodContaining(), resolveFairnessPeriod(), resolveFairnessPeriodIdentity() (+2 more)
+
+### Community 198 - "shootingRanges/actions.ts"
+Cohesion: 0.11
+Nodes (28): SelfReportQueue(), decide(), SHOOTING_RANGES_REQUIRED_SOURCES, approveSelfReportShootingRangeAction(), confirmPlannedShootingRangeAction(), ConfirmPlannedShootingRangeResult, CreatePlannedShootingRangeResult, rejectSelfReportShootingRangeAction() (+20 more)
 
 ### Community 201 - "DayMeta"
 Cohesion: 0.67
@@ -1093,45 +1146,81 @@ Nodes (3): notificationPath.ts, ServiceWorkerManager.tsx, public/sw.js
 Cohesion: 0.31
 Nodes (6): FairnessDetailOverlay(), handleKeyDown(), FairnessDetailOverlayProps, getFocusableElements(), push, useMounted()
 
-### Community 282 - "scheduledBroadcastStore.test.ts"
-Cohesion: 0.32
-Nodes (6): loadModule(), makeFakeSupabase(), batchesTable(), matches(), scheduledTable(), Row
+### Community 281 - "emergencyMode/types.ts"
+Cohesion: 0.25
+Nodes (6): OperationalMode, resolveOperationalGeneration(), loadEmergencyRoster, PERIOD, PERSONNEL, resolveOperationalMode
+
+### Community 282 - "makeFakeSupabase"
+Cohesion: 0.83
+Nodes (4): makeFakeSupabase(), batchesTable(), matches(), scheduledTable()
 
 ### Community 286 - "scheduledWorker.test.ts"
 Cohesion: 0.15
 Nodes (11): fetchFreshPersonnelRead, findDueCustomWeeklyOccurrences, loadModule(), loadNotificationRuleConfig, peekAnyManagerScheduledBroadcastWorkDue, peekDueJobsCount, PEOPLE, runDelivery (+3 more)
 
 ### Community 288 - "resolveSearchIntent.ts"
-Cohesion: 0.10
-Nodes (38): buildDisambiguationResults(), buildSplitDisambiguationResults(), choosePersonPair(), ChosenPairResolution, currentShiftFor(), findMatchingPeople(), MatchTier, nextShiftFor() (+30 more)
+Cohesion: 0.15
+Nodes (21): buildDisambiguationResults(), ChosenPairResolution, currentShiftFor(), MatchTier, nextShiftFor(), NO_OVERRIDES, PersonSideResolution, roleFor() (+13 more)
 
-### Community 289 - "PermanentManagerHome.tsx"
-Cohesion: 0.14
-Nodes (14): getCalendarFeedForCurrentUser, getRequestDashboardVisitRecap, getRequestPermanentManagerHome, getRequestPersonalSchedule, getRequestReportOneTomorrow, loadManagerEmergencyOverview, permanentManagerHomeModel(), recordDashboardVisitAction (+6 more)
+### Community 289 - "(dashboard)/page.test.tsx"
+Cohesion: 0.20
+Nodes (9): getCalendarFeedForCurrentUser, getRequestDashboardVisitRecap, getRequestPermanentManagerHome, getRequestPersonalSchedule, getRequestReportOneTomorrow, loadManagerEmergencyOverview, permanentManagerHomeModel(), recordDashboardVisitAction (+1 more)
 
 ### Community 290 - "resolveCurrentPerson"
 Cohesion: 0.33
 Nodes (6): findPersonByEmail, resolveCurrentPerson, resolveCurrentPersonFromPeople, resolveIdentityAgainstPeople, icsWindow.ts, loadCalendarFeedForToken
 
-### Community 292 - "loadManagerPersonnelContext"
-Cohesion: 0.12
-Nodes (26): EmergencyModeControlClient(), handleActivate(), handleDeactivate(), EmergencyModeControlClientProps, EmergencyModeControlProjection, activateEmergencyModeAction, deactivateEmergencyModeAction, getRequestAuthenticatedIdentity (+18 more)
+### Community 291 - "DashboardVisitSession.tsx"
+Cohesion: 0.31
+Nodes (6): DashboardProps, DashboardVisitSession(), DashboardVisitSessionProps, ORIGINAL_RECAP, recordDashboardVisitAction, DashboardVisitRecap
+
+### Community 292 - "emergencyMode/store.ts"
+Cohesion: 0.22
+Nodes (14): getEmergencyModeServiceClient(), activateEmergencyMode(), ActivateEmergencyModeResult, ActivateEmergencyModeRpcRow, deactivateEmergencyMode(), DeactivateEmergencyModeResult, DeactivateEmergencyModeRpcRow, EmergencyModePeriodDbRow (+6 more)
 
 ### Community 293 - "public.activate_emergency_mode"
 Cohesion: 0.50
 Nodes (4): public.emergency_mode_periods, public.emergency_mode_state, public.activate_emergency_mode(), public.deactivate_emergency_mode()
 
-### Community 295 - "hebrewCalendar.ts"
-Cohesion: 0.20
-Nodes (15): buildDayMeta(), Header(), HeaderProps, firstNameOf(), greetingEmojiForMinuteOfDay(), greetingForMinuteOfDay(), formatHebrewCalendarDate(), formatHebrewMonthRange() (+7 more)
+### Community 294 - "weaponQualification.ts"
+Cohesion: 0.36
+Nodes (9): detectWeaponQualificationIssues(), resolveAggregateNotificationJob(), upsertAggregateNotificationJob(), affectedPeopleLabel(), aggregateDedupeKey(), assignmentCountLabel(), issueKey(), runWeaponQualificationCheck() (+1 more)
 
-### Community 297 - "ShootingRangeHistoryList.tsx"
-Cohesion: 0.39
-Nodes (7): ShootingRangeHistoryList(), ShootingRangeHistoryListProps, shootingRangeHistorySourceLabel(), shootingRangeHistoryStatusLabel(), SOURCE_LABELS, STATUS_LABELS, ShootingRangeHistoryEntry
+### Community 295 - "feedStore.ts"
+Cohesion: 0.31
+Nodes (6): CalendarFeedRow, CalendarFeedState, enableCalendarFeedForCurrentUser(), EnableCalendarFeedResult, ResetCalendarFeedResult, generateCalendarFeedToken()
+
+### Community 296 - "icsEmergencyItems.ts"
+Cohesion: 0.36
+Nodes (6): buildEmergencyShiftCalendarItem(), emergencyShiftEventUid(), PERIOD_LABEL, SCHEDULE, minuteOnDateToInstant(), EmergencyShift
+
+### Community 297 - "buildShootingRangeQualificationReadModel.ts"
+Cohesion: 0.12
+Nodes (18): loadShootingRangeQualification, redirect, ShootingRangeHistoryList(), ShootingRangeHistoryListProps, shootingRangeHistorySourceLabel(), shootingRangeHistoryStatusLabel(), SOURCE_LABELS, STATUS_LABELS (+10 more)
 
 ### Community 298 - "20260827100000_add_audience_groups_and_exclusions.sql"
 Cohesion: 0.40
 Nodes (4): public.notification_rule_occurrences, public.claim_notification_rule_occurrence_v2(), public.update_system_rule_configuration_and_invalidate_pending_jobs_v2(), public.notification_rules
+
+### Community 299 - "notificationTiming.ts"
+Cohesion: 0.22
+Nodes (7): LocalClockTime, LOGISTICS_WITHDRAWAL_WINDOW, LOGISTICS_WITHDRAWAL_WINDOW_END, LOGISTICS_WITHDRAWAL_WINDOW_START, MinuteWindow, SEMANTIC_CHANGE_DEBOUNCE_MINUTES, WORKER_CADENCE_MINUTES
+
+### Community 300 - "schedule/page.test.tsx"
+Cohesion: 0.29
+Nodes (3): assignmentEvent(), getRequestPersonalSchedule, shiftEvent()
+
+### Community 302 - "emergencyFairnessTypes.ts"
+Cohesion: 0.38
+Nodes (5): EmergencyFairnessSection(), EmergencyFairnessSectionProps, EmergencyFairnessGroupView, EmergencyFairnessPersonRow, EmergencyFairnessReadModel
+
+### Community 307 - "ManagerBroadcastComposer.scheduling.test.tsx"
+Cohesion: 0.29
+Nodes (5): ADOPTION, createScheduledBroadcastAction, editScheduledBroadcastAction, ROSTER, sendManagerBroadcastAction
+
+### Community 308 - "calendar/actions.test.ts"
+Cohesion: 0.29
+Nodes (6): AUTHENTICATED, disableCalendarFeedForCurrentUser, enableCalendarFeedForCurrentUser, getAuthenticatedIdentity, resetCalendarFeedForCurrentUser, resolveRequestOrigin
 
 ### Community 309 - "settings/page.test.tsx"
 Cohesion: 0.33
@@ -1141,21 +1230,33 @@ Nodes (5): getCalendarFeedForCurrentUser, getRequestPersonalSchedule, OK_PERSON,
 Cohesion: 0.67
 Nodes (3): public.emergency_mode_periods, public.emergency_mode_state, auth.users
 
-### Community 314 - "DataFreshnessStatus.tsx"
-Cohesion: 0.16
-Nodes (11): DataFreshnessStatus(), handleRefresh(), DataFreshnessStatusProps, push, refresh, refreshWorkbookSnapshotAction, replace, useRouter (+3 more)
+### Community 314 - "PermanentManagerHome.tsx"
+Cohesion: 0.10
+Nodes (22): PermanentManagerHome(), PermanentManagerHomeProps, model(), shift(), AbsenceRow(), TodayOperationalContext(), TodayOperationalContextProps, DataFreshnessStatus() (+14 more)
 
 ### Community 315 - "LoginScheduleRing.tsx"
 Cohesion: 0.22
 Nodes (6): FLOATING_CARDS, FloatingCardSpec, LoginScheduleRing(), SWEEP_HAND_LEAD, SWEEP_HAND_TRAIL, TICKS
 
-### Community 320 - "ManagerBroadcastComposer.test.tsx"
-Cohesion: 0.40
-Nodes (5): ADOPTION, renderComposer(), renderWithEveryoneAudience(), ROSTER, sendManagerBroadcastAction
+### Community 316 - "tick/route.test.ts"
+Cohesion: 0.33
+Nodes (3): loadRoute(), runNotificationWorkerTick, SupabaseServiceRoleConfigError
 
-### Community 321 - "shooting-ranges/page.tsx"
-Cohesion: 0.24
-Nodes (8): ShootingRangesPage(), ERROR_LABELS, errorLabel(), SelfReportForm(), jerusalemEndOfDayInstant(), jerusalemLocalTimeToInstant(), jerusalemStartOfDayInstant(), jerusalemUtcOffsetMinutesAt()
+### Community 320 - "CalendarSyncSection.test.tsx"
+Cohesion: 0.33
+Nodes (5): disableCalendarSyncAction, enableCalendarSyncAction, LINKS, NEW_LINKS, resetCalendarSyncAction
+
+### Community 321 - "jerusalemClock.ts"
+Cohesion: 0.18
+Nodes (14): ShootingRangesPage(), ERROR_LABELS, errorLabel(), SelfReportForm(), DischargeCountdownLoadResult, DischargeCountdownView, getPersonnelSheet(), loadDischargeCountdownView() (+6 more)
+
+### Community 322 - "feedOwnerLookup.test.ts"
+Cohesion: 0.70
+Nodes (4): feedLookupMock, getCalendarFeedServiceClient, getUserByIdMock, makeFakeServiceClient()
+
+### Community 323 - "sharedShift.ts"
+Cohesion: 0.50
+Nodes (4): ACTIVE_STATES, compareSharedShifts(), findNextSharedShifts(), SharedShift
 
 ### Community 324 - "analyzeUnitShiftCoverage"
 Cohesion: 0.50
@@ -1164,22 +1265,22 @@ Nodes (4): buildShiftRosterDescription, analyzeUnitShiftCoverage, shiftCoverage.
 ## Knowledge Gaps
 - **1409 isolated node(s):** `eslintConfig`, `nextConfig`, `name`, `version`, `private` (+1404 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **92 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **103 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Person` connect `Person` to `reminders.ts`, `parseCalendarDate`, `domain/event.ts`, `LocalNow`, `AudienceGroupKey`, `buildPersonalScheduleReadModel.ts`, `personnel.ts`, `google/index.ts`, `engine/scheduledBroadcast.ts`, `potentialDutyEvents.test.ts`, `shiftFairness.test.ts`, `engine/store.ts`, `shootingRangeManagerOverview.test.ts`, `buildManagerOverviewReadModel.ts`, `weaponQualification.ts`, `fairnessShiftEngine.ts`, `buildManagerOverviewReadModel.test.ts`, `shiftCoverageRecommendation.ts`, `shootingRanges/actions.ts`, `recurringRuleDispatch.test.ts`, `readModels/shootingRangeQualification.test.ts`, `scheduledBroadcast.test.ts`, `potential.test.ts`, `buildPermanentManagerHomeReadModel.test.ts`, `operationalIssues.ts`, `reportOne.ts`, `shooting-ranges/manager/page.test.tsx`, `buildPersonalScheduleReadModel.test.ts`, `parsers/fairness.test.ts`, `shiftFairness.ts`, `managerOverview.ts`, `pipeline.weaponQualificationEmergencyMode.test.ts`, `weaponQualification.test.ts`, `shootingRanges/actions.test.ts`, `buildEmergencyScheduleReadModel.ts`, `buildSearchReadModel.test.ts`, `dutyFairness.test.ts`, `reportOne/actions.ts`?**
-  _High betweenness centrality (0.052) - this node is a cross-community bridge._
-- **Why does `Panel()` connect `Panel.tsx` to `duties/page.tsx`, `calendar/actions.ts`, `labels.ts`, `ruleActions.ts`, `LocalNow`, `readModels/types.ts`, `Dashboard.tsx`, `DayMeta`, `createSupabaseServerClient`, `schedule/page.tsx`, `loadManagerPersonnelContext`, `managerAdoption.ts`, `ShootingRangeHistoryList.tsx`, `manager/types.ts`, `ManagerRecentBroadcastsSection.tsx`, `CalendarGridCell`, `(app)/fairness/page.tsx`, `managerUrl.ts`, `SetupSection.tsx`, `shooting-ranges/page.tsx`, `scheduleEveryone.ts`, `ShootingRangeManagerPanel.tsx`, `Badge`, `ManagerBroadcastComposer.tsx`, `shooting-ranges/manager/page.tsx`, `ReportOneEditorOverlay.tsx`, `(dashboard)/page.tsx`, `buildEmergencyScheduleReadModel.ts`?**
-  _High betweenness centrality (0.029) - this node is a cross-community bridge._
-- **Why does `parseCalendarDate()` connect `parseCalendarDate` to `reminders.ts`, `hebrewDate.ts`, `EveryoneMonthGrid.tsx`, `labels.ts`, `domain/event.ts`, `buildPersonalScheduleReadModel.ts`, `emergencyAgenda.ts`, `engine/scheduledBroadcast.ts`, `presentation/dischargeCountdown.ts`, `engine/store.ts`, `schedule/page.tsx`, `hebrewCalendar.ts`, `ShootingRangeHistoryList.tsx`, `buildManagerOverviewReadModel.ts`, `weaponQualification.ts`, `fairnessShiftEngine.ts`, `shiftCoverageRecommendation.ts`, `shootingRanges/actions.ts`, `dutyBlocks.ts`, `dutyAllocationWeight.ts`, `icsRender.ts`, `CalendarGrid.test.tsx`, `shiftSchedule.ts`, `pipeline.weaponQualificationEmergencyMode.test.ts`, `WeekOverviewSection.tsx`, `weaponQualification.test.ts`, `ReportOneEditorOverlay.tsx`, `buildEmergencyScheduleReadModel.ts`, `recentDashboardChanges.ts`?**
-  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+- **Why does `Person` connect `Person` to `reminders.ts`, `ShootingRangeManagerPanel.tsx`, `buildPersonalScheduleReadModel.ts`, `dutyFairness.ts`, `notificationCenter.ts`, `managerOverview.ts`, `getNotificationServiceClient`, `potentialDutyEvents.test.ts`, `managerEventProjections.ts`, `emergencyMode/types.ts`, `google/index.ts`, `weaponQualification.ts`, `shootingRangeManagerOverview.test.ts`, `buildEmergencyScheduleReadModel.ts`, `LocalNow`, `engine/shootingRanges.ts`, `fairnessShiftEngine.ts`, `buildManagerOverviewReadModel.test.ts`, `shiftCoverageRecommendation.ts`, `buildShootingRangeQualificationReadModel.test.ts`, `fairnessGroups.ts`, `readModels/shootingRangeQualification.ts`, `recurringRuleDispatch.test.ts`, `readModels/shootingRangeQualification.test.ts`, `scheduledBroadcast.test.ts`, `potential.test.ts`, `reminders.test.ts`, `operationalIssues.ts`, `reportOne.ts`, `parsers/event.ts`, `buildPersonalScheduleReadModel.test.ts`, `emergencyShift.ts`, `parsers/fairness.test.ts`, `shiftFairness.ts`, `loadCalendarFeedForToken.ts`, `pipeline.weaponQualificationEmergencyMode.test.ts`, `changeDetection.ts`, `weaponQualification.test.ts`, `ruleConfig.ts`, `shootingRanges/actions.test.ts`, `buildEmergencyPersonalHome.ts`, `buildSearchReadModel.ts`, `dutyFairness.test.ts`, `emergencySchedule.ts`, `reportOne/actions.ts`?**
+  _High betweenness centrality (0.045) - this node is a cross-community bridge._
+- **Why does `parseCalendarDate()` connect `parseCalendarDate` to `reminders.ts`, `PersonalEventView`, `dateRange.ts`, `emergencyAgenda.ts`, `getNotificationServiceClient`, `domain/event.ts`, `presentation/dischargeCountdown.ts`, `shiftSchedule.ts`, `schedule/page.tsx`, `icsEmergencyItems.ts`, `buildShootingRangeQualificationReadModel.ts`, `LocalNow`, `engine/shootingRanges.ts`, `fairnessShiftEngine.ts`, `shiftCoverageRecommendation.ts`, `readModels/shootingRangeQualification.ts`, `dutyBlocks.ts`, `dutyAllocationWeight.ts`, `shootingRanges/actions.ts`, `reminders.test.ts`, `icsRender.ts`, `domain/shootingRangeQualification.ts`, `pipeline.weaponQualificationEmergencyMode.test.ts`, `weaponQualification.test.ts`, `ReportOneEditorOverlay.tsx`, `recentDashboardChanges.ts`, `buildSearchReadModel.ts`?**
+  _High betweenness centrality (0.040) - this node is a cross-community bridge._
+- **Why does `LocalNow` connect `LocalNow` to `reminders.ts`, `duties/page.tsx`, `Dashboard.tsx`, `parseCalendarDate`, `labels.ts`, `dateRange.ts`, `emergencyScheduleTypes.ts`, `readModels/types.ts`, `buildPersonalScheduleReadModel.ts`, `emergencyAgenda.ts`, `getNotificationServiceClient`, `managerEventProjections.ts`, `shiftSchedule.ts`, `Person`, `EmergencyPersonalScheduleList.tsx`, `managerTypes.ts`, `google/index.ts`, `resolveSearchIntent.ts`, `buildDutyFairnessReadModel.ts`, `schedule/page.tsx`, `buildEmergencyScheduleReadModel.ts`, `fairnessShiftEngine.ts`, `buildManagerOverviewReadModel.test.ts`, `recurringRuleDispatch.test.ts`, `PermanentManagerHome.tsx`, `jerusalemClock.ts`, `fairnessPeriod.ts`, `reminders.test.ts`, `reportOne.ts`, `buildPersonalScheduleReadModel.test.ts`, `ruleConfig.ts`, `buildEmergencyPersonalHome.ts`, `buildSearchReadModel.ts`?**
+  _High betweenness centrality (0.023) - this node is a cross-community bridge._
 - **What connects `eslintConfig`, `nextConfig`, `name` to the rest of the system?**
   _1409 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `reminders.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.05276907001044932 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.11904761904761904 - nodes in this community are weakly interconnected._
+- **Should `duties/page.tsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.11341463414634147 - nodes in this community are weakly interconnected._
 - **Should `pipeline.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.06116700201207243 - nodes in this community are weakly interconnected._
-- **Should `hebrewDate.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.13675213675213677 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07163461538461538 - nodes in this community are weakly interconnected._
