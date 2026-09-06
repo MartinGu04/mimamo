@@ -68,6 +68,11 @@ function dutyEvent(dutyFamily: NonNullable<Event["dutyFamily"]>, overrides: Part
   return event({ category: "duty", role: null, period: "unspecified", dutyFamily, slot: null, ...overrides });
 }
 
+/** A category "other" event carrying `title`, matching how `parseEvent` classifies unrecognized schedule-cell text like "משיכות"/"הסמכה" (see `lib/notifications/engine/logisticsWithdrawal.ts`'s own docs). */
+function otherEvent(title: string, overrides: Partial<Event> = {}): Event {
+  return event({ category: "other", role: null, period: "unspecified", title, ...overrides });
+}
+
 // --- 1-3. Tomorrow calculation --------------------------------------------
 
 describe("resolveReportOneTargetDate", () => {
@@ -388,6 +393,81 @@ describe("resolveRegularOrReserveStatus — presence-implying duties synthesize 
   it("a mix of a presence-implying duty and a non-presence-implying duty, no other primary -> still synthesizes 'נוכח' (at least one presence-implying duty is enough)", () => {
     const events = [dutyEvent("evacuation_on_call"), dutyEvent("guard", { slot: 1 })];
     expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, שמירה 1, כונן פינויים");
+  });
+});
+
+// --- משיכות / הסמכה: category "other" activities with no dedicated DutyFamily,
+// but which are physically on-site work like guard/kitchen/rasar duty --------
+
+describe("resolveRegularOrReserveStatus — משיכות/הסמכה (category 'other' presence-implying activities)", () => {
+  it("1. משיכות alone -> 'נוכח, משיכות'", () => {
+    const events = [otherEvent("משיכות")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, משיכות");
+  });
+
+  it("1b. the full phrase 'משיכות מהלוגיסטיקה' alone also synthesizes 'נוכח, משיכות'", () => {
+    const events = [otherEvent("משיכות מהלוגיסטיקה")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, משיכות");
+  });
+
+  it("2. הסמכה alone -> 'נוכח, הסמכה'", () => {
+    const events = [otherEvent("הסמכה")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, הסמכה");
+  });
+
+  it("3. both on the same day -> 'נוכח, הסמכה + משיכות' (one combined entry, never two comma-separated ones)", () => {
+    const events = [otherEvent("הסמכה"), otherEvent("משיכות")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, הסמכה + משיכות");
+  });
+
+  it("3b. combined wording is the same regardless of the source events' own order", () => {
+    const events = [otherEvent("משיכות"), otherEvent("הסמכה")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, הסמכה + משיכות");
+  });
+
+  it("4. an existing shift primary is preserved, with משיכות simply appended", () => {
+    const events = [shiftEvent("supervisor", "day"), otherEvent("משיכות")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe('נוכח, אחמ"ש יום, משיכות');
+  });
+
+  it("4b. an existing shift primary is preserved, with הסמכה simply appended", () => {
+    const events = [shiftEvent("technician", "night"), otherEvent("הסמכה")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, טכנאי לילה, הסמכה");
+  });
+
+  it("5. multiple additive activities (a duty family plus משיכות/הסמכה) never collapse to '?' -- everything appends, in a stable order", () => {
+    const events = [
+      shiftEvent("supervisor", "day"),
+      dutyEvent("evacuation_on_call"),
+      otherEvent("משיכות"),
+      otherEvent("הסמכה"),
+    ];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe('נוכח, אחמ"ש יום, כונן פינויים, הסמכה + משיכות');
+  });
+
+  it("5b. משיכות/הסמכה with no shift and no other primary still synthesize exactly one 'נוכח', never '?'", () => {
+    const events = [otherEvent("הסמכה"), otherEvent("משיכות"), dutyEvent("rasar")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe('נוכח, רס"ר, הסמכה + משיכות');
+  });
+
+  it("6. a genuine absence/presence conflict (vacation + a real shift/duty assignment) still follows the existing conflict policy -- bare '?', unaffected by an unrelated משיכות/הסמכה event elsewhere in the audit", () => {
+    const events = [absenceEvent("vacation"), dutyEvent("guard", { slot: 1 })];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe(UNKNOWN_REPORT_ONE_STATUS);
+  });
+
+  it("6b. a category 'other' event never itself counts as the conflicting assignment for a blocking absence -- vacation + משיכות alone is not the same structural conflict as vacation + a real shift/duty", () => {
+    const events = [absenceEvent("vacation"), otherEvent("משיכות")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe("חופש, משיכות");
+  });
+
+  it("unrelated 'other'-category text is still never surfaced -- only the משיכות/הסמכה keywords are exceptions", () => {
+    const events = [otherEvent("הערה כללית")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe(UNKNOWN_REPORT_ONE_STATUS);
+  });
+
+  it("duplicate משיכות events the same day are not doubled in the appended text", () => {
+    const events = [shiftEvent("technician", "day"), otherEvent("משיכות"), otherEvent("משיכות מהלוגיסטיקה")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, טכנאי יום, משיכות");
   });
 });
 
