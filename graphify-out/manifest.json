@@ -5520,15 +5520,15 @@
     "semantic_hash": ""
   },
   "src/components/dashboard/ScrollHomeToTopOnLaunch.test.tsx": {
-    "mtime": 1788713422.6293292,
-    "seen": 1788714172.0798483,
-    "ast_hash": "53e2e4baab7f46cff55a49686b7b818e",
+    "mtime": 1788717019.0390544,
+    "seen": 1788717514.0193307,
+    "ast_hash": "fe66b6d8a32bcaff4a3ec2ed93acd346",
     "semantic_hash": ""
   },
   "src/components/dashboard/ScrollHomeToTopOnLaunch.tsx": {
-    "mtime": 1788713381.4053268,
-    "seen": 1788714172.079851,
-    "ast_hash": "765f02cc3c8ca69ef094cf13b79bcefc",
+    "mtime": 1788716967.3510513,
+    "seen": 1788717514.0193336,
+    "ast_hash": "d758bc5a8dff165451595b49c578bc4a",
     "semantic_hash": ""
   }
 }

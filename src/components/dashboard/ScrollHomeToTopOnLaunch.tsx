@@ -8,28 +8,51 @@ import { useEffect } from "react";
  * in-app `Link`/back-button return to Home later in this session -- but
  * resets back to `false` whenever the module itself is freshly evaluated,
  * i.e. a genuinely fresh full page load. That is exactly the distinction
- * this component needs, and it falls out of ordinary JS module semantics
- * for free: no timestamp/session-storage bookkeeping required.
+ * the MOUNT-time reset below needs, and it falls out of ordinary JS module
+ * semantics for free: no timestamp/session-storage bookkeeping required.
+ * The RESUME-time reset (see the component's own docstring) is deliberately
+ * NOT gated by this flag -- a resume can happen any number of times while
+ * the user stays on Home.
  */
 let hasScrolledToTopThisPageLoad = false;
 
 /**
- * Forces the Home dashboard to open at `scrollY = 0` exactly once per full
- * page load, fixing iOS standalone PWA relaunches (manifest `start_url` is
- * `/`) and hard browser reloads of `/` that otherwise restore whatever
- * scroll offset the browser/WebKit had persisted for that history entry --
- * landing the user mid-scroll on a "fresh" dashboard instead of at the top.
+ * Forces the Home dashboard to `scrollY = 0`, fixing two distinct cases
+ * that both otherwise land the user mid-scroll on what should read as a
+ * fresh dashboard:
  *
- * Deliberately keyed off a REACT MOUNT effect, never a
- * `visibilitychange`/`pageshow` listener (contrast `AppRevalidator`, which
- * intentionally listens for those to detect a real app RESUME): resuming a
- * merely-backgrounded/frozen tab -- switching to another app and back --
- * never re-evaluates this module or re-mounts this component, so a user's
- * current reading position on Home is never disturbed by that. Only a
- * genuinely fresh script execution resets `hasScrolledToTopThisPageLoad`
- * to `false`, so a later in-app navigation back to Home (Link/back button,
- * still the SAME page load) is a no-op here and is left entirely to
- * Next.js's own existing push/back scroll behavior.
+ *  1. A genuinely fresh full page load (a hard browser reload of `/`, or a
+ *     cold iOS standalone-PWA start) -- the browser/WebKit can restore
+ *     whatever scroll offset it had persisted for that history entry.
+ *     Handled by the plain MOUNT effect below, gated by the module-scoped
+ *     flag so it only ever fires once per real page load (see that
+ *     variable's own docstring for why an in-app remount must never
+ *     re-trigger it).
+ *
+ *  2. Real-device iOS testing showed (1) alone is NOT enough: reopening
+ *     the installed PWA from the Home Screen after merely backgrounding it
+ *     does NOT reliably produce a fresh script evaluation or a React
+ *     remount at all -- WebKit can resume the EXISTING standalone session
+ *     exactly as it was, scroll offset included, with no new navigation
+ *     and no module re-evaluation for a mount effect to ever catch. The
+ *     only observable signal for that kind of resume is a browser
+ *     lifecycle event -- the SAME `visibilitychange`-to-`"visible"` and
+ *     BFCache `pageshow` (`event.persisted === true`) signals
+ *     `AppRevalidator` already uses to detect a real app resume, for the
+ *     identical reason (see that component's own docstring). Unlike case
+ *     1, this is intentionally NOT gated by the module flag: it must fire
+ *     every time the app resumes while the user happens to be on Home.
+ *
+ * Also sets `history.scrollRestoration = "manual"` for as long as Home
+ * stays mounted, restored to whatever it was on unmount. This is a
+ * deliberately Home-only override, never a global one -- Next.js's own
+ * push/scroll-to-top and back/restore behavior for ordinary in-app
+ * navigation never depends on the browser's NATIVE history-based scroll
+ * restoration (see `node_modules/next/dist/docs/.../linking-and-navigating.md`),
+ * so disabling it here cannot affect that. What it DOES stop is
+ * WebKit/the browser silently re-imposing its own persisted scroll offset
+ * in a layout pass around a resume -- exactly the kind of race that would
+ * otherwise undo the explicit resets above.
  *
  * Mounted once by `(dashboard)/layout.tsx` (the route group that maps to
  * `/` and nothing else -- see that file and `loading.tsx`'s own docstring
@@ -37,13 +60,39 @@ let hasScrolledToTopThisPageLoad = false;
  * `(app)/layout.tsx`), so this covers every Home surface the page can
  * render (`Dashboard`, `PermanentManagerHome`, the Emergency Mode
  * variants, `ConfigurationErrorState`) without duplicating this effect in
- * each. Renders nothing.
+ * each, and never touches any other route. Renders nothing.
  */
 export function ScrollHomeToTopOnLaunch() {
   useEffect(() => {
-    if (hasScrolledToTopThisPageLoad) return;
-    hasScrolledToTopThisPageLoad = true;
-    window.scrollTo(0, 0);
+    const previousScrollRestoration =
+      "scrollRestoration" in window.history ? window.history.scrollRestoration : undefined;
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+
+    if (!hasScrolledToTopThisPageLoad) {
+      hasScrolledToTopThisPageLoad = true;
+      window.scrollTo(0, 0);
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") window.scrollTo(0, 0);
+    }
+    function handlePageShow(event: Event) {
+      const persisted = "persisted" in event && (event as { persisted?: boolean }).persisted === true;
+      if (persisted) window.scrollTo(0, 0);
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pageshow", handlePageShow);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pageshow", handlePageShow);
+      if ("scrollRestoration" in window.history && previousScrollRestoration) {
+        window.history.scrollRestoration = previousScrollRestoration;
+      }
+    };
   }, []);
 
   return null;
