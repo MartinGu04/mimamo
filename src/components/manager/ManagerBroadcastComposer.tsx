@@ -24,6 +24,9 @@ import { resolveAudienceGroupMembers } from "@/lib/domain/audienceGroups";
 type AudienceKind = "person" | "people" | "everyone" | "groups";
 export type SendMode = "now" | "schedule";
 
+/** The audience mode a brand-new (non-editing) composer always starts in -- also what the explicit "↺ איפוס טופס" action restores, regardless of what was selected before. */
+const DEFAULT_AUDIENCE_KIND: AudienceKind = "person";
+
 interface ManagerBroadcastComposerProps {
   /**
    * Fixed by the parent Notification Center section ("עכשיו"/"תזמון") --
@@ -131,7 +134,7 @@ export function ManagerBroadcastComposer({
   // leaving/entering edit mode), so there is no need to re-sync these via
   // an effect.
   const [audienceKind, setAudienceKind] = useState<AudienceKind>(() =>
-    editingItem && editingItem.audienceKind !== "everyone" ? editingItem.audienceKind : editingItem ? "everyone" : "person",
+    editingItem && editingItem.audienceKind !== "everyone" ? editingItem.audienceKind : editingItem ? "everyone" : DEFAULT_AUDIENCE_KIND,
   );
   const [selectedIds, setSelectedIds] = useState<string[]>(() =>
     editingItem && editingItem.audienceKind !== "everyone" && editingItem.audienceKind !== "groups" ? editingItem.targetPersonIds : [],
@@ -187,18 +190,43 @@ export function ManagerBroadcastComposer({
     effectiveSelectedIds.length > 0 &&
     (mode === "now" || (scheduledDate.length > 0 && parsedTime !== null));
 
-  function resetForm() {
+  /**
+   * After a successful send/schedule-save: clears only title/body (and
+   * mints a fresh idempotency key for the next submission) -- the
+   * audience/filters (selected people, groups, exclusions, audience mode,
+   * search queries) are deliberately left as-is so the manager can send
+   * another notification to the SAME group right away. `scheduledDate`/
+   * `scheduledTime` are cleared too, since a just-used one-time slot is
+   * never worth resubmitting as-is.
+   */
+  function resetAfterSend() {
     setTitle("");
     setBody("");
+    setScheduledDate("");
+    setScheduledTime("");
+    setIdempotencyKey(newIdempotencyKey());
+  }
+
+  /**
+   * The explicit "↺ איפוס טופס" action -- restores the ENTIRE composer to
+   * its initial/default state (same fields a brand-new, non-editing
+   * composer starts with), unlike `resetAfterSend` above. Builds on
+   * `resetAfterSend` rather than re-clearing title/body/schedule/
+   * idempotency a second time. Purely local component state -- never
+   * calls a Server Action, so it can never affect an already-sent
+   * notification or the send history.
+   */
+  function resetToDefaultState() {
+    resetAfterSend();
+    setAudienceKind(DEFAULT_AUDIENCE_KIND);
     setSelectedIds([]);
     setGroupKeys([]);
     setExcludedIds([]);
     setExcludeExpanded(false);
     setQuery("");
     setExcludeQuery("");
-    setScheduledDate("");
-    setScheduledTime("");
-    setIdempotencyKey(newIdempotencyKey());
+    setResult(null);
+    setScheduleResult(null);
   }
 
   function toggleAudience(next: AudienceKind) {
@@ -240,7 +268,7 @@ export function ManagerBroadcastComposer({
         });
         setResult(outcome);
         if (outcome.ok) {
-          resetForm();
+          resetAfterSend();
           onSaved?.();
         }
         return;
@@ -266,7 +294,7 @@ export function ManagerBroadcastComposer({
 
       setScheduleResult(outcome);
       if (outcome.ok) {
-        resetForm();
+        resetAfterSend();
         onSaved?.();
         onCancelEdit?.();
       }
@@ -433,7 +461,7 @@ export function ManagerBroadcastComposer({
           ) : null}
         </div>
 
-        <div>
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={handleSubmit}
@@ -448,6 +476,14 @@ export function ManagerBroadcastComposer({
                 : mode === "now"
                   ? "שלח התראה"
                   : "שמירת תזמון"}
+          </button>
+          <button
+            type="button"
+            onClick={resetToDefaultState}
+            disabled={isPending}
+            className="rounded-full bg-transparent px-4 py-2 text-sm font-medium text-muted ring-1 ring-border transition-colors duration-150 hover:bg-overlay-soft disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            ↺ איפוס טופס
           </button>
         </div>
 
