@@ -44,7 +44,13 @@ let hasScrolledToTopOnContentReady = false;
  * fresh resolved content (this route is `force-dynamic`), and that
  * ordinary navigation must be left entirely to Next.js's own existing
  * push/back scroll behavior, never forced back to the top a second time.
- * Renders nothing.
+ *
+ * The scheduled `requestAnimationFrame` re-assertion is cancelled in the
+ * effect's own cleanup -- if the user navigates away before the next frame
+ * fires (this component unmounts, e.g. by clicking a `Link` moments after
+ * Home's content resolves), there is no reason for a deferred `scrollTo`
+ * to land on whatever page they've navigated to in the meantime. Renders
+ * nothing.
  */
 export function ScrollHomeToTopOnContentReady() {
   useLayoutEffect(() => {
@@ -52,9 +58,16 @@ export function ScrollHomeToTopOnContentReady() {
     hasScrolledToTopOnContentReady = true;
 
     window.scrollTo(0, 0);
+    let rafId: number | null = null;
     if (typeof requestAnimationFrame === "function") {
-      requestAnimationFrame(() => window.scrollTo(0, 0));
+      rafId = requestAnimationFrame(() => window.scrollTo(0, 0));
     }
+
+    return () => {
+      if (rafId !== null && typeof cancelAnimationFrame === "function") {
+        cancelAnimationFrame(rafId);
+      }
+    };
   }, []);
 
   return null;

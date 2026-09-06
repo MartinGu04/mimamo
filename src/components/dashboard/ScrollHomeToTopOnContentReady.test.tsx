@@ -41,6 +41,26 @@ describe("ScrollHomeToTopOnContentReady", () => {
     expect(scrollTo).toHaveBeenCalledTimes(2);
   });
 
+  it("cancels the scheduled requestAnimationFrame re-assertion on unmount -- navigating away before the next frame must never deliver a delayed scrollTo to whatever page the user is on by then", async () => {
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    const cancelAnimationFrame = vi.fn();
+    vi.stubGlobal("requestAnimationFrame", () => 42);
+    vi.stubGlobal("cancelAnimationFrame", cancelAnimationFrame);
+    const { ScrollHomeToTopOnContentReady } = await loadFreshModule();
+
+    const { unmount } = render(<ScrollHomeToTopOnContentReady />);
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+
+    unmount();
+
+    // The real browser API guarantees a cancelled id's callback never
+    // fires -- asserting the cancellation call itself (with the exact id
+    // requestAnimationFrame returned) is what proves this component asks
+    // for that guarantee, rather than leaving the frame to fire unchecked.
+    expect(cancelAnimationFrame).toHaveBeenCalledWith(42);
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+  });
+
   it("does NOT scroll again on a later remount within the SAME page load (an in-app Link/back-button return to Home, which also mounts fresh resolved content on this force-dynamic route)", async () => {
     const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
     const { ScrollHomeToTopOnContentReady } = await loadFreshModule();
