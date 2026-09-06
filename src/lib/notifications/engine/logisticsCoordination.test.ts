@@ -4,6 +4,7 @@ import type { Person } from "@/lib/domain/types";
 import { buildShiftSchedule } from "@/lib/domain/shiftSchedule";
 import {
   buildSupervisorAssignedInformedBody,
+  buildSupervisorAssignedTodayBody,
   buildTeamHelpAssignedBody,
   findLogisticsWithdrawalAssignees,
   isLogisticsWithdrawalFallbackDate,
@@ -249,6 +250,20 @@ describe("buildSupervisorAssignedInformedBody / buildTeamHelpAssignedBody -- sin
     );
     expect(buildTeamHelpAssignedBody(["איתן", "דניאל"])).toBe(
       "איתן ודניאל עושים משיכות היום בין 13:00–14:00. נדרש לעזור להם.",
+    );
+  });
+});
+
+describe("buildSupervisorAssignedTodayBody -- same-day (noon) counterpart of buildSupervisorAssignedInformedBody", () => {
+  it("matches the approved singular wording exactly", () => {
+    expect(buildSupervisorAssignedTodayBody(["איתן"])).toBe(
+      "איתן עושה משיכות היום בין 13:00–14:00. נדרש לוודא שהוא מכיר את המשימה.",
+    );
+  });
+
+  it("uses clean plural copy for multiple assignees, never one push per assignee", () => {
+    expect(buildSupervisorAssignedTodayBody(["איתן", "דניאל"])).toBe(
+      "איתן ודניאל עושים משיכות היום בין 13:00–14:00. נדרש לוודא שהם מכירים את המשימה.",
     );
   });
 });

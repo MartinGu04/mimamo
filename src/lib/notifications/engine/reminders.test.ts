@@ -1218,6 +1218,54 @@ describe("runReminders -- same-day noon (12:00) logistics-withdrawal team coordi
     );
   });
 
+  it("assigned Monday at noon: assigned technician, relevant supervisor, AND another eligible technician ALL receive their own distinct notification (the main bug -- the supervisor is no longer notified only when unassigned)", async () => {
+    store.listPendingJobDedupeKeysByPrefix.mockResolvedValue([]);
+    const { runReminders } = await loadModule();
+    const now: LocalNow = { date: "2026-08-17", minuteOfDay: 600 }; // Monday
+    const week = getOperationalWeek(now);
+
+    await runReminders({
+      events: [
+        withdrawalAssignment("p_ethan", "2026-08-17"),
+        dayTechnicianShift("p_ethan", { date: "2026-08-17" }),
+        dayTechnicianShift("p_helper", { date: "2026-08-17" }),
+        daySupervisorShift("p_sup", { date: "2026-08-17" }),
+      ],
+      people: [person("p_ethan", { isTechnician: true }), person("p_helper", { isTechnician: true })],
+      shiftSchedule: schedule,
+      week,
+      now,
+      persist: true,
+      recipientResolution: resolutionFor([
+        ["p_ethan", "user-ethan"],
+        ["p_helper", "user-helper"],
+        ["p_sup", "user-sup"],
+      ]),
+    });
+
+    const assignedJobs = upsertedFor("logistics_withdrawal_noon_assigned");
+    expect(assignedJobs).toHaveLength(1);
+    expect(assignedJobs[0]).toMatchObject({ recipientUserId: "user-ethan", title: "📦 משיכות בעוד שעה" });
+
+    const supervisorJobs = upsertedFor("logistics_withdrawal_noon_supervisor");
+    expect(supervisorJobs).toHaveLength(1);
+    expect(supervisorJobs[0]).toMatchObject({ recipientUserId: "user-sup", title: "📦 משיכות היום" });
+    expect(supervisorJobs[0].body).toBe("p_ethan עושה משיכות היום בין 13:00–14:00. נדרש לוודא שהוא מכיר את המשימה.");
+
+    const teamJobs = upsertedFor("logistics_withdrawal_noon_team");
+    expect(teamJobs).toHaveLength(1);
+    expect(teamJobs[0]).toMatchObject({ recipientUserId: "user-helper", title: "🤝 משיכות היום" });
+
+    // No cross-category duplication: the assignee and the supervisor never
+    // receive the generic team job, and the supervisor is not double-booked.
+    expect(store.upsertPendingSystemReminderJob).not.toHaveBeenCalledWith(
+      expect.objectContaining({ category: "logistics_withdrawal_noon_team", recipientUserId: "user-ethan" }), expect.anything(),
+    );
+    expect(store.upsertPendingSystemReminderJob).not.toHaveBeenCalledWith(
+      expect.objectContaining({ category: "logistics_withdrawal_noon_team", recipientUserId: "user-sup" }), expect.anything(),
+    );
+  });
+
   it("no assignee at noon: supervisor gets the warning AND eligible technicians get the all-hands fallback", async () => {
     store.listPendingJobDedupeKeysByPrefix.mockResolvedValue([]);
     const { runReminders } = await loadModule();
@@ -1254,7 +1302,7 @@ describe("runReminders -- same-day noon (12:00) logistics-withdrawal team coordi
     });
   });
 
-  it("an assignment appearing before noon replaces the stale fallback jobs on the next tick", async () => {
+  it("an assignment appearing before noon reconciles the pending supervisor and team jobs on the next tick (supervisor is NOT cancelled)", async () => {
     const { runReminders } = await loadModule();
     const now: LocalNow = { date: "2026-08-17", minuteOfDay: 480 }; // 08:00 -- still unassigned
     const week = getOperationalWeek(now);
@@ -1290,9 +1338,19 @@ describe("runReminders -- same-day noon (12:00) logistics-withdrawal team coordi
       recipientResolution,
     });
 
-    // The supervisor's fallback warning is no longer valid -- cancelled.
-    expect(upsertedFor("logistics_withdrawal_noon_supervisor")).toHaveLength(0);
-    expect(store.cancelPendingSystemReminderJob).toHaveBeenCalledWith("logistics_withdrawal_noon_supervisor:2026-08-17:user-sup", expect.anything());
+    // The supervisor job REMAINS valid -- it is re-upserted using the SAME
+    // dedupe identity, with its copy switched from the unassigned warning to
+    // the assigned-informed copy naming Ethan. It must NOT be cancelled
+    // merely because an assignee appeared.
+    expect(store.cancelPendingSystemReminderJob).not.toHaveBeenCalledWith("logistics_withdrawal_noon_supervisor:2026-08-17:user-sup", expect.anything());
+    const supervisorJobs = upsertedFor("logistics_withdrawal_noon_supervisor");
+    expect(supervisorJobs).toHaveLength(1);
+    expect(supervisorJobs[0]).toMatchObject({
+      recipientUserId: "user-sup",
+      dedupeKey: "logistics_withdrawal_noon_supervisor:2026-08-17:user-sup",
+      title: "📦 משיכות היום",
+    });
+    expect(supervisorJobs[0].body).toContain("p_ethan");
     // p_tech is STILL a valid team recipient (still eligible) -- their job
     // is re-upserted with fresh "help Ethan" content, never cancelled.
     expect(store.cancelPendingSystemReminderJob).not.toHaveBeenCalledWith("logistics_withdrawal_noon_team:2026-08-17:user-tech", expect.anything());
@@ -1417,7 +1475,7 @@ describe("runReminders -- same-day noon (12:00) logistics-withdrawal team coordi
     expect(store.cancelPendingSystemReminderJob).toHaveBeenCalledWith("logistics_withdrawal_noon_team:2026-08-19:user-helper", expect.anything());
   });
 
-  it("multiple assignees consolidate into ONE team job per eligible technician, not one per assignee", async () => {
+  it("multiple assignees consolidate into ONE team job per eligible technician AND ONE supervisor job, not one per assignee", async () => {
     store.listPendingJobDedupeKeysByPrefix.mockResolvedValue([]);
     const { runReminders } = await loadModule();
     const now: LocalNow = { date: "2026-08-19", minuteOfDay: 600 };
@@ -1428,6 +1486,7 @@ describe("runReminders -- same-day noon (12:00) logistics-withdrawal team coordi
         withdrawalAssignment("p_a", "2026-08-19"),
         withdrawalAssignment("p_b", "2026-08-19"),
         dayTechnicianShift("p_helper", { date: "2026-08-19" }),
+        daySupervisorShift("p_sup", { date: "2026-08-19" }),
       ],
       people: [person("p_helper", { isTechnician: true })],
       shiftSchedule: schedule,
@@ -1438,12 +1497,18 @@ describe("runReminders -- same-day noon (12:00) logistics-withdrawal team coordi
         ["p_a", "user-a"],
         ["p_b", "user-b"],
         ["p_helper", "user-helper"],
+        ["p_sup", "user-sup"],
       ]),
     });
 
     const teamJobs = upsertedFor("logistics_withdrawal_noon_team");
     expect(teamJobs).toHaveLength(1);
     expect(teamJobs[0].body).toContain("עושים");
+
+    const supervisorJobs = upsertedFor("logistics_withdrawal_noon_supervisor");
+    expect(supervisorJobs).toHaveLength(1);
+    expect(supervisorJobs[0].recipientUserId).toBe("user-sup");
+    expect(supervisorJobs[0].body).toBe("p_a וp_b עושים משיכות היום בין 13:00–14:00. נדרש לוודא שהם מכירים את המשימה.");
   });
 
   it("repeated worker ticks are idempotent -- identical dedupe keys both times", async () => {
@@ -1614,6 +1679,13 @@ describe("runReminders -- logistics-withdrawal fallback only ever exists for Mon
     });
 
     expect(upsertedFor("logistics_withdrawal_noon_assigned")).toHaveLength(1);
+    // The relevant supervisor also gets notified -- an explicit assignment
+    // is a real exceptional withdrawal regardless of weekday, so the
+    // Monday-only restriction (which only governs the NO-ASSIGNEE fallback)
+    // must never suppress it.
+    expect(upsertedFor("logistics_withdrawal_noon_supervisor")).toEqual([
+      expect.objectContaining({ recipientUserId: "user-sup", title: "📦 משיכות היום" }),
+    ]);
     expect(upsertedFor("logistics_withdrawal_noon_team")).toEqual([
       expect.objectContaining({ recipientUserId: "user-helper", title: "🤝 משיכות היום" }),
     ]);
