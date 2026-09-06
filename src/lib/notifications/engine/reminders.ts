@@ -13,6 +13,7 @@ import { jerusalemLocalTimeToInstant } from "@/lib/time/jerusalemClock";
 import { resolveMotzashShabbatInstant } from "@/lib/time/motzashShabbat";
 import {
   buildSupervisorAssignedInformedBody,
+  buildSupervisorAssignedTodayBody,
   buildTeamHelpAssignedBody,
   findLogisticsWithdrawalAssignees,
   isLogisticsWithdrawalFallbackDate,
@@ -476,11 +477,10 @@ async function runTomorrowLogisticsWithdrawalSupervisorReminders(
 }
 
 // ---------------------------------------------------------------------------
-// Same-day noon (12:00) logistics-withdrawal team coordination:
-// assigned technician / supervisor fallback (only if still unassigned) /
-// eligible teammates -- all computed together since they share the SAME
-// underlying "who's assigned / who's the supervisor / who's eligible"
-// query for TODAY's date.
+// Same-day noon (12:00) logistics-withdrawal team coordination: assigned
+// technician / relevant supervisor / eligible teammates -- all computed
+// together since they share the SAME underlying "who's assigned / who's
+// the supervisor / who's eligible" query for TODAY's date.
 // ---------------------------------------------------------------------------
 
 interface NoonReminderCategorySummary {
@@ -490,12 +490,23 @@ interface NoonReminderCategorySummary {
 }
 
 /**
+ * Three audiences, computed together:
+ *   1. the assigned person (when someone is assigned) gets their existing
+ *      personal reminder.
+ *   2. the relevant supervisor gets a logistics-context notification
+ *      whenever the withdrawal genuinely participates today (an explicit
+ *      assignment OR a qualifying unassigned Monday) -- informational,
+ *      naming the assignee(s), when assigned; the anti-spam warning
+ *      otherwise. This is NOT an unassigned-only fallback.
+ *   3. other eligible technicians get either the unassigned Monday
+ *      all-hands fallback, or "help the assigned technician(s)" copy when
+ *      someone is assigned.
+ *
  * Recipient precedence, enforced by construction (spec: "A single user
  * should not receive two pushes for the same logistics purpose/time
  * merely because they hold multiple capability flags"):
  *   1. assigned-person-specific copy (the assignee(s) themselves)
- *   2. supervisor-specific fallback/warning copy (excludes anyone already
- *      an assignee)
+ *   2. supervisor-specific copy (excludes anyone already an assignee)
  *   3. generic technician-team copy (excludes anyone already an assignee
  *      OR already a supervisor recipient above)
  */
@@ -560,12 +571,13 @@ async function runLogisticsWithdrawalNoonReminders(input: RemindersInput): Promi
     assignedRule,
   );
 
-  // Supervisor fallback: ONLY when still unassigned at this tick (spec
-  // Case A never lists a noon supervisor message; that's exclusively the
-  // Case B anti-spam warning) AND today is a genuine logistics-withdrawal
-  // date (`participatesToday`). No supervisor jobs at all once assigned,
-  // or on a non-Monday with nothing assigned -- any previously-upserted
-  // warning naturally becomes stale and is cancelled by
+  // The relevant supervisor gets a noon logistics notification whenever the
+  // withdrawal genuinely participates today (`participatesToday`: an
+  // explicit assignment OR a qualifying unassigned Monday) -- NOT only when
+  // unassigned. Copy branches on `isAssigned`: informational (naming the
+  // assignee(s)) when someone is assigned, the anti-spam warning otherwise.
+  // No supervisor job at all on a non-Monday with nothing assigned -- any
+  // previously-upserted job naturally becomes stale and is cancelled by
   // `applyReminderJobs`'s own prefix sweep.
   const supervisorCandidates = participatesToday
     ? resolveRelevantSupervisors(input.events, today, input.shiftSchedule).filter(
@@ -573,12 +585,15 @@ async function runLogisticsWithdrawalNoonReminders(input: RemindersInput): Promi
       )
     : [];
   const supervisorJobs: NewNotificationJob[] = [];
-  if (!isAssigned && supervisorRule?.enabled) {
+  if (participatesToday && supervisorRule?.enabled) {
     const scheduledFor = toIso(today, supervisorRule.localHour, supervisorRule.localMinute);
-    const { title, body } = applySystemRuleCopy("logistics_withdrawal_noon_supervisor", supervisorRule, {
-      title: "⚠️ לא הוגדר טכנאי למשיכות",
-      body: "לא הוגדר טכנאי למשיכות היום בין 13:00–14:00. נדרש לוודא שכל הטכנאים הזמינים יוצאים למשיכות.",
-    });
+    const builtInSupervisorCopy = isAssigned
+      ? { title: "📦 משיכות היום", body: buildSupervisorAssignedTodayBody(assignees.map((a) => a.personName)) }
+      : {
+          title: "⚠️ לא הוגדר טכנאי למשיכות",
+          body: "לא הוגדר טכנאי למשיכות היום בין 13:00–14:00. נדרש לוודא שכל הטכנאים הזמינים יוצאים למשיכות.",
+        };
+    const { title, body } = applySystemRuleCopy("logistics_withdrawal_noon_supervisor", supervisorRule, builtInSupervisorCopy);
     for (const supervisor of supervisorCandidates) {
       if (!isSystemRulePersonAllowed(supervisorRule, supervisor.personId, input.people)) continue;
       const recipient = input.recipientResolution.resolved.get(supervisor.personId);
@@ -605,7 +620,7 @@ async function runLogisticsWithdrawalNoonReminders(input: RemindersInput): Promi
   );
 
   // Eligible teammates, excluding anyone already reached above (precedence).
-  // Same `participatesToday` gate as the supervisor fallback: on a
+  // Same `participatesToday` gate as the supervisor notification: on a
   // non-Monday with nothing assigned, there is no team notification either
   // (spec: "create zero logistics fallback jobs").
   const supervisorRecipientPersonIds = new Set(supervisorCandidates.map((supervisor) => supervisor.personId));

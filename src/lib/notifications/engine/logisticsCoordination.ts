@@ -178,12 +178,29 @@ function pluralize(count: number, singular: string, plural: string): string {
   return count === 1 ? singular : plural;
 }
 
-/** "מחר איתן עושה משיכות בין 13:00–14:00. נדרש לוודא שהוא מכיר את המשימה." -- pluralized for 2+ assignees. */
-export function buildSupervisorAssignedInformedBody(assigneeNames: readonly string[]): string {
+/**
+ * Shared assignee-informed sentence for the relevant supervisor, used both
+ * the evening before ("מחר ...") and same-day at noon ("... היום ...") --
+ * same deterministic name-joining and singular/plural rules either way,
+ * the two callers below only ever differ in word order/timing.
+ */
+function buildSupervisorAssignedBody(assigneeNames: readonly string[], timing: "tomorrow" | "today"): string {
   const names = joinNamesWithVav(assigneeNames);
   const verb = pluralize(assigneeNames.length, "עושה", "עושים");
   const knowsClause = pluralize(assigneeNames.length, "שהוא מכיר", "שהם מכירים");
-  return `מחר ${names} ${verb} משיכות בין 13:00–14:00. נדרש לוודא ${knowsClause} את המשימה.`;
+  const subject = timing === "tomorrow" ? `מחר ${names}` : names;
+  const timeWord = timing === "tomorrow" ? "" : " היום";
+  return `${subject} ${verb} משיכות${timeWord} בין 13:00–14:00. נדרש לוודא ${knowsClause} את המשימה.`;
+}
+
+/** "מחר איתן עושה משיכות בין 13:00–14:00. נדרש לוודא שהוא מכיר את המשימה." -- pluralized for 2+ assignees. */
+export function buildSupervisorAssignedInformedBody(assigneeNames: readonly string[]): string {
+  return buildSupervisorAssignedBody(assigneeNames, "tomorrow");
+}
+
+/** "איתן עושה משיכות היום בין 13:00–14:00. נדרש לוודא שהוא מכיר את המשימה." -- same-day (noon) counterpart of `buildSupervisorAssignedInformedBody`, pluralized for 2+ assignees. */
+export function buildSupervisorAssignedTodayBody(assigneeNames: readonly string[]): string {
+  return buildSupervisorAssignedBody(assigneeNames, "today");
 }
 
 /** "איתן עושה משיכות היום בין 13:00–14:00. נדרש לעזור לו." -- pluralized for 2+ assignees. */
