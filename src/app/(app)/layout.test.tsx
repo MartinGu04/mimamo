@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import { formatHebrewWeekdayAndDate } from "@/lib/presentation/hebrewDate";
+import { APP_NAME } from "@/lib/config/productName";
 import type { PersonalProfile } from "@/lib/readModels/types";
 
 function renderWithTheme(ui: ReactElement) {
@@ -120,7 +121,7 @@ describe("(app) layout — server-side auth gating", () => {
     renderWithTheme(element);
 
     expect(screen.queryByText("SECRET_DASHBOARD_CONTENT")).toBeNull();
-    expect(screen.getByText("אין לך הרשאה ל-מי-מה-מו")).toBeInTheDocument();
+    expect(screen.getByText(`אין לך הרשאה ל-${APP_NAME}`)).toBeInTheDocument();
   });
 
   it("does not reveal personnel names/emails/workbook details on the unmapped-denial screen", async () => {
@@ -168,7 +169,7 @@ describe("(app) layout — server-side auth gating", () => {
     renderWithTheme(element);
 
     expect(screen.queryByText("SECRET_DASHBOARD_CONTENT")).toBeNull();
-    expect(screen.getByText("אין לך הרשאה ל-מי-מה-מו")).toBeInTheDocument();
+    expect(screen.getByText(`אין לך הרשאה ל-${APP_NAME}`)).toBeInTheDocument();
   });
 
   it("an ambiguous-identity user is denied the same way, never redirected, never reaching AppShell", async () => {
@@ -179,7 +180,7 @@ describe("(app) layout — server-side auth gating", () => {
 
     expect(redirect).not.toHaveBeenCalled();
     expect(screen.queryByText("SECRET_DASHBOARD_CONTENT")).toBeNull();
-    expect(screen.getByText("אין לך הרשאה ל-מי-מה-מו")).toBeInTheDocument();
+    expect(screen.getByText(`אין לך הרשאה ל-${APP_NAME}`)).toBeInTheDocument();
   });
 
   it("the denial screen text is identical for unmapped, missing_email, and ambiguous_identity", async () => {

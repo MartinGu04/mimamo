@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { APP_NAME } from "@/lib/config/productName";
 import { renderIcsFeed, type IcsCalendarItem } from "./icsRender";
 
 const GENERATED_AT = new Date("2026-08-18T10:00:00.000Z");
@@ -28,7 +29,7 @@ describe("renderIcsFeed", () => {
     const text = renderIcsFeed({ personName: "דני בדיקה", items: [], generatedAt: GENERATED_AT });
     expect(text).toContain("VERSION:2.0\r\n");
     expect(text).toContain("METHOD:PUBLISH\r\n");
-    expect(text).toContain("X-WR-CALNAME:מי-מה-מו — דני בדיקה\r\n");
+    expect(text).toContain(`X-WR-CALNAME:${APP_NAME} — דני בדיקה\r\n`);
   });
 
   it("renders zero VEVENTs as a valid, empty calendar", () => {

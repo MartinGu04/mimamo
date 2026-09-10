@@ -1,8 +1,8 @@
-# מי-מה-מו (mi-ma-mo)
+# המחלבה (hamachlava)
 
-מי-מה-מו is a Hebrew RTL, read-only scheduling companion built on top of an
+המחלבה is a Hebrew RTL, read-only scheduling companion built on top of an
 existing Google Sheets scheduling workbook. Google Sheets remains the
-single source of truth; מי-מה-מו never writes back to it.
+single source of truth; המחלבה never writes back to it.
 
 This repository currently contains the **project foundation** only:
 Next.js App Router shell, Hebrew/RTL layout, and placeholder architecture

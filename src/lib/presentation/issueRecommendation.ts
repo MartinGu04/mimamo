@@ -5,12 +5,12 @@ import { formatMissingIntervals } from "./scheduleTime";
 
 /**
  * PR #37 -- Hebrew copy for the manager's "פעולה מומלצת" candidate search.
- * Mi-Ma-Mo is narrowing the search, never making the staffing decision: no
+ * Hamachlava is narrowing the search, never making the staffing decision: no
  * sentence here ever claims a person IS available (`זמין`/`פנוי`) or is
  * the best/optimal choice -- only that they may be "worth checking with"
  * against what the product can actually prove, with the limitation always
  * stated honestly (a private constraint communicated outside the product,
- * e.g. WhatsApp, is simply unknown to Mi-Ma-Mo).
+ * e.g. WhatsApp, is simply unknown to Hamachlava).
  */
 
 /**

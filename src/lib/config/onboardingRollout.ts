@@ -43,7 +43,7 @@
  * it, still pre-rollout, as "new"/onboarding-eligible. Set with a generous
  * multi-day buffer past the authoring date instead, comfortably past any
  * realistic merge/deploy time for this PR -- every account that already
- * existed before מי-מה-מו ever had a setup card must never suddenly see one
+ * existed before המחלבה ever had a setup card must never suddenly see one
  * just because the feature shipped. This intentionally favors
  * grandfathering: the one-sided cost is that genuinely-new accounts
  * created during that short post-release buffer may not see the card

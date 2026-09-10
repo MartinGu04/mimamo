@@ -1,35 +1,42 @@
 /**
- * Single source of truth for the real brand imagery supplied for PR #23
- * (`public/brand/`), so components never hardcode an asset path. Every
- * entry is the SUPPLIED artwork, unaltered except where noted -- never a
- * recreated/redrawn substitute.
+ * Single source of truth for the real brand imagery supplied for the
+ * המחלבה rebrand (`public/brand/`), so components never hardcode an asset
+ * path. Every entry is the SUPPLIED artwork, unaltered except where noted
+ * (icon resizes for PWA/favicon use -- see `public/icons/` and
+ * `src/app/icon.png`/`apple-icon.png`) -- never a recreated/redrawn
+ * substitute.
  */
 
 /**
- * Standalone מי-מה-מו symbol, background keyed to transparent (from the
- * supplied opaque icon) for inline placement next to text on any surface
- * color -- compact identity (Sidebar, mobile header) and the source for
- * the site's favicon/app icon (`src/app/icon.png`).
+ * Standalone המחלבה symbol -- the exhausted cow with the satellite dish
+ * and satellite, WITHOUT any embedded lettering (the circular lockup with
+ * baked-in text is `BRAND_LOGO_BADGE` below; its lettering is unreadable
+ * at this element's icon-scale usage). Used for inline placement next to
+ * live text on any surface color -- compact identity (Sidebar, mobile
+ * header) -- and is the source for the site's favicon/app icon
+ * (`src/app/icon.png`), resized only, never redrawn.
  */
-export const BRAND_SYMBOL = { src: "/brand/symbol.png", width: 512, height: 512 } as const;
+export const BRAND_SYMBOL = { src: "/brand/icon.png", width: 1254, height: 1254 } as const;
 
 /**
- * The wordmark lockup (מי-מה-מו text with the symbol's ears/horns
- * integrated into the letterforms), cropped from the supplied full logo
- * to exclude its baked-in tagline text and the duplicate icon badge --
- * the tagline already exists as its own live text (`LOGIN_HERO_HEADLINE`)
- * elsewhere on the login page, so including it a second time inside the
- * image would duplicate the same sentence twice on one screen. The
- * selected pixels are the original artwork, unaltered.
+ * The wide banner lockup (navy/blue/purple canvas, symbol + "המחלבה" +
+ * slogan, no circular frame). Not currently wired into any UI -- this app
+ * has no existing large marketing/splash surface for it to sit in without
+ * redesigning a screen the rebrand wasn't asked to touch (the login page
+ * deliberately keeps only the small `LoginHeaderLogo` mark, by prior
+ * design). Kept as the pristine source asset for any future large-format
+ * placement.
  */
-export const BRAND_LOGO_WORDMARK = { src: "/brand/logo-wordmark.png", width: 996, height: 329 } as const;
+export const BRAND_BANNER = { src: "/brand/banner.png", width: 2172, height: 724 } as const;
 
 /**
- * The complete supplied lockup (wordmark + tagline + icon badge),
- * unmodified. Not currently wired into any UI -- kept as the pristine
- * source asset for any future full-lockup placement.
+ * The circular badge lockup (symbol + "המחלבה" + slogan, badge-framed).
+ * Intended for larger placements where the embedded lettering stays
+ * readable -- NOT for navigation-icon scale (see `BRAND_SYMBOL`). Not
+ * currently wired into any UI, for the same reason as `BRAND_BANNER` above
+ * -- kept as the pristine source asset for any future placement.
  */
-export const BRAND_LOGO_FULL = { src: "/brand/logo-full.webp", width: 1536, height: 1024 } as const;
+export const BRAND_LOGO_BADGE = { src: "/brand/logo-circle.png", width: 1254, height: 1254 } as const;
 
 /** Shared shape for a supplied organizational logo asset -- `src`/`width`/`height` for `next/image`, `alt` for the real Hebrew name (never decorative/empty, unlike `BRAND_SYMBOL`, since these mark a specific real organization, not a repeated product name). */
 export interface OrgLogo {

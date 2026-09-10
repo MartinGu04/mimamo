@@ -175,7 +175,7 @@ recognizes no such assignment. There is currently **no real upstream data
 source** (sheet or schedule) that represents a future shooting-range
 assignment for a person.
 
-Given that, planned ranges are modeled as their own mi-ma-mo-owned concept:
+Given that, planned ranges are modeled as their own hamachlava-owned concept:
 a manager schedules people for a range date directly through this feature
 (`createPlannedShootingRangeAction`), which writes rows into
 `shooting_range_planned_occurrences`. This table -- not any Google Sheet

@@ -20,7 +20,7 @@ export function LoginHeaderLogo() {
         width={BRAND_SYMBOL.width}
         height={BRAND_SYMBOL.height}
         priority
-        className="h-7 w-7 shrink-0 sm:h-8 sm:w-8"
+        className="h-7 w-7 shrink-0 rounded-full sm:h-8 sm:w-8"
       />
       <span className="text-lg font-bold tracking-tight text-white sm:text-xl">{APP_NAME}</span>
     </div>

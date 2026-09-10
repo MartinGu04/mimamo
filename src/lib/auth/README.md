@@ -30,7 +30,7 @@ connects "who signed in" to "which כ"א Person that is."
   `resolveIdentityAgainstPeople` too, so there is exactly one place this
   mapping logic lives.
 - `safeRedirect.ts` — `sanitizeNextPath`, validating the OAuth callback's
-  `next` redirect target so it can only ever point back into מי-מה-מו.
+  `next` redirect target so it can only ever point back into המחלבה.
 - `actions.ts` — `signOutAction`, a Server Action that signs out
   server-side and redirects to `/login`.
 

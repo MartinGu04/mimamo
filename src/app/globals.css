@@ -81,7 +81,7 @@
      vacation, after, referral, evacuation, guard, kitchen) are the fixed
      8-slot categorical hue set/order from this repo's dataviz color
      methodology (blue/orange/aqua/yellow/magenta/green/violet/red),
-     validated against BOTH of mi-ma-mo's real calendar surfaces (light
+     validated against BOTH of hamachlava's real calendar surfaces (light
      `--surface-1` #ffffff, dark `--surface-1` #161d24) for CVD separation
      and contrast -- reused as-is rather than hand-picked. A follow-up
      pass added 3 more (shift-morning, medical-rest, reserve) for the

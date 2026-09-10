@@ -6,7 +6,7 @@ import { APP_NAME } from "@/lib/config/productName";
  * Shown when an authenticated, mapped person hits `/manager` without
  * `isManager === true`. Deliberately not `AccessDeniedScreen` (that
  * screen's sign-out affordance is for someone who shouldn't be in
- * מי-מה-מו at all) -- this person IS a legitimate מי-מה-מו user, just not
+ * המחלבה at all) -- this person IS a legitimate המחלבה user, just not
  * authorized for this specific manager-only screen, so they stay signed
  * in.
  */

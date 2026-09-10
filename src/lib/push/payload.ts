@@ -1,4 +1,5 @@
 import "server-only";
+import { APP_NAME } from "@/lib/config/productName";
 import { resolveSafeNotificationPath } from "./notificationPath";
 
 /**
@@ -59,7 +60,7 @@ export function serializeNotificationPayload(payload: NotificationPayload): stri
  * operational scheduling data.
  */
 export const TEST_NOTIFICATION_PAYLOAD: BuildNotificationPayloadInput = {
-  title: "מי-מה-מו 🐮",
+  title: `${APP_NAME} 🐮`,
   body: "ההתראות עובדות כמו שצריך 🎉",
   path: "/",
   tag: "test-notification",

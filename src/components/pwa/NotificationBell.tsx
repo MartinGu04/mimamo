@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Bell, BellOff, BellRing, ChevronDown, ChevronUp, Download, Loader2, RefreshCw, Settings } from "lucide-react";
 import type { NotificationInboxItem } from "@/lib/readModels/notificationInboxTypes";
 import { formatRecentChangeRelativeTime } from "@/lib/presentation/relativeChangeTime";
+import { APP_NAME } from "@/lib/config/productName";
 import { usePushSubscription } from "./usePushSubscription";
 import { useNotificationInbox } from "./useNotificationInbox";
 import { type InstallPromptOutcome, usePwaInstall } from "./PwaInstallProvider";
@@ -93,7 +94,7 @@ function formatBadgeCount(count: number): string {
 
 /**
  * The bell's primary surface (notification-center PR): the user's real
- * Mi-Ma-Mo inbox (`useNotificationInbox`, reusing the existing
+ * Hamachlava inbox (`useNotificationInbox`, reusing the existing
  * `notification_jobs` outbox -- never a second notification-rule engine),
  * newest first. Push controls (`usePushSubscription`, unchanged) moved
  * BEHIND the gear icon in the header -- push is one delivery channel
@@ -522,7 +523,7 @@ function NotEnabledPanel({
   return (
     <div>
       <p className="text-sm font-semibold text-foreground">סטטוס: כבוי</p>
-      <p className="mt-1 text-xs text-muted">קבל תזכורות ועדכונים חשובים ממי-מה-מו</p>
+      <p className="mt-1 text-xs text-muted">קבל תזכורות ועדכונים חשובים מ{APP_NAME}</p>
       <button
         type="button"
         onClick={onEnable}
@@ -620,7 +621,7 @@ function BellOnboardingCardView({
     return (
       <OnboardingCardShell>
         <p className="text-sm font-semibold text-foreground">🔔 הפעילו התראות</p>
-        <p className="mt-1 text-xs text-muted">קבלו תזכורות ועדכונים חשובים גם כשמי-מה-מו סגור.</p>
+        <p className="mt-1 text-xs text-muted">קבלו תזכורות ועדכונים חשובים גם כש{APP_NAME} סגורה.</p>
         <button
           type="button"
           onClick={onEnablePush}
@@ -658,7 +659,7 @@ function BellOnboardingCardView({
     return (
       <OnboardingCardShell>
         <p className="text-sm font-semibold text-foreground">ההתקנה הושלמה</p>
-        <p className="mt-1 text-xs text-muted">עכשיו פתח/י את מי-מה-מו מהסמל במסך הבית כדי להפעיל התראות.</p>
+        <p className="mt-1 text-xs text-muted">עכשיו פתח/י את {APP_NAME} מהסמל במסך הבית כדי להפעיל התראות.</p>
       </OnboardingCardShell>
     );
   }
@@ -680,7 +681,7 @@ function InstallOnboardingCard({
     // (G) No native prompt, not iOS -- a truthful low-key note, never a
     // dead "Install" button. Never dismissible: there is no CTA here to
     // nag with in the first place.
-    return <p className="mb-3 px-1 text-xs text-muted">אפשר להוסיף את מי-מה-מו למסך הבית דרך תפריט הדפדפן.</p>;
+    return <p className="mb-3 px-1 text-xs text-muted">אפשר להוסיף את {APP_NAME} למסך הבית דרך תפריט הדפדפן.</p>;
   }
 
   return (
@@ -707,7 +708,7 @@ function InstallGuidanceBody({
 }) {
   if (guidance === "ios") return <IosInstallInstructions />;
   if (guidance === "native") return <NativeInstallPitch onPromptInstall={onPromptInstall} />;
-  return <p className="text-xs text-muted">אפשר להוסיף את מי-מה-מו למסך הבית דרך תפריט הדפדפן.</p>;
+  return <p className="text-xs text-muted">אפשר להוסיף את {APP_NAME} למסך הבית דרך תפריט הדפדפן.</p>;
 }
 
 /** (D) Non-iOS browser exposing a real `beforeinstallprompt` -- the ONLY place `promptInstall()` is ever invoked from, itself only ever reachable via this button's own click. */
@@ -725,7 +726,7 @@ function NativeInstallPitch({ onPromptInstall }: { onPromptInstall: () => Promis
 
   return (
     <div>
-      <p className="text-sm font-semibold text-foreground">📲 התקינו את מי-מה-מו</p>
+      <p className="text-sm font-semibold text-foreground">📲 התקינו את {APP_NAME}</p>
       <p className="mt-1 text-xs text-muted">הוסיפו אותה למסך הבית לחוויית אפליקציה מלאה ולהתראות אמינות.</p>
       <button
         type="button"
@@ -751,7 +752,7 @@ function IosInstallInstructions() {
 
   return (
     <div>
-      <p className="text-sm font-semibold text-foreground">הוסיפו את מי-מה-מו למסך הבית</p>
+      <p className="text-sm font-semibold text-foreground">הוסיפו את {APP_NAME} למסך הבית</p>
       <p className="mt-1 text-xs text-muted">כדי להשתמש באפליקציה במסך מלא ולקבל התראות בצורה אמינה, הוסיפו אותה למסך הבית.</p>
       <button
         type="button"
@@ -771,7 +772,7 @@ function IosInstallInstructions() {
         <ol id={stepsId} className="mt-2 list-decimal space-y-1 ps-4 text-xs text-muted">
           <li>לחצו על כפתור השיתוף</li>
           <li>בחרו „הוסף למסך הבית”</li>
-          <li>פתחו את מי-מה-מו מהסמל החדש</li>
+          <li>פתחו את {APP_NAME} מהסמל החדש</li>
         </ol>
       ) : null}
     </div>
@@ -799,7 +800,7 @@ function InstallSettingsSection({
         {guidance === "completed" ? (
           <div>
             <p className="text-sm font-semibold text-foreground">ההתקנה הושלמה</p>
-            <p className="mt-1 text-xs text-muted">עכשיו פתח/י את מי-מה-מו מהסמל במסך הבית כדי להפעיל התראות.</p>
+            <p className="mt-1 text-xs text-muted">עכשיו פתח/י את {APP_NAME} מהסמל במסך הבית כדי להפעיל התראות.</p>
           </div>
         ) : (
           <InstallGuidanceBody guidance={guidance} onPromptInstall={onPromptInstall} />

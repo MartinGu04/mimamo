@@ -18,7 +18,7 @@ Related pieces living elsewhere, by existing layering convention:
 - `app/manifest.ts` — the Web App Manifest (Next's file-convention route),
   using `lib/config/productName.ts` for name/description and
   `public/icons/` for the installable icon set (resized from the real
-  supplied `public/brand/symbol.png` artwork, never redrawn).
+  supplied `public/brand/icon.png` artwork, never redrawn).
 - `public/sw.js` — the actual Service Worker. A plain static file (no
   build step, no bundler) so it can never accidentally inline a secret —
   it must not and does not receive VAPID private keys, Supabase service

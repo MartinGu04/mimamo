@@ -79,7 +79,7 @@ describe("buildFairnessComparisonGroups", () => {
   });
 
   it('אחמ"ש + ר"צ: a person whose personnelType/title metadata is anything else still lands in the supervisor group purely from isSupervisor -- role-title text is never consulted', () => {
-    // מי-מה-מו does not store a "ר״צ" title field on Person today -- only
+    // המחלבה does not store a "ר״צ" title field on Person today -- only
     // the personnelType service category (קבע/חובה/מילואים) and the
     // isSupervisor/isTechnician capability flags. This test documents the
     // domain rule that will keep such a person correctly grouped once

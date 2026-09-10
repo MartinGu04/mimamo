@@ -15,7 +15,7 @@ export const WORKBOOK_SNAPSHOT_CACHE_TAG = "workbook-snapshot";
  * How long a fetched snapshot stays reusable across requests, in seconds.
  *
  * Deliberately "tens of seconds, not many minutes" -- this app is a live
- * operational schedule (Google Sheets is the source of truth; מי-מה-מו is
+ * operational schedule (Google Sheets is the source of truth; המחלבה is
  * read-only), so staleness must stay short. 30s is chosen specifically to:
  *  - comfortably absorb a normal burst of in-app navigation (tapping
  *    through several routes over a few seconds) with ZERO extra Google

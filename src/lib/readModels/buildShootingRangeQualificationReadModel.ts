@@ -76,7 +76,7 @@ export interface BuildShootingRangeQualificationReadModelInput {
  * `buildManagerOverviewReadModel.ts`. Implements the feature's explicit
  * source precedence (spec):
  *
- *   1. the latest APPROVED mi-ma-mo completion (by `performedOn`) --
+ *   1. the latest APPROVED hamachlava completion (by `performedOn`) --
  *      unconditionally wins, regardless of how it compares to the sheet
  *      baseline's own date;
  *   2. otherwise, the Google Sheet initial baseline;

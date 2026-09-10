@@ -3,7 +3,7 @@
 Personal ICS calendar subscription feed -- each user can enable a private,
 token-gated feed of their own shifts/duties/absences that Google/Apple
 Calendar (or any ICS-subscription-capable app) polls on its own schedule.
-One-way sync only: מי-מה-מו never reads or writes anything back to a
+One-way sync only: המחלבה never reads or writes anything back to a
 user's external calendar. Reuses the existing domain/parser layers for
 every scheduling fact -- this directory contains no parallel schedule data
 model, only the calendar-feed-specific plumbing around it.

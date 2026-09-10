@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { APP_NAME } from "@/lib/config/productName";
 import { TEST_NOTIFICATION_PAYLOAD, buildNotificationPayload, serializeNotificationPayload } from "./payload";
 
 describe("buildNotificationPayload", () => {
@@ -41,7 +42,7 @@ describe("serializeNotificationPayload", () => {
 describe("TEST_NOTIFICATION_PAYLOAD", () => {
   it("matches the exact specified copy and opens the root path", () => {
     expect(TEST_NOTIFICATION_PAYLOAD).toEqual({
-      title: "מי-מה-מו 🐮",
+      title: `${APP_NAME} 🐮`,
       body: "ההתראות עובדות כמו שצריך 🎉",
       path: "/",
       tag: "test-notification",

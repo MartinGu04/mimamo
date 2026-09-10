@@ -13,7 +13,7 @@ import type { Person } from "./types";
  * with?" candidate search for a coverage problem, built ENTIRELY on
  * already-existing domain facts. This never invents availability: a
  * person is only ever a candidate when every check below can be proven
- * from already-parsed data. Mi-Ma-Mo does not know about a constraint
+ * from already-parsed data. Hamachlava does not know about a constraint
  * communicated outside the product (e.g. a WhatsApp message) -- that
  * limitation is real and is reflected honestly by the presentation layer
  * (`lib/presentation/issueRecommendation.ts`), never papered over here.
@@ -94,7 +94,7 @@ function datesTouchedByMissingIntervals(issueDate: string, missingIntervals: rea
  * exactly like every other blocking-absence check in this domain). Checked
  * against EVERY calendar date the missing interval actually touches
  * (`datesTouchedByMissingIntervals`), not merely the issue's own date --
- * Mi-Ma-Mo already knows about a blocking absence the day after an
+ * Hamachlava already knows about a blocking absence the day after an
  * overnight shift starts, and must not suggest that person just because
  * the absence Event's own `date` differs from the issue's.
  */
@@ -126,7 +126,7 @@ function hasBlockingAbsence(candidateEvents: readonly Event[], touchedDates: Rea
  * `"unspecified"` (the whole day) and `"morning"` have no provable
  * canonical window, so they keep the original conservative rule: any
  * occurrence on a calendar date the missing interval touches
- * (`datesTouchedByMissingIntervals`) excludes the candidate -- Mi-Ma-Mo
+ * (`datesTouchedByMissingIntervals`) excludes the candidate -- Hamachlava
  * would rather omit a potentially-valid candidate than suggest someone
  * while already holding an unresolved constraint signal against them;
  * uncertainty must never be read as a positive availability claim.
@@ -332,7 +332,7 @@ function hasRecentConfirmedSameRoleShift(
  *   `deriveReserveRoleParticipation` -- see that module for exactly which
  *   period/rows), or (B) `hasRecentConfirmedSameRoleShift`.
  * - anything else (`classifyPersonnelType` -> "unclassified": missing or
- *   unrecognized `personnelType`) -> never. Mi-Ma-Mo does not guess a
+ *   unrecognized `personnelType`) -> never. Hamachlava does not guess a
  *   person's service category from silence.
  */
 function participatesInRoleRotation(

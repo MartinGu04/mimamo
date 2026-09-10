@@ -2,10 +2,10 @@
  * "עודכן עכשיו" / "עודכן לפני 4 דקות" / "עודכן לפני שעה" / "עודכן לפני
  * יומיים" -- a restrained, deterministic relative-age label for a read
  * model's `fetchedAt` (PR #17, day buckets added in PR #18).
- * `fetchedAt` means WHEN מי-מה-מו FETCHED THE SNAPSHOT from Google Sheets --
+ * `fetchedAt` means WHEN המחלבה FETCHED THE SNAPSHOT from Google Sheets --
  * never when someone last edited the spreadsheet -- so this label never
  * claims otherwise, and never calls older data "wrong" or "out of sync"
- * (Google Sheets remains the source of truth; מי-מה-מו only shows the age of
+ * (Google Sheets remains the source of truth; המחלבה only shows the age of
  * its own read-only snapshot of it).
  *
  * Pure: takes `now` explicitly rather than reading `Date.now()`/`new

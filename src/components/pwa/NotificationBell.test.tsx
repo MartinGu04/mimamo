@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { APP_REVALIDATE_EVENT } from "@/components/layout/AppRevalidator";
+import { APP_NAME } from "@/lib/config/productName";
 import { readPushPreference } from "@/lib/notifications/pushPreference";
 import { INSTALL_PROMPT_COOLDOWN_MS } from "@/lib/pwa/installPromptPreference";
 import { NotificationBell } from "./NotificationBell";
@@ -721,7 +722,7 @@ describe("NotificationBell — onboarding card (D): non-iOS browser with a nativ
     fireEvent.click(screen.getByRole("button", { name: /התראות/ }));
     await act(async () => window.dispatchEvent(new FakeBeforeInstallPromptEvent()));
 
-    await waitFor(() => expect(screen.getByText("📲 התקינו את מי-מה-מו")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(`📲 התקינו את ${APP_NAME}`)).toBeInTheDocument());
     expect(screen.getByRole("button", { name: /התקנה/ })).toBeInTheDocument();
     expect(screen.queryByText(/דרך תפריט הדפדפן/)).toBeNull();
   });
@@ -746,11 +747,11 @@ describe("NotificationBell — onboarding card (D): non-iOS browser with a nativ
     await renderBellWithInstall();
     fireEvent.click(screen.getByRole("button", { name: /התראות/ }));
     await act(async () => window.dispatchEvent(new FakeBeforeInstallPromptEvent()));
-    await waitFor(() => expect(screen.getByText("📲 התקינו את מי-מה-מו")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(`📲 התקינו את ${APP_NAME}`)).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: "לא עכשיו" }));
 
-    expect(screen.queryByText("📲 התקינו את מי-מה-מו")).toBeNull();
+    expect(screen.queryByText(`📲 התקינו את ${APP_NAME}`)).toBeNull();
   });
 });
 
@@ -760,7 +761,7 @@ describe("NotificationBell — onboarding card (G): non-iOS, no deferred prompt"
     removeBrowserPushEnvironment();
     await openInstallBellPanel();
 
-    await waitFor(() => expect(screen.getByText("אפשר להוסיף את מי-מה-מו למסך הבית דרך תפריט הדפדפן.")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(`אפשר להוסיף את ${APP_NAME} למסך הבית דרך תפריט הדפדפן.`)).toBeInTheDocument());
     expect(screen.queryByRole("button", { name: /התקנה/ })).toBeNull();
     // The inbox itself is still perfectly usable alongside the fallback note.
     await waitFor(() => expect(screen.getByText("אין התראות חדשות")).toBeInTheDocument());
@@ -774,7 +775,7 @@ describe("NotificationBell — onboarding card (E): iPhone/iPad, not standalone"
     removeBrowserPushEnvironment();
     await openInstallBellPanel();
 
-    await waitFor(() => expect(screen.getByText("הוסיפו את מי-מה-מו למסך הבית")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(`הוסיפו את ${APP_NAME} למסך הבית`)).toBeInTheDocument());
     const trigger = screen.getByRole("button", { name: "איך מוסיפים למסך הבית?" });
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("לחצו על כפתור השיתוף")).toBeNull();
@@ -793,7 +794,7 @@ describe("NotificationBell — onboarding card (E): iPhone/iPad, not standalone"
     removeBrowserPushEnvironment();
     await openInstallBellPanel();
 
-    await waitFor(() => expect(screen.getByText("הוסיפו את מי-מה-מו למסך הבית")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(`הוסיפו את ${APP_NAME} למסך הבית`)).toBeInTheDocument());
     expect(screen.queryByRole("button", { name: /^התקנה$/ })).toBeNull();
   });
 });
@@ -806,7 +807,7 @@ describe("NotificationBell — onboarding card (E): iPhone/iPad, standalone", ()
     await openInstallBellPanel();
 
     await waitFor(() => expect(screen.getByText("אין התראות חדשות")).toBeInTheDocument());
-    expect(screen.queryByText("הוסיפו את מי-מה-מו למסך הבית")).toBeNull();
+    expect(screen.queryByText(`הוסיפו את ${APP_NAME} למסך הבית`)).toBeNull();
   });
 });
 
@@ -819,8 +820,8 @@ describe("NotificationBell — onboarding card (F): install completed this sessi
     fireEvent.click(screen.getByRole("button", { name: /התראות/ }));
 
     await waitFor(() => expect(screen.getByText("ההתקנה הושלמה")).toBeInTheDocument());
-    expect(screen.getByText(/פתח\/י את מי-מה-מו מהסמל במסך הבית/)).toBeInTheDocument();
-    expect(screen.queryByText("📲 התקינו את מי-מה-מו")).toBeNull();
+    expect(screen.getByText(new RegExp(`פתח/י את ${APP_NAME} מהסמל במסך הבית`))).toBeInTheDocument();
+    expect(screen.queryByText(`📲 התקינו את ${APP_NAME}`)).toBeNull();
   });
 });
 
@@ -892,7 +893,7 @@ describe("NotificationBell — dismissal cooldown", () => {
     await renderBellWithInstall();
     fireEvent.click(screen.getByRole("button", { name: /התראות/ }));
     await act(async () => window.dispatchEvent(new FakeBeforeInstallPromptEvent()));
-    await waitFor(() => expect(screen.getByText("📲 התקינו את מי-מה-מו")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(`📲 התקינו את ${APP_NAME}`)).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "לא עכשיו" }));
     cleanup();
 
@@ -903,7 +904,7 @@ describe("NotificationBell — dismissal cooldown", () => {
     await act(async () => window.dispatchEvent(new FakeBeforeInstallPromptEvent()));
 
     await waitFor(() => expect(screen.getByText("אין התראות חדשות")).toBeInTheDocument());
-    expect(screen.queryByText("📲 התקינו את מי-מה-מו")).toBeNull();
+    expect(screen.queryByText(`📲 התקינו את ${APP_NAME}`)).toBeNull();
   });
 
   it("is scoped by userId -- a different account on the same device still gets the automatic card", async () => {
@@ -912,7 +913,7 @@ describe("NotificationBell — dismissal cooldown", () => {
     await renderBellWithInstall(TEST_USER_ID);
     fireEvent.click(screen.getByRole("button", { name: /התראות/ }));
     await act(async () => window.dispatchEvent(new FakeBeforeInstallPromptEvent()));
-    await waitFor(() => expect(screen.getByText("📲 התקינו את מי-מה-מו")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(`📲 התקינו את ${APP_NAME}`)).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "לא עכשיו" }));
     cleanup();
 
@@ -920,7 +921,7 @@ describe("NotificationBell — dismissal cooldown", () => {
     fireEvent.click(screen.getByRole("button", { name: /התראות/ }));
     await act(async () => window.dispatchEvent(new FakeBeforeInstallPromptEvent()));
 
-    await waitFor(() => expect(screen.getByText("📲 התקינו את מי-מה-מו")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(`📲 התקינו את ${APP_NAME}`)).toBeInTheDocument());
   });
 
   it("expires after the cooldown window, letting the card appear again", async () => {
@@ -933,7 +934,7 @@ describe("NotificationBell — dismissal cooldown", () => {
     fireEvent.click(screen.getByRole("button", { name: /התראות/ }));
     await act(async () => window.dispatchEvent(new FakeBeforeInstallPromptEvent()));
 
-    await waitFor(() => expect(screen.getByText("📲 התקינו את מי-מה-מו")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(`📲 התקינו את ${APP_NAME}`)).toBeInTheDocument());
   });
 });
 
@@ -949,7 +950,7 @@ describe("NotificationBell — Settings manual install entry point (spec point 8
     await act(async () => window.dispatchEvent(new FakeBeforeInstallPromptEvent()));
     // The automatic card is suppressed by the fresh dismissal...
     await waitFor(() => expect(screen.getByText("אין התראות חדשות")).toBeInTheDocument());
-    expect(screen.queryByText("📲 התקינו את מי-מה-מו")).toBeNull();
+    expect(screen.queryByText(`📲 התקינו את ${APP_NAME}`)).toBeNull();
 
     // ...but Settings still offers it, unconditionally.
     fireEvent.click(await screen.findByRole("button", { name: "הגדרות התראות" }));
@@ -980,7 +981,7 @@ describe("NotificationBell — Settings replaces the misleading unsupported mess
     fireEvent.click(await screen.findByRole("button", { name: "הגדרות התראות" }));
 
     await waitFor(() => expect(screen.getByText("התקנת האפליקציה")).toBeInTheDocument());
-    expect(screen.getByText("הוסיפו את מי-מה-מו למסך הבית")).toBeInTheDocument();
+    expect(screen.getByText(`הוסיפו את ${APP_NAME} למסך הבית`)).toBeInTheDocument();
     expect(screen.queryByText("התראות אינן נתמכות בדפדפן או במכשיר הזה.")).toBeNull();
   });
 

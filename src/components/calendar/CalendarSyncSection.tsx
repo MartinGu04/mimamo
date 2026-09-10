@@ -9,6 +9,7 @@ import {
 } from "@/lib/calendar/actions";
 import type { CalendarFeedLinks } from "@/lib/calendar/feedUrl";
 import { Panel } from "@/components/ui/Panel";
+import { APP_NAME } from "@/lib/config/productName";
 
 interface CalendarSyncSectionProps {
   initialEnabled: boolean;
@@ -103,7 +104,7 @@ export function CalendarSyncSection({ initialEnabled, initialLinks }: CalendarSy
         <h2 className="text-base font-semibold text-foreground">סנכרון ליומן</h2>
         <p className="mt-1 text-sm text-muted">
           קבלו את המשמרות והתורנויות שלכם אוטומטית ביומן Google, Apple, או כל אפליקציית יומן שתומכת במנוי ICS.
-          העדכון חד-כיווני בלבד: מי-מה-מו לעולם לא קורא או משנה את היומן האישי שלכם.
+          העדכון חד-כיווני בלבד: {APP_NAME} לעולם לא קורא או משנה את היומן האישי שלכם.
         </p>
       </div>
 

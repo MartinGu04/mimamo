@@ -8,6 +8,7 @@ import { usePwaInstall } from "@/components/pwa/PwaInstallProvider";
 import { usePushSubscription } from "@/components/pwa/usePushSubscription";
 import { deriveInstallGuidance, type InstallGuidance } from "@/components/pwa/bellOnboarding";
 import { markSetupItemSkipped, readSkippedSetupItems, type SetupItemKey } from "@/lib/onboarding/setupCardPreference";
+import { APP_NAME } from "@/lib/config/productName";
 
 interface SetupSectionProps {
   /** Authenticated Supabase user id -- keys the per-device skip preference and the Push subscription state, same as every other consumer of these (see `usePushSubscription`'s own docstring). `undefined` degrades gracefully (no persistence, no card at all) rather than throwing. */
@@ -40,12 +41,12 @@ interface SetupSectionProps {
 
 function installGuidanceText(guidance: Exclude<InstallGuidance, "completed">): string {
   if (guidance === "ios") {
-    return "כדי להשתמש במסך מלא ולקבל התראות בצורה אמינה, הוסיפו את מי-מה-מו למסך הבית מכפתור השיתוף.";
+    return `כדי להשתמש במסך מלא ולקבל התראות בצורה אמינה, הוסיפו את ${APP_NAME} למסך הבית מכפתור השיתוף.`;
   }
   if (guidance === "native") {
-    return "התקינו את מי-מה-מו למסך הבית לחוויית אפליקציה מלאה ולהתראות אמינות.";
+    return `התקינו את ${APP_NAME} למסך הבית לחוויית אפליקציה מלאה ולהתראות אמינות.`;
   }
-  return "אפשר להוסיף את מי-מה-מו למסך הבית דרך תפריט הדפדפן.";
+  return `אפשר להוסיף את ${APP_NAME} למסך הבית דרך תפריט הדפדפן.`;
 }
 
 interface SetupItemRowProps {
@@ -187,7 +188,7 @@ export function SetupSection({ userId, calendarSyncEnabled, eligibleForOnboardin
     <Panel variant="panel" className="flex flex-col gap-3" data-testid="setup-section">
       <div>
         <h2 className="text-sm font-semibold text-foreground">השלמת הגדרה</h2>
-        <p className="mt-0.5 text-xs text-muted">כמה צעדים קצרים כדי להפיק את המקסימום ממי-מה-מו</p>
+        <p className="mt-0.5 text-xs text-muted">כמה צעדים קצרים כדי להפיק את המקסימום מ{APP_NAME}</p>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -206,7 +207,7 @@ export function SetupSection({ userId, calendarSyncEnabled, eligibleForOnboardin
           <SetupItemRow
             icon={BellRing}
             title="הפעלת התראות"
-            description="קבלו תזכורות ועדכונים חשובים ממי-מה-מו גם כשהיא סגורה."
+            description={`קבלו תזכורות ועדכונים חשובים מ${APP_NAME} גם כשהיא סגורה.`}
             actionLabel="הפעלה"
             onAction={() => void enable()}
             onSkip={() => skip("notifications")}

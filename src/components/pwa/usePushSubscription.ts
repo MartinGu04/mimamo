@@ -91,7 +91,7 @@ async function tryAutoRestore(): Promise<boolean> {
  * All Web Push subscription state/actions for the current device --
  * backs `NotificationBell`. Deliberately does NOT equate browser
  * `Notification.permission === "granted"` with "this device is
- * subscribed to מי-מה-מו": a device can have permission granted yet no
+ * subscribed to המחלבה": a device can have permission granted yet no
  * active `PushSubscription`, and -- the important shared-device case --
  * a leftover browser `PushSubscription` from a PREVIOUS account is never
  * treated as active for a newly logged-in different user. "enabled" is

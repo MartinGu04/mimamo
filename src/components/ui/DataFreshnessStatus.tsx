@@ -25,7 +25,7 @@ const RELATIVE_AGE_TICK_MS = 30_000;
 /**
  * Restrained, reusable "how fresh is what I'm looking at" metadata row
  * (PR #17) -- supporting context, never a hero card. Google Sheets remains
- * the source of truth; מי-מה-מו only ever holds a read-only, timestamped
+ * the source of truth; המחלבה only ever holds a read-only, timestamped
  * snapshot of it. The refresh control FIRST forces the short-lived
  * workbook-snapshot cache to expire (`refreshWorkbookSnapshotAction`, see
  * `lib/sync`) so this is a REAL refresh, never one that quietly returns

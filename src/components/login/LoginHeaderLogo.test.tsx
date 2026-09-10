@@ -10,7 +10,7 @@ afterEach(() => {
 describe("LoginHeaderLogo", () => {
   it("renders the real supplied symbol artwork, decorative (alt='')", () => {
     const { container } = render(<LoginHeaderLogo />);
-    const img = container.querySelector('img[src*="symbol.png"]');
+    const img = container.querySelector('img[src*="icon.png"]');
     expect(img).toBeInTheDocument();
     expect(img).toHaveAttribute("alt", "");
   });

@@ -201,7 +201,7 @@ no Google API calls and no spreadsheet-cell access.
      (e.g. "נדב"/"יובל"/"סטיבן") lands here like any other unrecognized
      source — Design Pass PR #21 removed the temporary special-cased
      `team_unresolved_person` ownership state that used to carve out
-     נדב/יובל as a known-but-unresolved תקש"ל אתרים responsibility; מי-מה-מו
+     נדב/יובל as a known-but-unresolved תקש"ל אתרים responsibility; המחלבה
      no longer claims that responsibility at all. If either name (or
      anyone else) is later added to `כ"א`, steps 2/4 above resolve them as
      an ordinary `team_person` automatically, with no special-casing
