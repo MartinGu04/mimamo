@@ -7,7 +7,7 @@ import { APP_NAME } from "@/lib/config/productName";
 const PUBLIC_DIR = path.join(__dirname, "..", "..", "public");
 
 describe("Web App Manifest (PR #28)", () => {
-  it("identifies the app clearly as מי-מה-מו, installable in standalone mode", () => {
+  it("identifies the app clearly as המחלבה, installable in standalone mode", () => {
     const result = manifest();
     expect(result.name).toBe(APP_NAME);
     expect(result.short_name).toBe(APP_NAME);

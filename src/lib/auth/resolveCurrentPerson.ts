@@ -91,7 +91,7 @@ export async function resolveCurrentPersonFromPeople(
  *    duplicate personnel parsing)
  * 4. finds the matching Person by email
  *
- * A valid Google/Supabase login does NOT by itself grant מי-מה-מו access —
+ * A valid Google/Supabase login does NOT by itself grant המחלבה access —
  * an authenticated email absent from כ"א resolves to "unmapped", an
  * account with no usable email resolves to "missing_email", and an email
  * matching more than one כ"א record resolves to "ambiguous_identity" —

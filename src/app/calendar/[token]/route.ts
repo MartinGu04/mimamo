@@ -55,7 +55,7 @@ export async function GET(
     status: 200,
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
-      "Content-Disposition": 'inline; filename="mi-ma-mo.ics"',
+      "Content-Disposition": 'inline; filename="hamachlava.ics"',
       // Bounded, private caching: the feed is per-person data behind an
       // unguessable token (never shared-cacheable), but a short max-age
       // absorbs a calendar client re-fetching the same URL faster than

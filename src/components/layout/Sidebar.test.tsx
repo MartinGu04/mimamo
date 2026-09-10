@@ -139,12 +139,13 @@ describe("Sidebar", () => {
   });
 });
 
-describe("Sidebar — brand identity (PR #23)", () => {
-  it("shows the מי-מה-מו symbol next to the wordmark, and never the retired 'Luzly' name", () => {
+describe("Sidebar — brand identity (rebrand: מי-מה-מו -> המחלבה)", () => {
+  it("shows the המחלבה symbol next to the wordmark, and never a retired brand name", () => {
     const { container } = renderWithTheme(<Sidebar />);
     expect(screen.getByText(APP_NAME)).toBeInTheDocument();
-    expect(container.querySelector('img[src*="symbol.png"]')).toBeInTheDocument();
+    expect(container.querySelector('img[src*="icon.png"]')).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/luzly/i);
+    expect(container.textContent).not.toMatch(/מי-מה-מו/);
   });
 });
 

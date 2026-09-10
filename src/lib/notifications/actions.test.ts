@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { APP_NAME } from "@/lib/config/productName";
 
 const getAuthenticatedIdentity = vi.fn();
 const upsertPushSubscriptionForCurrentUser = vi.fn();
@@ -171,7 +172,7 @@ describe("sendTestNotificationAction", () => {
     expect(sendPush).toHaveBeenCalledTimes(1);
     const [subscriptionArg, payloadArg] = sendPush.mock.calls[0] as [unknown, { title: string; body: string }];
     expect(subscriptionArg).toEqual({ endpoint: "https://push.example/e1", p256dh: "p256dh-key", auth: "auth-key" });
-    expect(payloadArg.title).toBe("מי-מה-מו 🐮");
+    expect(payloadArg.title).toBe(`${APP_NAME} 🐮`);
     expect(payloadArg.body).toBe("ההתראות עובדות כמו שצריך 🎉");
   });
 

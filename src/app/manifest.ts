@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/config/productName";
 
 /**
- * The Web App Manifest (PR #28) -- makes מי-מה-מו properly installable.
+ * The Web App Manifest (PR #28) -- makes המחלבה properly installable.
  * Served automatically by Next's `app/manifest.ts` file convention at the
  * root scope. Icons reference the real supplied symbol artwork (see
- * `public/brand/symbol.png` / `lib/config/brandAssets.ts`), resized only,
+ * `public/brand/icon.png` / `lib/config/brandAssets.ts`), resized only,
  * never redrawn (`public/icons/`).
  *
  * `theme_color` here is a single stable value (manifest fields cannot

@@ -53,12 +53,13 @@ describe("MobileIdentityBar", () => {
     expect(screen.queryByRole("button", { name: "התנתקות" })).toBeNull();
   });
 
-  it("PR #23: shows the מי-מה-מו brand symbol next to the wordmark, and never the retired 'Luzly' name", async () => {
+  it("shows the המחלבה brand symbol next to the wordmark, and never a retired brand name", async () => {
     const { container } = await renderWithTheme(
       <MobileIdentityBar name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />,
     );
-    expect(container.querySelector('img[src*="symbol.png"]')).toBeInTheDocument();
+    expect(container.querySelector('img[src*="icon.png"]')).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/luzly/i);
+    expect(container.textContent).not.toMatch(/מי-מה-מו/);
   });
 });
 

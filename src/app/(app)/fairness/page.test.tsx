@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { COMPLETE_FAIRNESS_DATA, fairnessDataCompleteness } from "@/lib/domain/fairnessFoundation";
+import { APP_NAME } from "@/lib/config/productName";
 import type { DutyFairnessPersonRowView, DutyFairnessReadModel } from "@/lib/readModels/dutyFairnessTypes";
 import type { ShiftFairnessPersonRowView, ShiftFairnessReadModel } from "@/lib/readModels/shiftFairnessTypes";
 
@@ -164,7 +165,7 @@ describe("/fairness — auth failure states", () => {
   it.each(["missing_email", "unmapped", "ambiguous_identity"])("%s shows the generic access-denied screen", async (status) => {
     getRequestShiftFairness.mockResolvedValue({ status });
     await renderFairnessPage();
-    expect(screen.getByText("אין לך הרשאה ל-מי-מה-מו")).toBeInTheDocument();
+    expect(screen.getByText(`אין לך הרשאה ל-${APP_NAME}`)).toBeInTheDocument();
   });
 
   it("a mapped normal (non-manager) user reaches the real page -- no manager requirement anywhere", async () => {

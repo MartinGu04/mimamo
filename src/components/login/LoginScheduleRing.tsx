@@ -215,7 +215,7 @@ export function LoginScheduleRing() {
               aria-hidden="true"
               width={BRAND_SYMBOL.width}
               height={BRAND_SYMBOL.height}
-              className="relative h-full w-full drop-shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
+              className="relative h-full w-full rounded-full drop-shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
             />
           </div>
         </div>

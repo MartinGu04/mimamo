@@ -4,7 +4,7 @@ import { parseCalendarDate } from "./dutyBlocks";
 import type { LocalNow } from "./localNow";
 
 /**
- * מי-מה-מו currently models every shift as exactly 12 hours. Documented here
+ * המחלבה currently models every shift as exactly 12 hours. Documented here
  * as the one domain constant the whole day/night derivation is built on.
  */
 export const SHIFT_DURATION_MINUTES = 12 * 60;

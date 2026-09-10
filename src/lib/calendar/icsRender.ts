@@ -1,5 +1,6 @@
 import { addCalendarDays, formatCalendarDate } from "@/lib/domain/dateRange";
 import { parseCalendarDate } from "@/lib/domain/dutyBlocks";
+import { APP_NAME } from "@/lib/config/productName";
 import { buildIcsLine, escapeIcsText } from "./icsEncoding";
 
 /**
@@ -90,7 +91,7 @@ function renderEvent(item: IcsCalendarItem, generatedAt: Date): string {
  * every timing decision has already been made by `icsItems.ts`; this only
  * formats/escapes/folds. `METHOD:PUBLISH` marks this as a published,
  * read-only calendar (never an invitation requiring RSVP) -- matching the
- * one-way מי-מה-מו -> external calendar sync this feature is (see the
+ * one-way המחלבה -> external calendar sync this feature is (see the
  * spec's "important behavior" section).
  *
  * `REFRESH-INTERVAL`/`X-PUBLISHED-TTL` are hints, not guarantees -- Apple
@@ -107,7 +108,7 @@ export function renderIcsFeed(input: IcsFeedInput): string {
   text += buildIcsLine("PRODID", "-//mi-ma-mo//Personal Calendar//HE");
   text += buildIcsLine("CALSCALE", "GREGORIAN");
   text += buildIcsLine("METHOD", "PUBLISH");
-  text += buildIcsLine("X-WR-CALNAME", escapeIcsText(`מי-מה-מו — ${input.personName}`));
+  text += buildIcsLine("X-WR-CALNAME", escapeIcsText(`${APP_NAME} — ${input.personName}`));
   text += buildIcsLine("X-WR-TIMEZONE", "Asia/Jerusalem");
   text += buildIcsLine("REFRESH-INTERVAL;VALUE=DURATION", "PT1H");
   text += buildIcsLine("X-PUBLISHED-TTL", "PT1H");

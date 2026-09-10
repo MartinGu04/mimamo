@@ -85,12 +85,12 @@ export function resolveDutyFairnessStatus(
 /**
  * The independently computed sum of the currently parsed/displayed person
  * rows. Deliberately NOT a "validation" of anything -- the real workbook's
- * "סך הכל:" totals are backed by formulas מי-מה-מו never sees at runtime (the
+ * "סך הכל:" totals are backed by formulas המחלבה never sees at runtime (the
  * Google fetch renders formatted VALUES only, by design -- see
  * `lib/google/fetchWorkbookSnapshot.ts`), and those formulas are not
  * always a naive sum of every displayed row. A verified real example: the
  * H1 previous-score total is `=SUM(Y9:Y19)/4*6`, not `=SUM(...)` of every
- * row מי-מה-מו parses. A difference between this sum and the sheet's own
+ * row המחלבה parses. A difference between this sum and the sheet's own
  * reported total is therefore NOT evidence of an error and must never be
  * labeled as a discrepancy/mismatch (PR #15 hardening pass).
  */

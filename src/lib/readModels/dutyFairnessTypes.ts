@@ -117,7 +117,7 @@ export interface DutyFairnessPersonRowView {
    * carried through here untouched -- literally the SAME number as
    * `currentScore` above. This IS the authoritative per-person target for
    * the whole selected period, already computed and published by the
-   * workbook itself; מי-מה-מו never derives it.
+   * workbook itself; המחלבה never derives it.
    *
    * This redesign's FIRST attempt instead reconstructed a total by
    * replaying the published Potential's own operational allocations

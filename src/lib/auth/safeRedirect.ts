@@ -2,7 +2,7 @@ const DEFAULT_NEXT_PATH = "/";
 
 /**
  * Validates a `next` redirect target from the OAuth callback so it can
- * never be used to redirect a user off מי-מה-מו after signing in. Only an
+ * never be used to redirect a user off המחלבה after signing in. Only an
  * internal, single-leading-slash, same-origin path is accepted; anything
  * else (an absolute URL, a protocol-relative "//host" trick, an embedded
  * "://", a backslash some browsers treat like a slash) falls back to "/".

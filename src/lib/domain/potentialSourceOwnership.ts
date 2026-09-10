@@ -17,7 +17,7 @@ import type { Person } from "./types";
  * be "external" without evidence.
  *
  * A source like "נדב"/"יובל" (a תקש"ל אתרים sub-team person with no
- * current `כ"א` record) intentionally resolves to `unknown` -- מי-מה-מו no
+ * current `כ"א` record) intentionally resolves to `unknown` -- המחלבה no
  * longer claims that responsibility (Design Pass PR #21 §23/§24). If
  * either name is later added to `כ"א`, the normal exact-full-name or
  * unique-short-name checks below resolve them as a real `team_person`
@@ -137,7 +137,7 @@ function resolveUniqueMatch(matches: readonly Person[] | undefined): Person | nu
  *    (including another organization's name) never overrides it, and
  *    never gets parsed as natural language beyond that leading token.
  * 5. `unknown` -- fails closed, never guessed. A name with no current
- *    `כ"א` record (e.g. "נדב"/"יובל"/"סטיבן") lands here -- מי-מה-מו claims
+ *    `כ"א` record (e.g. "נדב"/"יובל"/"סטיבן") lands here -- המחלבה claims
  *    no special responsibility for a source it can't resolve to a real
  *    person (Design Pass PR #21).
  *

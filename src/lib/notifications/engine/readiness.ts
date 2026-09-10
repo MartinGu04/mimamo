@@ -9,7 +9,7 @@ import {
 
 /**
  * PR #40 -- every deterministic state a roster person can resolve to when
- * asking "can Mi-Ma-Mo currently target a personal push notification to
+ * asking "can Hamachlava currently target a personal push notification to
  * this person, all the way to at least one registered device?". This is a
  * STRICTLY stronger question than `resolveNotificationRecipients`'
  * identity mapping (personnel person -> unique email -> matching auth

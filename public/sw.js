@@ -1,5 +1,5 @@
 /**
- * מי-מה-מו -- minimal first-party Service Worker (PR #28).
+ * המחלבה -- minimal first-party Service Worker (PR #28).
  *
  * Scope of THIS file, deliberately narrow:
  *   1. Register/lifecycle correctly (install -> waiting -> activate, the
@@ -68,7 +68,7 @@ self.addEventListener("push", function (event) {
     return; // Never guess at a malformed/non-JSON payload.
   }
 
-  var title = typeof payload.title === "string" && payload.title.trim() !== "" ? payload.title : "מי-מה-מו";
+  var title = typeof payload.title === "string" && payload.title.trim() !== "" ? payload.title : "המחלבה";
   var options = {
     body: typeof payload.body === "string" ? payload.body : "",
     icon: typeof payload.icon === "string" ? payload.icon : "/icons/icon-192.png",

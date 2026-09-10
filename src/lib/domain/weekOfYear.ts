@@ -20,9 +20,9 @@ function zeroIndexedDayOfYear({ year, month, day }: CalendarDate): number {
 /**
  * Sunday-first week-of-year number, the SAME convention `buildMonthGrid`
  * already uses for its rows (`calendarMonth.ts`) -- this is the ONLY week-
- * numbering convention used anywhere in מי-מה-מו.
+ * numbering convention used anywhere in המחלבה.
  *
- * מי-מה-מו's own convention (deliberately NOT strftime `%U`, which allows a
+ * המחלבה's own convention (deliberately NOT strftime `%U`, which allows a
  * user-visible "week 0" -- unacceptable UX here): the partial week
  * containing January 1st is always WEEK 1, however many days it actually
  * spans (1-7, depending on January 1st's weekday) -- when January 1st

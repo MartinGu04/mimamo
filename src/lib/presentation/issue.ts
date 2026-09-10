@@ -75,7 +75,7 @@ const ISSUE_GUIDANCE_LABELS: Record<IssueReason, string> = {
 /**
  * Short, presentation-only "what to check" hint for one `IssueReason` --
  * centralized so it's never inlined per-component. No workflow state, no
- * acknowledgement, no "resolved" affordance -- מי-מה-מו stays read-only.
+ * acknowledgement, no "resolved" affordance -- המחלבה stays read-only.
  */
 export function issueGuidanceLabel(reason: IssueReason): string {
   return ISSUE_GUIDANCE_LABELS[reason];

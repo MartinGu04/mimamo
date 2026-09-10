@@ -118,7 +118,7 @@ describe("public/sw.js (PR #28)", () => {
       ).not.toThrow();
       await captured;
       const [title] = fakeRegistration.showNotification.mock.calls[0] as [string];
-      expect(title).toBe("מי-מה-מו");
+      expect(title).toBe("המחלבה");
     });
 
     it("silently ignores a malformed (non-JSON) push payload -- never crashes the worker", () => {

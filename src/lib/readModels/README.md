@@ -396,7 +396,7 @@ future PR #16 that adds assignment-specific eligibility.
 A management-visibility category, not an operational one: it reconciles
 the SAME כ"א roster every other manager category uses against Supabase
 auth + push-subscription state, so a manager can see who has logged into
-מי-מה-מו, who hasn't, and who can currently receive push notifications.
+המחלבה, who hasn't, and who can currently receive push notifications.
 Formerly a small aside inside Overview (מצב התראות, PR #40), then a
 combined "התחברויות והתראות" Manager category that ALSO hosted
 notification-management UI (immediate/scheduled composer, history, fixed/
@@ -539,7 +539,7 @@ only.
 ## Person avatar convention (project-wide)
 
 **Person avatar = connected Google profile photo when available; initials
-otherwise.** This is a project-wide mi-ma-mo convention, not a
+otherwise.** This is a project-wide hamachlava convention, not a
 Fairness-specific or Shooting-Ranges-specific one — any feature that
 displays a person's avatar resolves it this way, and reuses the SAME
 primitives below rather than inventing a second Google-profile system,

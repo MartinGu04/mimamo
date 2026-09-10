@@ -4,7 +4,7 @@
  * written to investigate a report that a card showed 8 completed shifts
  * for someone believed to only reach 8 on a later date.
  *
- * Never writes anything (מי-מה-מו stays read-only) -- one `batchGet` call,
+ * Never writes anything (המחלבה stays read-only) -- one `batchGet` call,
  * the same real parsing/engine functions the app itself uses, then plain
  * console output. Loads the SAME `.env.local` (via `@next/env`'s own
  * `loadEnvConfig` -- the exact loader `next dev`/`next build` use

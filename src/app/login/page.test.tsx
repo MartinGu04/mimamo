@@ -118,7 +118,7 @@ describe("LoginPage — brand identity", () => {
     const element = await LoginPage({ searchParams: searchParams() });
     const { container } = renderWithTheme(element);
 
-    expect(container.querySelector('img[src*="symbol.png"]')).toBeInTheDocument();
+    expect(container.querySelector('img[src*="icon.png"]')).toBeInTheDocument();
   });
 
   it("renders the final hero headline exactly once", async () => {

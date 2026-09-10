@@ -25,7 +25,7 @@ import type { AbsenceKind, DutyFamily, EventCategory, EventPeriod } from "@/lib/
  *
  * The 11 hues/hex values themselves live in `globals.css` as `--event-*`
  * tokens (light+dark), reusing this repo's own dataviz categorical-color
- * method (CVD/contrast-validated against mi-ma-mo's real light AND dark
+ * method (CVD/contrast-validated against hamachlava's real light AND dark
  * calendar surfaces) rather than hand-picked ones. The original 8 hues
  * (blue/orange/aqua/yellow/magenta/green/violet/red) fully occupy that
  * method's validated 8-hue set, so the 3 added slots (an olive/khaki,

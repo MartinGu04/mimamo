@@ -8,7 +8,7 @@ import type { DutyFamily, Event } from "./event";
  * duty family. This is DELIBERATELY separate from `currentScore` (the
  * workbook's own opaque Fairness score, `lib/domain/fairnessAnalysis.ts`) --
  * that value is parsed straight off the Potential sheet's "טבלת צדק" table
- * and reflects Google Sheet formulas מי-מה-מו never sees at runtime, while
+ * and reflects Google Sheet formulas המחלבה never sees at runtime, while
  * this module derives a genuinely independent factual total purely from
  * real schedule `Event`s. Neither value is derived from the other, and
  * neither ever overwrites the other -- see `buildDutyFairnessReadModel.ts`'s

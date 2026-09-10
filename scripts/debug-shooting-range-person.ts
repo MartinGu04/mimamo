@@ -5,7 +5,7 @@
  * completion row in the "מטווחים" sheet was rendering as
  * "אין מידע כשירות" in the manager overview.
  *
- * Never writes anything (מי-מה-מו stays read-only). Traces the EXACT
+ * Never writes anything (המחלבה stays read-only). Traces the EXACT
  * SAME pipeline the app itself uses, stage by stage, printing raw values
  * (including hex code points, to catch invisible Unicode differences a
  * human can't see) at every boundary:
