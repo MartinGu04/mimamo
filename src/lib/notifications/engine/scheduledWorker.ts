@@ -5,7 +5,9 @@ import { loadNotificationRuleConfig } from "./ruleConfig";
 import { runDueScheduledBroadcastDispatch } from "./scheduledBroadcast";
 import { runDelivery, type DeliverySummary } from "./delivery";
 import { getJerusalemLocalNow } from "@/lib/time/jerusalemClock";
-import { peekAnyManagerScheduledBroadcastWorkDue, peekDueJobsCount } from "./store";
+import { getOperationalWeek } from "@/lib/domain/operationalWeek";
+import { peekAnyManagerScheduledBroadcastWorkDue, peekBaselineState, peekDueJobsCount } from "./store";
+import { requiresNotificationFloodRecovery } from "./notificationFloodRecovery";
 import { formatWorkerErrorLog, runStage, sanitizeWorkerError, WorkerStageError } from "./workerErrors";
 
 export interface ScheduledBroadcastWorkerTickSummary {
@@ -115,6 +117,24 @@ async function findDueCustomWeeklyOccurrencesSafely(now: ReturnType<typeof getJe
 export async function runScheduledBroadcastWorkerTick(): Promise<ScheduledBroadcastWorkerTickSummary> {
   const startedAt = performance.now();
   const now = getJerusalemLocalNow();
+
+  // The minute worker can deliver ANY due outbox job. Keep it fail-closed
+  // until the 5-minute worker has quarantined the incident jobs and completed
+  // the fresh baseline reseed; otherwise it could race ahead and deliver the
+  // very false-positive jobs the recovery is meant to cancel.
+  const baselineState = await runStage("notification_flood_recovery_guard", () => peekBaselineState());
+  if (!baselineState.initialized || requiresNotificationFloodRecovery(baselineState, getOperationalWeek(now).weekStart)) {
+    return {
+      skipped: true,
+      scheduledBroadcastsDue: 0,
+      scheduledBroadcastsDispatched: 0,
+      scheduledBroadcastsFailed: 0,
+      recurringRulesDispatched: 0,
+      recurringRulesFailed: 0,
+      jobsClaimed: 0,
+      durationMs: Math.round(performance.now() - startedAt),
+    };
+  }
 
   const [scheduledDueCount, dueJobsCount, recurringDue] = await Promise.all([
     runStage("scheduled_broadcasts_work_check", () => peekAnyManagerScheduledBroadcastWorkDue()),

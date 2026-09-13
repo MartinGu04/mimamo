@@ -13,6 +13,21 @@ describe("diffSemanticFacts", () => {
     expect(changes).toEqual([]);
   });
 
+  it("treats a jsonb round trip with reordered object keys as the same semantic value", () => {
+    const fromPostgres: SemanticFact = {
+      factKey: "shift:p1:2026-08-18",
+      category: "shift",
+      value: { entries: [{ role: "technician", period: "day", shadow: false }] },
+    };
+    const fresh: SemanticFact = {
+      factKey: "shift:p1:2026-08-18",
+      category: "shift",
+      value: { entries: [{ period: "day", role: "technician", shadow: false }] },
+    };
+
+    expect(diffSemanticFacts(facts([fromPostgres]), facts([fresh]))).toEqual([]);
+  });
+
   it("detects a genuine value change", () => {
     const oldFact: SemanticFact = { factKey: "shift:p1:2026-08-18", category: "shift", value: { entries: [{ period: "day", role: "technician", shadow: false }] } };
     const newFact: SemanticFact = { factKey: "shift:p1:2026-08-18", category: "shift", value: { entries: [{ period: "night", role: "technician", shadow: false }] } };

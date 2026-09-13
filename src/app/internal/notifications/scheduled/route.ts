@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isAuthorizedWorkerRequest } from "@/lib/notifications/workerAuth";
 import { runScheduledBroadcastWorkerTick } from "@/lib/notifications/engine/scheduledWorker";
 import { WorkerStageError, formatWorkerErrorLog, sanitizeWorkerError } from "@/lib/notifications/engine/workerErrors";
+import { NOTIFICATION_WORKERS_PAUSED } from "@/lib/notifications/workerPause";
 
 /**
  * The dedicated, secured internal worker endpoint Supabase Cron calls
@@ -42,6 +43,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const authorized = isAuthorizedWorkerRequest(request.headers.get("authorization"));
   if (!authorized) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  if (NOTIFICATION_WORKERS_PAUSED) {
+    return NextResponse.json({ status: "paused" }, { status: 200 });
   }
 
   try {

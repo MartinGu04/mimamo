@@ -13,6 +13,7 @@ import {
   advanceNotificationBaseline,
   applyPendingChanges,
   claimDuePendingChanges,
+  claimNotificationBaselineReseed,
   clearWeekState,
   countOpenPendingChanges,
   deletePendingChange,
@@ -20,9 +21,11 @@ import {
   insertNotificationJobIfAbsent,
   peekBaselineState,
   peekDuePendingChangesCount,
+  quarantineNotificationFloodJobs,
   seedObservedFacts,
   setObservedFact,
 } from "./store";
+import { NOTIFICATION_FLOOD_INCIDENT, requiresNotificationFloodRecovery } from "./notificationFloodRecovery";
 
 export interface ChangeDetectionSummary {
   currentWeek: string;
@@ -122,10 +125,13 @@ export async function runChangeDetection(input: ChangeDetectionInput): Promise<C
           week,
         );
 
-  const { action: rawBaselineAction, previousWeekStart: rawPreviousWeekStart } = await resolveBaselineTransition(
-    week.weekStart,
-    persist,
-  );
+  const transition = await resolveBaselineTransition(week.weekStart);
+  const {
+    action: rawBaselineAction,
+    previousWeekStart: rawPreviousWeekStart,
+    incidentRecovery,
+    baselineState,
+  } = transition;
 
   // A generation transition forces the SAME silent treatment as a week
   // rollover (see `ChangeDetectionInput.operationalGenerationTransitioned`'s
@@ -136,19 +142,39 @@ export async function runChangeDetection(input: ChangeDetectionInput): Promise<C
   const previousWeekStart = rawBaselineAction === "rolled_over" ? rawPreviousWeekStart : week.weekStart;
 
   if (baselineAction === "initialized") {
-    if (persist) await seedObservedFacts(week.weekStart, freshFacts);
+    if (persist) {
+      const claimed = await claimNotificationBaselineReseed(baselineState);
+      if (!claimed) return { currentWeek: week.weekStart, baselineAction, ...SILENT_SUMMARY_BASE };
+      // Commit the marker LAST. If seeding times out or throws, the next
+      // invocation still sees an uninitialized baseline and retries this
+      // silent path instead of diffing an empty/partial seed as real changes.
+      await seedObservedFacts(week.weekStart, freshFacts);
+      await advanceNotificationBaseline(week.weekStart);
+    }
     return { currentWeek: week.weekStart, baselineAction, ...SILENT_SUMMARY_BASE };
   }
 
   if (baselineAction === "rolled_over") {
     if (persist) {
+      const claimed = await claimNotificationBaselineReseed(baselineState);
+      if (!claimed) return { currentWeek: week.weekStart, baselineAction, ...SILENT_SUMMARY_BASE };
       // The previous week's (or, on a mode transition, THIS week's own
       // pre-transition) stale state must never leak into the new diff
       // base, and must never itself generate change notifications just
       // because the week rolled over or the operational generation changed
       // (spec section 9/22).
+      if (incidentRecovery) {
+        await quarantineNotificationFloodJobs(
+          NOTIFICATION_FLOOD_INCIDENT.jobsCreatedFrom,
+          NOTIFICATION_FLOOD_INCIDENT.jobsCreatedThrough,
+        );
+      }
       if (previousWeekStart) await clearWeekState(previousWeekStart);
       await seedObservedFacts(week.weekStart, freshFacts);
+      // As above, advance the week marker only after the new seed is
+      // complete. A crash before this call leaves initialized=false, so the
+      // next worker retries silently rather than emitting a flood.
+      await advanceNotificationBaseline(week.weekStart);
     }
     return { currentWeek: week.weekStart, baselineAction, ...SILENT_SUMMARY_BASE };
   }
@@ -193,29 +219,41 @@ export async function runChangeDetection(input: ChangeDetectionInput): Promise<C
 }
 
 /**
- * The single decision point for first-run/rollover/unchanged. In
- * `persist` mode this calls the atomic `advance_notification_baseline`
- * RPC exactly once (its row lock is what makes concurrent worker
- * invocations safe -- see the migration's own comment) and trusts its
- * return value directly, rather than re-deriving the decision from a
- * second read. In dry-run mode there is nothing to lock/commit, so a
- * plain read-only peek is used instead.
+ * The single read-only decision point for first-run/rollover/unchanged.
+ * The durable marker is intentionally advanced only AFTER clear+seed has
+ * completed. This ordering is the crash-safety boundary: a timeout while
+ * reseeding leaves the previous marker intact and the next invocation retries
+ * the silent transition instead of diffing against empty/partial state.
  */
 async function resolveBaselineTransition(
   weekStart: string,
-  persist: boolean,
-): Promise<{ action: "initialized" | "rolled_over" | "unchanged"; previousWeekStart: string | null }> {
-  if (persist) {
-    const result = await advanceNotificationBaseline(weekStart);
-    return { action: result.action, previousWeekStart: result.previousWeekStart };
-  }
-
+): Promise<{
+  action: "initialized" | "rolled_over" | "unchanged";
+  previousWeekStart: string | null;
+  incidentRecovery: boolean;
+  baselineState: Awaited<ReturnType<typeof peekBaselineState>>;
+}> {
   const state = await peekBaselineState();
-  if (!state.initialized) return { action: "initialized", previousWeekStart: null };
   if (state.currentWeekStart !== weekStart) {
-    return { action: "rolled_over", previousWeekStart: state.currentWeekStart };
+    const firstRun = !state.initialized && state.currentWeekStart === null;
+    return {
+      action: firstRun ? "initialized" : "rolled_over",
+      previousWeekStart: state.currentWeekStart,
+      incidentRecovery: false,
+      baselineState: state,
+    };
   }
-  return { action: "unchanged", previousWeekStart: state.currentWeekStart };
+  // initialized=false with the SAME week means a previous clear/reseed owner
+  // crashed after claiming. Clear the current week's partial state and retry
+  // the whole silent transition.
+  const interruptedReseed = !state.initialized;
+  const incidentRecovery = requiresNotificationFloodRecovery(state, weekStart);
+  return {
+    action: incidentRecovery || interruptedReseed ? "rolled_over" : "unchanged",
+    previousWeekStart: state.currentWeekStart,
+    incidentRecovery,
+    baselineState: state,
+  };
 }
 
 async function settleOneChange(
