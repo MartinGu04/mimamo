@@ -2,7 +2,7 @@ import "server-only";
 import { SEMANTIC_CHANGE_DEBOUNCE_MINUTES } from "@/lib/config/notificationTiming";
 import type { AudienceGroupKey } from "@/lib/domain/audienceGroups";
 import { getNotificationServiceClient } from "./serviceClient";
-import type { FactChange } from "./diffFacts";
+import { semanticFactValuesEqual, type FactChange } from "./diffFacts";
 import type { SemanticFact, SemanticFactCategory, SemanticFactValue } from "./semanticFacts";
 
 // ---------------------------------------------------------------------------
@@ -50,6 +50,7 @@ export async function advanceNotificationBaseline(weekStart: string): Promise<Ba
 export interface BaselineStateSnapshot {
   initialized: boolean;
   currentWeekStart: string | null;
+  updatedAt: string | null;
 }
 
 /** Read-only peek at the baseline row -- used by dry-run mode, which must never call the mutating `advance_notification_baseline` RPC. */
@@ -57,11 +58,53 @@ export async function peekBaselineState(): Promise<BaselineStateSnapshot> {
   const supabase = getNotificationServiceClient();
   const { data, error } = await supabase
     .from("notification_baseline_state")
-    .select("initialized, current_week_start")
+    .select("initialized, current_week_start, updated_at")
     .eq("id", 1)
-    .maybeSingle<{ initialized: boolean; current_week_start: string | null }>();
+    .maybeSingle<{ initialized: boolean; current_week_start: string | null; updated_at: string | null }>();
   if (error) throw error;
-  return { initialized: data?.initialized ?? false, currentWeekStart: data?.current_week_start ?? null };
+  return {
+    initialized: data?.initialized ?? false,
+    currentWeekStart: data?.current_week_start ?? null,
+    updatedAt: data?.updated_at ?? null,
+  };
+}
+
+/**
+ * Compare-and-set claim for a silent baseline reseed. Setting initialized=false
+ * BEFORE destructive clear/seed work is the durable in-progress marker: a crash
+ * leaves the next worker on another silent recovery path, never ordinary diff.
+ */
+export async function claimNotificationBaselineReseed(expected: BaselineStateSnapshot): Promise<boolean> {
+  const supabase = getNotificationServiceClient();
+  let query = supabase
+    .from("notification_baseline_state")
+    .update({ initialized: false, updated_at: new Date().toISOString() })
+    .eq("id", 1)
+    .eq("initialized", expected.initialized);
+
+  query = expected.currentWeekStart === null
+    ? query.is("current_week_start", null)
+    : query.eq("current_week_start", expected.currentWeekStart);
+  query = expected.updatedAt === null ? query.is("updated_at", null) : query.eq("updated_at", expected.updatedAt);
+
+  const { data, error } = await query.select("id").maybeSingle<{ id: number }>();
+  if (error) throw error;
+  return data !== null;
+}
+
+/** Cancels only still-deliverable semantic-change jobs created during the bounded 2026-09-13 false-positive incident. */
+export async function quarantineNotificationFloodJobs(createdFrom: string, createdThrough: string): Promise<number> {
+  const supabase = getNotificationServiceClient();
+  const { data, error } = await supabase
+    .from("notification_jobs")
+    .update({ status: "cancelled", claimed_at: null, updated_at: new Date().toISOString() })
+    .like("dedupe_key", "settle:%")
+    .in("status", ["pending", "claimed"])
+    .gte("created_at", createdFrom)
+    .lte("created_at", createdThrough)
+    .select("id");
+  if (error) throw error;
+  return data?.length ?? 0;
 }
 
 /**
@@ -268,7 +311,7 @@ export async function applyPendingChanges(
     const existing = existingByKey.get(key);
     const originalValue = existing ? existing.originalValue : fallbackOriginal;
 
-    if (JSON.stringify(originalValue) === JSON.stringify(freshValue)) {
+    if (semanticFactValuesEqual(originalValue, freshValue)) {
       if (existing) toCancel.push(key);
       return;
     }
@@ -278,7 +321,7 @@ export async function applyPendingChanges(
     // observed again by another worker tick, not a new change. Leave
     // the row's timestamps completely alone; polling itself is never
     // evidence of a new change.
-    if (existing && JSON.stringify(existing.latestValue) === JSON.stringify(freshValue)) {
+    if (existing && semanticFactValuesEqual(existing.latestValue, freshValue)) {
       return;
     }
 

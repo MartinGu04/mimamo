@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const peekAnyManagerScheduledBroadcastWorkDue = vi.fn();
+const peekBaselineState = vi.fn();
 const peekDueJobsCount = vi.fn();
 const fetchFreshPersonnelRead = vi.fn();
 const runDueScheduledBroadcastDispatch = vi.fn();
@@ -11,6 +12,7 @@ const runDueCustomWeeklyRuleDispatch = vi.fn();
 
 vi.mock("./store", () => ({
   peekAnyManagerScheduledBroadcastWorkDue: (...args: unknown[]) => peekAnyManagerScheduledBroadcastWorkDue(...args),
+  peekBaselineState: (...args: unknown[]) => peekBaselineState(...args),
   peekDueJobsCount: (...args: unknown[]) => peekDueJobsCount(...args),
 }));
 vi.mock("./freshRead", () => ({
@@ -46,6 +48,7 @@ const ZERO_DELIVERY_SUMMARY = {
 
 /** Every test gets an empty rule config / zero due recurring occurrences unless it explicitly overrides one -- keeps the pre-existing scheduled-broadcast-only tests below untouched by this feature's addition. */
 function setupRuleConfigDefaults() {
+  peekBaselineState.mockResolvedValue({ initialized: true, currentWeekStart: "2026-08-16", updatedAt: "2026-08-16T00:00:00.000Z" });
   loadNotificationRuleConfig.mockResolvedValue({ systemRules: new Map(), customWeeklyRules: [] });
   findDueCustomWeeklyOccurrences.mockResolvedValue([]);
   runDueCustomWeeklyRuleDispatch.mockResolvedValue({ dispatched: 0, failed: 0 });
@@ -57,6 +60,23 @@ afterEach(() => {
 });
 
 describe("runScheduledBroadcastWorkerTick -- zero due/recoverable work", () => {
+  it("fails closed before due-job delivery while the incident baseline still needs recovery", async () => {
+    setupRuleConfigDefaults();
+    peekBaselineState.mockResolvedValue({
+      initialized: true,
+      currentWeekStart: "2026-09-13",
+      updatedAt: "2026-09-12T21:05:00.000Z",
+    });
+
+    const { runScheduledBroadcastWorkerTick } = await loadModule();
+    const summary = await runScheduledBroadcastWorkerTick();
+
+    expect(summary.skipped).toBe(true);
+    expect(peekAnyManagerScheduledBroadcastWorkDue).not.toHaveBeenCalled();
+    expect(peekDueJobsCount).not.toHaveBeenCalled();
+    expect(runDelivery).not.toHaveBeenCalled();
+  });
+
   it("performs NO personnel read, NO dispatch, and NO delivery when ALL THREE pre-checks find nothing (true no-op)", async () => {
     setupRuleConfigDefaults();
     peekAnyManagerScheduledBroadcastWorkDue.mockResolvedValue(0);

@@ -12,8 +12,9 @@ afterEach(() => {
 
 const runNotificationWorkerTick = vi.fn();
 
-async function loadRoute() {
+async function loadRoute(paused = false) {
   vi.doMock("@/lib/notifications/engine/pipeline", () => ({ runNotificationWorkerTick }));
+  vi.doMock("@/lib/notifications/workerPause", () => ({ NOTIFICATION_WORKERS_PAUSED: paused }));
   return import("./route");
 }
 
@@ -41,6 +42,17 @@ describe("POST /internal/notifications/tick -- worker authentication", () => {
     const response = await POST(request("/internal/notifications/tick", "Bearer wrong-secret"));
 
     expect(response.status).toBe(401);
+    expect(runNotificationWorkerTick).not.toHaveBeenCalled();
+  });
+
+  it("fails closed while the emergency worker pause is active", async () => {
+    process.env.NOTIFICATION_WORKER_SECRET = "correct-secret";
+    const { POST } = await loadRoute(true);
+
+    const response = await POST(request("/internal/notifications/tick?mode=send", "Bearer correct-secret"));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: "paused" });
     expect(runNotificationWorkerTick).not.toHaveBeenCalled();
   });
 

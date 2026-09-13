@@ -5,6 +5,7 @@ import { buildShiftSchedule } from "@/lib/domain/shiftSchedule";
 import { getOperationalWeek } from "@/lib/domain/operationalWeek";
 import type { LocalNow } from "@/lib/domain/localNow";
 import type { RecipientResolution } from "./recipients";
+import type { BaselineStateSnapshot } from "./store";
 
 function person(overrides: Partial<Person> & Pick<Person, "id" | "name">): Person {
   return { email: null, isManager: false, isTechnician: false, isSupervisor: false, personnelType: null, dischargeDate: null, enlistmentDate: null, ...overrides };
@@ -43,19 +44,30 @@ const store = {
   advanceNotificationBaseline: vi.fn(),
   applyPendingChanges: vi.fn(async () => {}),
   claimDuePendingChanges: vi.fn<() => Promise<import("./store").ClaimedPendingChange[]>>(async () => []),
+  claimNotificationBaselineReseed: vi.fn(async () => true),
   clearWeekState: vi.fn(async () => {}),
   countOpenPendingChanges: vi.fn(async () => 0),
   deletePendingChange: vi.fn(async () => {}),
   getObservedFacts: vi.fn(async () => new Map()),
   insertNotificationJobIfAbsent: vi.fn(async () => true),
-  peekBaselineState: vi.fn(),
+  peekBaselineState: vi.fn<() => Promise<BaselineStateSnapshot>>(async () => ({
+    initialized: true,
+    currentWeekStart: week.weekStart,
+    updatedAt: "2026-08-19T00:00:00.000Z",
+  })),
   peekDuePendingChangesCount: vi.fn(async () => 0),
+  quarantineNotificationFloodJobs: vi.fn(async () => 0),
   seedObservedFacts: vi.fn(async () => {}),
   setObservedFact: vi.fn(async () => {}),
 };
 
 afterEach(() => {
   vi.clearAllMocks();
+  store.peekBaselineState.mockResolvedValue({
+    initialized: true,
+    currentWeekStart: week.weekStart,
+    updatedAt: "2026-08-19T00:00:00.000Z",
+  });
   vi.resetModules();
 });
 
@@ -66,6 +78,7 @@ async function loadModule() {
 
 describe("runChangeDetection -- baseline transitions", () => {
   it("first-ever run silently seeds the baseline and sends nothing", async () => {
+    store.peekBaselineState.mockResolvedValue({ initialized: false, currentWeekStart: null, updatedAt: null });
     store.advanceNotificationBaseline.mockResolvedValue({ action: "initialized", previousWeekStart: null });
     const { runChangeDetection } = await loadModule();
 
@@ -83,11 +96,18 @@ describe("runChangeDetection -- baseline transitions", () => {
     expect(summary.semanticChangesDetected).toBe(0);
     expect(summary.jobsCreated).toBe(0);
     expect(store.seedObservedFacts).toHaveBeenCalledTimes(1);
+    expect(store.claimNotificationBaselineReseed.mock.invocationCallOrder[0]).toBeLessThan(
+      store.seedObservedFacts.mock.invocationCallOrder[0],
+    );
+    expect(store.seedObservedFacts.mock.invocationCallOrder[0]).toBeLessThan(
+      store.advanceNotificationBaseline.mock.invocationCallOrder[0],
+    );
     expect(store.getObservedFacts).not.toHaveBeenCalled();
     expect(store.insertNotificationJobIfAbsent).not.toHaveBeenCalled();
   });
 
   it("week rollover clears the PREVIOUS week's state, silently re-seeds the new week, and sends nothing", async () => {
+    store.peekBaselineState.mockResolvedValue({ initialized: true, currentWeekStart: "2026-08-09", updatedAt: "2026-08-09T00:00:00.000Z" });
     store.advanceNotificationBaseline.mockResolvedValue({ action: "rolled_over", previousWeekStart: "2026-08-09" });
     const { runChangeDetection } = await loadModule();
 
@@ -105,11 +125,38 @@ describe("runChangeDetection -- baseline transitions", () => {
     expect(summary.jobsCreated).toBe(0);
     expect(store.clearWeekState).toHaveBeenCalledWith("2026-08-09");
     expect(store.seedObservedFacts).toHaveBeenCalledTimes(1);
+    expect(store.claimNotificationBaselineReseed.mock.invocationCallOrder[0]).toBeLessThan(
+      store.seedObservedFacts.mock.invocationCallOrder[0],
+    );
+    expect(store.seedObservedFacts.mock.invocationCallOrder[0]).toBeLessThan(
+      store.advanceNotificationBaseline.mock.invocationCallOrder[0],
+    );
     expect(store.insertNotificationJobIfAbsent).not.toHaveBeenCalled();
   });
 
+  it("does not advance the week marker when reseeding fails, so the next tick retries silently", async () => {
+    store.peekBaselineState.mockResolvedValue({ initialized: true, currentWeekStart: "2026-08-09", updatedAt: "2026-08-09T00:00:00.000Z" });
+    store.seedObservedFacts.mockRejectedValueOnce(new Error("timeout"));
+    const { runChangeDetection } = await loadModule();
+
+    await expect(
+      runChangeDetection({
+        events: [],
+        people: [],
+        shiftSchedule: schedule,
+        week,
+        persist: true,
+        recipientResolution: emptyResolution(),
+        personNameById: new Map(),
+      }),
+    ).rejects.toThrow("timeout");
+
+    expect(store.advanceNotificationBaseline).not.toHaveBeenCalled();
+    expect(store.claimNotificationBaselineReseed).toHaveBeenCalledTimes(1);
+  });
+
   it("dry-run mode never calls a single mutating store function", async () => {
-    store.peekBaselineState.mockResolvedValue({ initialized: true, currentWeekStart: week.weekStart });
+    store.peekBaselineState.mockResolvedValue({ initialized: true, currentWeekStart: week.weekStart, updatedAt: "2026-08-19T00:00:00.000Z" });
     const { runChangeDetection } = await loadModule();
 
     await runChangeDetection({
@@ -123,10 +170,75 @@ describe("runChangeDetection -- baseline transitions", () => {
     });
 
     expect(store.advanceNotificationBaseline).not.toHaveBeenCalled();
+    expect(store.claimNotificationBaselineReseed).not.toHaveBeenCalled();
     expect(store.applyPendingChanges).not.toHaveBeenCalled();
     expect(store.claimDuePendingChanges).not.toHaveBeenCalled();
     expect(store.seedObservedFacts).not.toHaveBeenCalled();
     expect(store.setObservedFact).not.toHaveBeenCalled();
+    expect(store.insertNotificationJobIfAbsent).not.toHaveBeenCalled();
+  });
+
+  it("silently retries an interrupted same-week reseed instead of entering ordinary diff", async () => {
+    store.peekBaselineState.mockResolvedValue({
+      initialized: false,
+      currentWeekStart: week.weekStart,
+      updatedAt: "2026-08-19T00:01:00.000Z",
+    });
+    const { runChangeDetection } = await loadModule();
+
+    const summary = await runChangeDetection({
+      events: [],
+      people: [],
+      shiftSchedule: schedule,
+      week,
+      persist: true,
+      recipientResolution: emptyResolution(),
+      personNameById: new Map(),
+    });
+
+    expect(summary.baselineAction).toBe("rolled_over");
+    expect(store.clearWeekState).toHaveBeenCalledWith(week.weekStart);
+    expect(store.seedObservedFacts).toHaveBeenCalledTimes(1);
+    expect(store.advanceNotificationBaseline).toHaveBeenCalledWith(week.weekStart);
+    expect(store.getObservedFacts).not.toHaveBeenCalled();
+    expect(store.applyPendingChanges).not.toHaveBeenCalled();
+  });
+
+  it("quarantines the bounded incident jobs and reseeds silently before marking recovery complete", async () => {
+    const incidentNow: LocalNow = { date: "2026-09-13", minuteOfDay: 60 };
+    const incidentWeek = getOperationalWeek(incidentNow);
+    store.peekBaselineState.mockResolvedValue({
+      initialized: true,
+      currentWeekStart: incidentWeek.weekStart,
+      updatedAt: "2026-09-12T21:05:00.000Z",
+    });
+    const { runChangeDetection } = await loadModule();
+
+    const summary = await runChangeDetection({
+      events: [],
+      people: [],
+      shiftSchedule: schedule,
+      week: incidentWeek,
+      persist: true,
+      recipientResolution: emptyResolution(),
+      personNameById: new Map(),
+    });
+
+    expect(summary.baselineAction).toBe("rolled_over");
+    expect(summary.semanticChangesDetected).toBe(0);
+    expect(store.quarantineNotificationFloodJobs).toHaveBeenCalledWith(
+      "2026-09-12T21:00:00.000Z",
+      "2026-09-12T21:51:00.000Z",
+    );
+    expect(store.clearWeekState).toHaveBeenCalledWith(incidentWeek.weekStart);
+    expect(store.seedObservedFacts).toHaveBeenCalledTimes(1);
+    expect(store.quarantineNotificationFloodJobs.mock.invocationCallOrder[0]).toBeLessThan(
+      store.advanceNotificationBaseline.mock.invocationCallOrder[0],
+    );
+    expect(store.seedObservedFacts.mock.invocationCallOrder[0]).toBeLessThan(
+      store.advanceNotificationBaseline.mock.invocationCallOrder[0],
+    );
+    expect(store.advanceNotificationBaseline).toHaveBeenCalledWith(incidentWeek.weekStart);
     expect(store.insertNotificationJobIfAbsent).not.toHaveBeenCalled();
   });
 });
@@ -442,6 +554,7 @@ describe("runChangeDetection -- Emergency Mode (spec section 22/23)", () => {
   });
 
   it("a generation transition happening on the SAME tick as a genuine week rollover still only clears/reseeds once, using the real previous week", async () => {
+    store.peekBaselineState.mockResolvedValue({ initialized: true, currentWeekStart: "2026-08-09", updatedAt: "2026-08-09T00:00:00.000Z" });
     store.advanceNotificationBaseline.mockResolvedValue({ action: "rolled_over", previousWeekStart: "2026-08-09" });
     const { runChangeDetection } = await loadModule();
 

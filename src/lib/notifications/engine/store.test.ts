@@ -153,6 +153,22 @@ describe("applyPendingChanges -- single-tick cases", () => {
     expect(rows.has(KEY)).toBe(false);
   });
 
+  it("cancels a false pending row caused only by jsonb object-key reordering", async () => {
+    const jsonbOrderedEvening = { entries: [{ role: "technician", period: "day", shadow: false }] };
+    const existing: FakeRow = {
+      fact_key: KEY,
+      category: "shift",
+      original_value: jsonbOrderedEvening,
+      latest_value: jsonbOrderedEvening,
+    };
+    const { client, rows } = makeStatefulFakeSupabase([existing]);
+    const { applyPendingChanges } = await loadModule(client);
+
+    await applyPendingChanges(WEEK, [], new Map([[KEY, fact(KEY, "shift", EVENING)]]));
+
+    expect(rows.has(KEY)).toBe(false);
+  });
+
   it("does nothing when there are no changes and no open pending rows", async () => {
     const { client, rows } = makeStatefulFakeSupabase([]);
     const { applyPendingChanges } = await loadModule(client);

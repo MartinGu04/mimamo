@@ -25,6 +25,7 @@ export type WorkerStage =
   | "recipient_resolution"
   | "operational_mode"
   | "operational_roster"
+  | "notification_flood_recovery_guard"
   | "last_operational_generation"
   | "last_operational_generation_write"
   | "change_detection"

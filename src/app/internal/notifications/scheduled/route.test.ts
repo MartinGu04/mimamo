@@ -12,8 +12,9 @@ afterEach(() => {
 
 const runScheduledBroadcastWorkerTick = vi.fn();
 
-async function loadRoute() {
+async function loadRoute(paused = false) {
   vi.doMock("@/lib/notifications/engine/scheduledWorker", () => ({ runScheduledBroadcastWorkerTick }));
+  vi.doMock("@/lib/notifications/workerPause", () => ({ NOTIFICATION_WORKERS_PAUSED: paused }));
   return import("./route");
 }
 
@@ -44,6 +45,17 @@ describe("POST /internal/notifications/scheduled -- worker authentication", () =
     const response = await POST(request("Bearer wrong-secret"));
 
     expect(response.status).toBe(401);
+    expect(runScheduledBroadcastWorkerTick).not.toHaveBeenCalled();
+  });
+
+  it("fails closed while the emergency worker pause is active", async () => {
+    process.env.NOTIFICATION_WORKER_SECRET = "correct-secret";
+    const { POST } = await loadRoute(true);
+
+    const response = await POST(request("Bearer correct-secret"));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: "paused" });
     expect(runScheduledBroadcastWorkerTick).not.toHaveBeenCalled();
   });
 
