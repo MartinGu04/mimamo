@@ -132,11 +132,11 @@
      a decorative BEHIND-content layer, never used on cards/panels/text.
      Light mode: airy, low-opacity blue-gray, never louder than the neutral
      page chrome it sits behind. */
-  --satcom-glow-a: rgba(47, 100, 142, 0.07);
-  --satcom-glow-b: rgba(124, 58, 237, 0.035);
+  --satcom-glow-a: rgba(47, 100, 142, 0.09);
+  --satcom-glow-b: rgba(124, 58, 237, 0.05);
   --satcom-grid-line: rgba(24, 33, 43, 0.04);
-  --satcom-orbit-line: rgba(47, 100, 142, 0.16);
-  --satcom-dish: rgba(24, 33, 43, 0.075);
+  --satcom-orbit-line: rgba(47, 100, 142, 0.22);
+  --satcom-dish: rgba(47, 100, 142, 0.06);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -209,11 +209,11 @@
     /* Cinematic dark-mode SATCOM atmosphere: deep navy stays the page
        background (unchanged), these are just a restrained blue/violet glow
        and faint grid on top -- see the light-mode note above. */
-    --satcom-glow-a: rgba(79, 195, 232, 0.13);
-    --satcom-glow-b: rgba(139, 92, 246, 0.1);
+    --satcom-glow-a: rgba(79, 195, 232, 0.16);
+    --satcom-glow-b: rgba(139, 92, 246, 0.12);
     --satcom-grid-line: rgba(255, 255, 255, 0.045);
-    --satcom-orbit-line: rgba(120, 169, 204, 0.22);
-    --satcom-dish: rgba(255, 255, 255, 0.09);
+    --satcom-orbit-line: rgba(120, 169, 204, 0.3);
+    --satcom-dish: rgba(120, 169, 204, 0.1);
   }
 }
 
@@ -271,11 +271,11 @@
 
   --shadow-elevated: 0 16px 36px -14px rgba(0, 0, 0, 0.55);
 
-  --satcom-glow-a: rgba(79, 195, 232, 0.13);
-  --satcom-glow-b: rgba(139, 92, 246, 0.1);
+  --satcom-glow-a: rgba(79, 195, 232, 0.16);
+  --satcom-glow-b: rgba(139, 92, 246, 0.12);
   --satcom-grid-line: rgba(255, 255, 255, 0.045);
-  --satcom-orbit-line: rgba(120, 169, 204, 0.22);
-  --satcom-dish: rgba(255, 255, 255, 0.09);
+  --satcom-orbit-line: rgba(120, 169, 204, 0.3);
+  --satcom-dish: rgba(120, 169, 204, 0.1);
 }
 
 /* ---------------------------------------------------------------------- */
