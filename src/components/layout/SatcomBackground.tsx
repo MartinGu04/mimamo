@@ -29,10 +29,15 @@ import type { SatcomVariant } from "./satcom-variants";
  * placement uses PHYSICAL sides (left/right, not start/end): it is a
  * picture, not text that should flip with direction.
  *
- * MOTION: ambient micro-motion only -- a starfield drift measured in minutes,
- * slow glow breathing, and light tracing along two comm paths. Everything
- * animates `transform`/`opacity` (plus one `stroke-dashoffset`) and is
- * disabled under `prefers-reduced-motion` via `globals.css`.
+ * MOTION: ambient only, but deliberately perceptible -- the point is that a
+ * few seconds of looking reveals a living environment, not that the motion
+ * hides. Arcs rise and settle on 19-26s, a light travels a comm path every
+ * 12s, glows breathe on 8-11s, a sparse subset of stars twinkles on 6-8.5s,
+ * the dish idles +/-1.4 degrees on its mount over 28s, and a signal ping
+ * leaves the feed every 11s. Everything animates `transform`/`opacity` (plus
+ * `stroke-dashoffset` on two hairline paths) so the compositor does the work,
+ * and every class is disabled under `prefers-reduced-motion` via
+ * `globals.css`.
  *
  * Colors come entirely from the `--satcom-*` tokens in `globals.css`
  * (cinematic deep space in dark mode, the same composition translated to
@@ -51,6 +56,8 @@ interface ArcSpec {
   opacity: string;
   /** Animates a light along the path -- at most two per page. */
   traced?: boolean;
+  /** Offsets the second light by half a cycle so the two never travel together. */
+  traceLate?: boolean;
 }
 
 interface SpotSpec {
@@ -97,7 +104,7 @@ const COMPOSITIONS: Readonly<Record<SatcomVariant, Composition>> = {
     arcs: [
       { position: "-top-16 h-[380px]", cy: -120, ry: 300, opacity: "opacity-100", traced: true },
       { position: "top-[22%] h-[300px]", cy: -60, ry: 260, dash: "2 9", opacity: "opacity-85" },
-      { position: "top-[44%] h-[300px]", cy: -70, ry: 270, opacity: "opacity-80", traced: true },
+      { position: "top-[44%] h-[300px]", cy: -70, ry: 270, opacity: "opacity-80", traced: true, traceLate: true },
       { position: "top-[66%] h-[280px]", cy: -80, ry: 260, dash: "3 10", opacity: "opacity-75" },
       { position: "top-[86%] h-[260px]", cy: -90, ry: 250, opacity: "opacity-65" },
     ],
@@ -185,12 +192,23 @@ const STAR_FIELD = [
   "radial-gradient(1px 1px at 91% 84%, var(--satcom-star), transparent)",
 ].join(", ");
 
-/** The brighter, sparser stars that carry the twinkle. */
+/**
+ * The brighter, sparser stars that carry the twinkle -- two small sets on
+ * different tile sizes and phases, so a handful of stars around the page
+ * swell at any moment while the bulk of the sky stays steady.
+ */
 const STAR_FIELD_BRIGHT = [
   "radial-gradient(1.5px 1.5px at 31% 12%, var(--satcom-star), transparent)",
   "radial-gradient(1.5px 1.5px at 69% 48%, var(--satcom-star), transparent)",
   "radial-gradient(1.5px 1.5px at 12% 76%, var(--satcom-star), transparent)",
   "radial-gradient(1.5px 1.5px at 88% 28%, var(--satcom-star), transparent)",
+].join(", ");
+
+const STAR_FIELD_BRIGHT_ALT = [
+  "radial-gradient(1.5px 1.5px at 52% 22%, var(--satcom-star), transparent)",
+  "radial-gradient(1.5px 1.5px at 21% 54%, var(--satcom-star), transparent)",
+  "radial-gradient(1.5px 1.5px at 77% 84%, var(--satcom-star), transparent)",
+  "radial-gradient(1.5px 1.5px at 95% 62%, var(--satcom-star), transparent)",
 ].join(", ");
 
 /**
@@ -204,62 +222,70 @@ const STAR_FIELD_BRIGHT = [
 function SatcomDish({ className }: { className: string }) {
   return (
     <svg className={`absolute ${className}`} viewBox="0 0 200 200" fill="none" aria-hidden="true">
-      <path d="M26 72 C26 102 60 124 100 124 C140 124 174 102 174 72 Z" fill="var(--satcom-dish)" stroke="none" />
-
-      {/* Structural rim glow, under the linework. */}
-      <ellipse
-        cx="100"
-        cy="72"
-        rx="74"
-        ry="20"
-        fill="none"
-        stroke="var(--satcom-horizon-glow)"
-        strokeWidth="3"
-        style={{ filter: "blur(3px)" }}
-      />
-
+      {/* Static mount -- the head above idles on this, so the pedestal and
+          its base stay planted. */}
       <g stroke="var(--satcom-orbit-line)" fill="none" strokeLinecap="round">
-        {/* Reflector: rim + bowl. */}
-        <ellipse cx="100" cy="72" rx="74" ry="20" strokeWidth="1.6" />
-        <path d="M26 72 C26 102 60 124 100 124 C140 124 174 102 174 72" strokeWidth="1.4" />
-
-        {/* Panel seams and ribs -- mesh hints, hairline. */}
-        <path d="M44 76 C44 95 68 109 100 109 C132 109 156 95 156 76" strokeWidth="0.75" opacity="0.45" />
-        <path d="M64 79 C64 90 80 98 100 98 C120 98 136 90 136 79" strokeWidth="0.75" opacity="0.35" />
-        <path d="M100 124 L38 76" strokeWidth="0.7" opacity="0.3" />
-        <path d="M100 124 L100 92" strokeWidth="0.7" opacity="0.3" />
-        <path d="M100 124 L162 76" strokeWidth="0.7" opacity="0.3" />
-
-        {/* Feed assembly: three struts converging on the focus. */}
-        <path d="M38 70 L100 38" strokeWidth="1" opacity="0.8" />
-        <path d="M162 70 L100 38" strokeWidth="1" opacity="0.8" />
-        <path d="M100 110 L100 44" strokeWidth="1" opacity="0.65" />
-
-        {/* Elbow onto the azimuth housing and pedestal. */}
-        <path d="M100 124 L100 144" strokeWidth="1.3" />
         <rect x="87" y="144" width="26" height="15" rx="4.5" strokeWidth="1.2" />
         <path d="M100 159 L100 180" strokeWidth="1.3" />
         <ellipse cx="100" cy="183" rx="21" ry="4.5" strokeWidth="1.1" opacity="0.75" />
       </g>
 
-      {/* Feed horn at the focus. */}
-      <rect x="94" y="30" width="12" height="15" rx="4" fill="var(--satcom-dish)" stroke="var(--satcom-orbit-line)" strokeWidth="1.1" />
-      <circle cx="100" cy="26" r="2.6" fill="var(--satcom-orbit-line)" />
+      {/* The head, idling on the azimuth housing. `transformBox` is explicit
+          so the pivot lands on the housing in viewBox coordinates rather than
+          on this group's own bounding box. */}
+      <g className="animate-satcom-dish-idle" style={{ transformBox: "view-box", transformOrigin: "100px 146px" }}>
+        <path d="M26 72 C26 102 60 124 100 124 C140 124 174 102 174 72 Z" fill="var(--satcom-dish)" stroke="none" />
 
-      {/* Signal waves off the feed -- two very faint, very slow pings. */}
-      {/* `transformBox` is set explicitly so the scale pivots on the feed horn
-          in viewBox coordinates rather than the element's own bounding box. */}
-      <g stroke="var(--satcom-horizon-glow)" fill="none" strokeWidth="1.2" strokeLinecap="round">
-        <path
-          className="animate-satcom-ping"
-          style={{ transformBox: "view-box", transformOrigin: "100px 30px" }}
-          d="M78 24 A 26 26 0 0 1 122 24"
+        {/* Structural rim glow, under the linework. */}
+        <ellipse
+          cx="100"
+          cy="72"
+          rx="74"
+          ry="20"
+          fill="none"
+          stroke="var(--satcom-horizon-glow)"
+          strokeWidth="3"
+          style={{ filter: "blur(3px)" }}
         />
-        <path
-          className="animate-satcom-ping-late"
-          style={{ transformBox: "view-box", transformOrigin: "100px 30px" }}
-          d="M78 24 A 26 26 0 0 1 122 24"
-        />
+
+        <g stroke="var(--satcom-orbit-line)" fill="none" strokeLinecap="round">
+          {/* Reflector: rim + bowl. */}
+          <ellipse cx="100" cy="72" rx="74" ry="20" strokeWidth="1.6" />
+          <path d="M26 72 C26 102 60 124 100 124 C140 124 174 102 174 72" strokeWidth="1.4" />
+
+          {/* Panel seams and ribs -- mesh hints, hairline. */}
+          <path d="M44 76 C44 95 68 109 100 109 C132 109 156 95 156 76" strokeWidth="0.75" opacity="0.45" />
+          <path d="M64 79 C64 90 80 98 100 98 C120 98 136 90 136 79" strokeWidth="0.75" opacity="0.35" />
+          <path d="M100 124 L38 76" strokeWidth="0.7" opacity="0.3" />
+          <path d="M100 124 L100 92" strokeWidth="0.7" opacity="0.3" />
+          <path d="M100 124 L162 76" strokeWidth="0.7" opacity="0.3" />
+
+          {/* Feed assembly: three struts converging on the focus. */}
+          <path d="M38 70 L100 38" strokeWidth="1" opacity="0.8" />
+          <path d="M162 70 L100 38" strokeWidth="1" opacity="0.8" />
+          <path d="M100 110 L100 44" strokeWidth="1" opacity="0.65" />
+
+          {/* Elbow down onto the housing. */}
+          <path d="M100 124 L100 146" strokeWidth="1.3" />
+        </g>
+
+        {/* Feed horn at the focus. */}
+        <rect x="94" y="30" width="12" height="15" rx="4" fill="var(--satcom-dish)" stroke="var(--satcom-orbit-line)" strokeWidth="1.1" />
+        <circle cx="100" cy="26" r="2.6" fill="var(--satcom-orbit-line)" />
+
+        {/* Signal waves off the feed, pivoting on the horn. */}
+        <g stroke="var(--satcom-horizon-glow)" fill="none" strokeWidth="1.5" strokeLinecap="round">
+          <path
+            className="animate-satcom-ping"
+            style={{ transformBox: "view-box", transformOrigin: "100px 30px" }}
+            d="M78 24 A 26 26 0 0 1 122 24"
+          />
+          <path
+            className="animate-satcom-ping-late"
+            style={{ transformBox: "view-box", transformOrigin: "100px 30px" }}
+            d="M78 24 A 26 26 0 0 1 122 24"
+          />
+        </g>
       </g>
     </svg>
   );
@@ -317,6 +343,10 @@ export function SatcomBackground({ variant }: SatcomBackgroundProps) {
           className="animate-satcom-twinkle absolute inset-0"
           style={{ backgroundImage: STAR_FIELD_BRIGHT, backgroundSize: "1100px 820px", backgroundRepeat: "repeat" }}
         />
+        <div
+          className="animate-satcom-twinkle-late absolute inset-0"
+          style={{ backgroundImage: STAR_FIELD_BRIGHT_ALT, backgroundSize: "1300px 940px", backgroundRepeat: "repeat" }}
+        />
       </div>
 
       {/* Earth limb: a faint body plus a soft-glowing edge. */}
@@ -350,38 +380,45 @@ export function SatcomBackground({ variant }: SatcomBackgroundProps) {
 
       {/* Communication/orbital paths: full-width sweeps at several heights,
           two of them carrying a slow travelling light. */}
-      {composition.arcs.map((arc) => (
-        <svg
+      {composition.arcs.map((arc, index) => (
+        <div
           key={arc.position}
-          className={`absolute ${arc.position} left-1/2 w-[150%] -translate-x-1/2 ${arc.opacity}`}
-          viewBox="0 0 1200 300"
-          preserveAspectRatio="none"
-          fill="none"
-          aria-hidden="true"
+          className={`absolute inset-x-0 ${arc.position} ${
+            index % 2 === 0 ? "animate-satcom-arc-drift" : "animate-satcom-arc-drift-alt"
+          }`}
         >
-          <ellipse
-            cx="600"
-            cy={arc.cy}
-            rx="640"
-            ry={arc.ry}
-            stroke="var(--satcom-orbit-line)"
-            strokeWidth="1.25"
-            strokeDasharray={arc.dash}
-            vectorEffect="non-scaling-stroke"
-          />
-          {arc.traced ? (
+          <svg
+            className={`absolute inset-y-0 left-1/2 w-[150%] -translate-x-1/2 ${arc.opacity}`}
+            viewBox="0 0 1200 300"
+            preserveAspectRatio="none"
+            fill="none"
+            aria-hidden="true"
+          >
             <ellipse
-              className="animate-satcom-trace"
               cx="600"
               cy={arc.cy}
               rx="640"
               ry={arc.ry}
-              stroke="var(--satcom-horizon-glow)"
-              strokeWidth="1.5"
-              strokeDasharray="80 2950"
+              stroke="var(--satcom-orbit-line)"
+              strokeWidth="1.25"
+              strokeDasharray={arc.dash}
+              vectorEffect="non-scaling-stroke"
             />
-          ) : null}
-        </svg>
+            {arc.traced ? (
+              <ellipse
+                className={arc.traceLate ? "animate-satcom-trace-late" : "animate-satcom-trace"}
+                cx="600"
+                cy={arc.cy}
+                rx="640"
+                ry={arc.ry}
+                stroke="var(--satcom-horizon-glow)"
+                strokeWidth="2.25"
+                strokeDasharray="220 2900"
+                strokeLinecap="round"
+              />
+            ) : null}
+          </svg>
+        </div>
       ))}
 
       {/* Ambient glows, seeded across every region and breathing out of sync. */}

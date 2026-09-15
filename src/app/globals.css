@@ -546,24 +546,50 @@ body {
 /* triggers layout. All of it is disabled under reduced motion below.       */
 /* ---------------------------------------------------------------------- */
 
-/* Starfield parallax: a few pixels over three minutes. The layer it runs on
-   is inset past the canvas edges so this never exposes a seam. */
+/* Starfield parallax: the whole sky easing across a few dozen pixels. The
+   layer it runs on is inset past the canvas edges so this never exposes a
+   seam. */
 @keyframes satcom-drift {
   0%, 100% { transform: translate3d(0, 0, 0); }
-  50% { transform: translate3d(-16px, -10px, 0); }
+  50% { transform: translate3d(-38px, -22px, 0); }
 }
 
-/* The brighter stars only -- a shallow opacity swell, never a blink. */
+/* The arcs themselves rising and settling, which is what actually reads as
+   "the environment is alive" -- a bright hairline moving is far easier to
+   catch than a glow changing brightness. Two speeds in opposite phase give
+   the set a little parallax. */
+@keyframes satcom-arc-drift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -18px, 0); }
+}
+
+@keyframes satcom-arc-drift-alt {
+  0%, 100% { transform: translate3d(0, -14px, 0); }
+  50% { transform: translate3d(0, 0, 0); }
+}
+
+/* Only the sparse bright-star layers, never the whole sky. A real swell
+   down to near-invisible and back, which at this size reads as a twinkle
+   rather than a blink. */
 @keyframes satcom-twinkle {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 1; }
+  0%, 100% { opacity: 0.22; }
+  45% { opacity: 1; }
 }
 
-/* Atmospheric glows breathing. Two durations, so they never pulse in unison
-   and the loop never becomes legible. */
+/* Atmospheric glows breathing. These sit at very low alpha, so the swing
+   has to be wide to register at all -- scale carries most of it. Two
+   durations, so they never pulse in unison and the loop stays illegible. */
 @keyframes satcom-breathe {
-  0%, 100% { opacity: 0.75; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.05); }
+  0%, 100% { opacity: 0.45; transform: scale(0.94); }
+  50% { opacity: 1; transform: scale(1.12); }
+}
+
+/* The dish idling on its mount: a degree and a half either side, slow
+   enough to read as a tracking servo rather than a wobble. Pivots on the
+   azimuth housing, so only the head sways and the pedestal stays planted. */
+@keyframes satcom-dish-idle {
+  0%, 100% { transform: rotate(-1.4deg); }
+  50% { transform: rotate(1.4deg); }
 }
 
 /* A light travelling along a communication path: one short dash sliding
@@ -573,7 +599,7 @@ body {
    that would resolve the dashes in screen units instead, and the pattern
    would break differently at every viewport width. */
 @keyframes satcom-trace {
-  from { stroke-dashoffset: 3030; }
+  from { stroke-dashoffset: 3120; }
   to { stroke-dashoffset: 0; }
 }
 
@@ -581,18 +607,23 @@ body {
    its cycle invisible, so it reads as an occasional pulse rather than a
    repeating animation. */
 @keyframes satcom-ping {
-  0% { transform: scale(0.6); opacity: 0; }
-  12% { opacity: 0.5; }
-  55%, 100% { transform: scale(2.3); opacity: 0; }
+  0% { transform: scale(0.45); opacity: 0; }
+  10% { opacity: 0.85; }
+  70%, 100% { transform: scale(2.8); opacity: 0; }
 }
 
-.animate-satcom-drift { animation: satcom-drift 180s ease-in-out infinite; }
-.animate-satcom-twinkle { animation: satcom-twinkle 9s ease-in-out infinite; }
-.animate-satcom-breathe { animation: satcom-breathe 19s ease-in-out infinite; }
-.animate-satcom-breathe-slow { animation: satcom-breathe 27s ease-in-out infinite; }
-.animate-satcom-trace { animation: satcom-trace 42s linear infinite; }
-.animate-satcom-ping { animation: satcom-ping 16s ease-out infinite; }
-.animate-satcom-ping-late { animation: satcom-ping 16s ease-out 8s infinite; }
+.animate-satcom-drift { animation: satcom-drift 60s ease-in-out infinite; }
+.animate-satcom-arc-drift { animation: satcom-arc-drift 19s ease-in-out infinite; }
+.animate-satcom-arc-drift-alt { animation: satcom-arc-drift-alt 26s ease-in-out infinite; }
+.animate-satcom-twinkle { animation: satcom-twinkle 6s ease-in-out infinite; }
+.animate-satcom-twinkle-late { animation: satcom-twinkle 8.5s ease-in-out 2s infinite; }
+.animate-satcom-breathe { animation: satcom-breathe 8s ease-in-out infinite; }
+.animate-satcom-breathe-slow { animation: satcom-breathe 11s ease-in-out infinite; }
+.animate-satcom-trace { animation: satcom-trace 12s linear infinite; }
+.animate-satcom-trace-late { animation: satcom-trace 12s linear 6s infinite; }
+.animate-satcom-ping { animation: satcom-ping 11s ease-out infinite; }
+.animate-satcom-ping-late { animation: satcom-ping 11s ease-out 5.5s infinite; }
+.animate-satcom-dish-idle { animation: satcom-dish-idle 28s ease-in-out infinite; }
 
 .animate-pulse-dot { animation: pulse-dot 2.4s ease-in-out infinite; }
 .animate-pulse-ring { animation: pulse-ring 2.4s cubic-bezier(0.25, 0.6, 0.35, 1) infinite; }
@@ -622,12 +653,17 @@ body {
   .animate-login-now-drift,
   .animate-login-clock-sweep,
   .animate-satcom-drift,
+  .animate-satcom-arc-drift,
+  .animate-satcom-arc-drift-alt,
   .animate-satcom-twinkle,
+  .animate-satcom-twinkle-late,
   .animate-satcom-breathe,
   .animate-satcom-breathe-slow,
   .animate-satcom-trace,
+  .animate-satcom-trace-late,
   .animate-satcom-ping,
   .animate-satcom-ping-late,
+  .animate-satcom-dish-idle,
   .skeleton {
     animation: none !important;
   }
