@@ -536,6 +536,64 @@ body {
   to { transform: rotate(360deg); }
 }
 
+/* ---------------------------------------------------------------------- */
+/* SATCOM ambient motion (see `SatcomBackground`). Deliberately an order of */
+/* magnitude slower than everything above -- the recommended 2.5-8s ambient */
+/* band is for motion the eye is MEANT to notice; this is background        */
+/* atmosphere that should register only subconsciously, so the cycles run   */
+/* 16s-3min. Only `transform`/`opacity` (plus one `stroke-dashoffset` on a  */
+/* single hairline path) so the compositor does the work and nothing        */
+/* triggers layout. All of it is disabled under reduced motion below.       */
+/* ---------------------------------------------------------------------- */
+
+/* Starfield parallax: a few pixels over three minutes. The layer it runs on
+   is inset past the canvas edges so this never exposes a seam. */
+@keyframes satcom-drift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-16px, -10px, 0); }
+}
+
+/* The brighter stars only -- a shallow opacity swell, never a blink. */
+@keyframes satcom-twinkle {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+/* Atmospheric glows breathing. Two durations, so they never pulse in unison
+   and the loop never becomes legible. */
+@keyframes satcom-breathe {
+  0%, 100% { opacity: 0.75; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+/* A light travelling along a communication path: one short dash sliding
+   around a long, otherwise-empty dash cycle. The cycle length is tuned to
+   these arcs' perimeter in viewBox units (~2930-3050 across the set), which
+   is why the traced path deliberately does NOT use `non-scaling-stroke` --
+   that would resolve the dashes in screen units instead, and the pattern
+   would break differently at every viewport width. */
+@keyframes satcom-trace {
+  from { stroke-dashoffset: 3030; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* Signal waves off the dish feed -- a slow radar ping that spends most of
+   its cycle invisible, so it reads as an occasional pulse rather than a
+   repeating animation. */
+@keyframes satcom-ping {
+  0% { transform: scale(0.6); opacity: 0; }
+  12% { opacity: 0.5; }
+  55%, 100% { transform: scale(2.3); opacity: 0; }
+}
+
+.animate-satcom-drift { animation: satcom-drift 180s ease-in-out infinite; }
+.animate-satcom-twinkle { animation: satcom-twinkle 9s ease-in-out infinite; }
+.animate-satcom-breathe { animation: satcom-breathe 19s ease-in-out infinite; }
+.animate-satcom-breathe-slow { animation: satcom-breathe 27s ease-in-out infinite; }
+.animate-satcom-trace { animation: satcom-trace 42s linear infinite; }
+.animate-satcom-ping { animation: satcom-ping 16s ease-out infinite; }
+.animate-satcom-ping-late { animation: satcom-ping 16s ease-out 8s infinite; }
+
 .animate-pulse-dot { animation: pulse-dot 2.4s ease-in-out infinite; }
 .animate-pulse-ring { animation: pulse-ring 2.4s cubic-bezier(0.25, 0.6, 0.35, 1) infinite; }
 .animate-fade-up { animation: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
@@ -563,6 +621,13 @@ body {
   .animate-issue-pulse,
   .animate-login-now-drift,
   .animate-login-clock-sweep,
+  .animate-satcom-drift,
+  .animate-satcom-twinkle,
+  .animate-satcom-breathe,
+  .animate-satcom-breathe-slow,
+  .animate-satcom-trace,
+  .animate-satcom-ping,
+  .animate-satcom-ping-late,
   .skeleton {
     animation: none !important;
   }
