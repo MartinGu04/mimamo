@@ -17,18 +17,19 @@
 export function SatcomBackground() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-      {/* Technical grid -- spans the full content height, gently softer
-          toward the bottom rather than fading away, so the page reads as
-          one continuous SATCOM canvas instead of a top-only effect. */}
+      {/* Technical grid -- spans the full content height. Softer toward the
+          bottom, but the floor stays high enough that the lower half of
+          the page still reads as the same SATCOM canvas, not a fade to
+          plain background. */}
       <div
         className="absolute inset-0"
         style={{
           backgroundImage:
             "linear-gradient(to bottom, var(--satcom-grid-line) 1px, transparent 1px), linear-gradient(to right, var(--satcom-grid-line) 1px, transparent 1px)",
           backgroundSize: "42px 42px",
-          maskImage: "linear-gradient(to bottom, black 0%, black 22%, rgba(0,0,0,0.65) 55%, rgba(0,0,0,0.45) 100%)",
+          maskImage: "linear-gradient(to bottom, black 0%, black 20%, rgba(0,0,0,0.72) 50%, rgba(0,0,0,0.6) 100%)",
           WebkitMaskImage:
-            "linear-gradient(to bottom, black 0%, black 22%, rgba(0,0,0,0.65) 55%, rgba(0,0,0,0.45) 100%)",
+            "linear-gradient(to bottom, black 0%, black 20%, rgba(0,0,0,0.72) 50%, rgba(0,0,0,0.6) 100%)",
         }}
       />
 
@@ -41,6 +42,15 @@ export function SatcomBackground() {
       <div
         className="absolute top-12 start-[12%] h-24 w-24 rounded-full blur-2xl"
         style={{ background: "var(--satcom-glow-b)" }}
+      />
+
+      {/* A third, equally small glow echoing the two above but in the
+          lower half -- same tight/tied-down visual language, not a new
+          freestanding blob, just keeping the ambient light from reading
+          as top-only. */}
+      <div
+        className="absolute top-[52%] end-[10%] h-28 w-28 rounded-full opacity-80 blur-2xl"
+        style={{ background: "var(--satcom-glow-a)" }}
       />
 
       {/* Primary orbital/communication-path arcs, upper background. */}
@@ -64,14 +74,16 @@ export function SatcomBackground() {
 
       {/* A second, fainter arc further down the page -- only its crest
           pokes into view, echoing the top pair so the atmosphere reads as
-          continuous rather than confined to the header. */}
+          continuous rather than confined to the header. Kept thin and
+          restrained, but visible enough that the lower half doesn't feel
+          like the theme has dropped out entirely. */}
       <svg
-        className="absolute top-[54%] start-1/2 h-[280px] w-[1300px] -translate-x-1/2 opacity-70"
+        className="absolute top-[54%] start-1/2 h-[280px] w-[1300px] -translate-x-1/2 opacity-90"
         viewBox="0 0 1300 280"
         fill="none"
         aria-hidden="true"
       >
-        <ellipse cx="650" cy="-60" rx="720" ry="340" stroke="var(--satcom-orbit-line)" strokeWidth="1" />
+        <ellipse cx="650" cy="-60" rx="720" ry="340" stroke="var(--satcom-orbit-line)" strokeWidth="1.25" />
       </svg>
 
       {/* Satellite dish -- elliptical rim (in perspective) + bowl curve +
