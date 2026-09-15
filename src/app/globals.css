@@ -139,7 +139,8 @@
   --satcom-dish: rgba(47, 100, 142, 0.07);
   --satcom-bg-from: #f8fafc;
   --satcom-bg-via: #eef3f8;
-  --satcom-horizon-glow: rgba(47, 100, 142, 0.1);
+  --satcom-horizon-glow: rgba(47, 100, 142, 0.14);
+  --satcom-earth-fill: rgba(47, 100, 142, 0.035);
   --satcom-star: rgba(47, 100, 142, 0.05);
 }
 
@@ -221,7 +222,8 @@
     --satcom-dish: rgba(120, 169, 204, 0.12);
     --satcom-bg-from: #050810;
     --satcom-bg-via: #0a1729;
-    --satcom-horizon-glow: rgba(79, 195, 232, 0.26);
+    --satcom-horizon-glow: rgba(79, 195, 232, 0.28);
+    --satcom-earth-fill: rgba(30, 84, 140, 0.16);
     --satcom-star: rgba(226, 236, 248, 0.55);
   }
 }
@@ -287,7 +289,8 @@
   --satcom-dish: rgba(120, 169, 204, 0.12);
   --satcom-bg-from: #050810;
   --satcom-bg-via: #0a1729;
-  --satcom-horizon-glow: rgba(79, 195, 232, 0.26);
+  --satcom-horizon-glow: rgba(79, 195, 232, 0.28);
+  --satcom-earth-fill: rgba(30, 84, 140, 0.16);
   --satcom-star: rgba(226, 236, 248, 0.55);
 }
 
