@@ -127,6 +127,16 @@
      palette. Never used for normal in-page cards/panels, and never
      colored/glowing. */
   --shadow-elevated: 0 12px 28px -12px rgba(24, 33, 43, 0.18);
+
+  /* SATCOM ambient background (Home/Dashboard only, see SatcomBackground) --
+     a decorative BEHIND-content layer, never used on cards/panels/text.
+     Light mode: airy, low-opacity blue-gray, never louder than the neutral
+     page chrome it sits behind. */
+  --satcom-glow-a: rgba(47, 100, 142, 0.07);
+  --satcom-glow-b: rgba(124, 58, 237, 0.035);
+  --satcom-grid-line: rgba(24, 33, 43, 0.04);
+  --satcom-orbit-line: rgba(47, 100, 142, 0.16);
+  --satcom-dish: rgba(24, 33, 43, 0.075);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -195,6 +205,15 @@
     --event-reserve: #a37a1f;
 
     --shadow-elevated: 0 16px 36px -14px rgba(0, 0, 0, 0.55);
+
+    /* Cinematic dark-mode SATCOM atmosphere: deep navy stays the page
+       background (unchanged), these are just a restrained blue/violet glow
+       and faint grid on top -- see the light-mode note above. */
+    --satcom-glow-a: rgba(79, 195, 232, 0.13);
+    --satcom-glow-b: rgba(139, 92, 246, 0.1);
+    --satcom-grid-line: rgba(255, 255, 255, 0.045);
+    --satcom-orbit-line: rgba(120, 169, 204, 0.22);
+    --satcom-dish: rgba(255, 255, 255, 0.09);
   }
 }
 
@@ -251,6 +270,12 @@
   --event-reserve: #a37a1f;
 
   --shadow-elevated: 0 16px 36px -14px rgba(0, 0, 0, 0.55);
+
+  --satcom-glow-a: rgba(79, 195, 232, 0.13);
+  --satcom-glow-b: rgba(139, 92, 246, 0.1);
+  --satcom-grid-line: rgba(255, 255, 255, 0.045);
+  --satcom-orbit-line: rgba(120, 169, 204, 0.22);
+  --satcom-dish: rgba(255, 255, 255, 0.09);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -294,6 +319,12 @@
   --sidebar-hover-bg: color-mix(in srgb, white 7%, transparent);
   --sidebar-active-bg: color-mix(in srgb, var(--sidebar-accent) 18%, transparent);
   --sidebar-active-ring: color-mix(in srgb, var(--sidebar-accent) 45%, transparent);
+
+  /* A single, barely-there SATCOM glow hint behind the sidebar's BrandMark
+     -- fixed-tone (not per-theme) to match the sidebar's own always-dark
+     surface (see the top-of-file note). Intentionally the only ambient
+     touch the sidebar gets; it must stay clean, not decorative. */
+  --sidebar-satcom-glow: rgba(139, 158, 246, 0.07);
 
   --surface-critical: color-mix(in srgb, var(--critical) 8%, var(--surface-1));
   --surface-critical-border: color-mix(in srgb, var(--critical) 30%, transparent);

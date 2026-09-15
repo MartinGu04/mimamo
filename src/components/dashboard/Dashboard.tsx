@@ -10,6 +10,7 @@ import { DashboardVisitSession } from "./DashboardVisitSession";
 import { Header } from "./Header";
 import { Hero } from "./Hero";
 import { IssuesPanel } from "./IssuesPanel";
+import { SatcomBackground } from "./SatcomBackground";
 import { TodayTimeline } from "./TodayTimeline";
 import { UpcomingSection } from "./UpcomingSection";
 import { WeekOverviewSection } from "./WeekOverviewSection";
@@ -123,7 +124,8 @@ export function Dashboard({
   const weekOverview = buildPersonalWeekOverview(model.calendarEvents, model.localNow);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="relative isolate flex flex-col gap-4">
+      <SatcomBackground />
       <Header personName={model.person.name} localNow={model.localNow} />
       <SetupSection userId={userId} calendarSyncEnabled={calendarSyncEnabled} eligibleForOnboarding={eligibleForOnboarding} />
       {reportOneDraft ? (
