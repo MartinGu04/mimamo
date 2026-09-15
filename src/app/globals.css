@@ -135,8 +135,12 @@
   --satcom-glow-a: rgba(47, 100, 142, 0.09);
   --satcom-glow-b: rgba(124, 58, 237, 0.05);
   --satcom-grid-line: rgba(24, 33, 43, 0.04);
-  --satcom-orbit-line: rgba(47, 100, 142, 0.22);
-  --satcom-dish: rgba(47, 100, 142, 0.06);
+  --satcom-orbit-line: rgba(47, 100, 142, 0.24);
+  --satcom-dish: rgba(47, 100, 142, 0.07);
+  --satcom-bg-from: #f8fafc;
+  --satcom-bg-via: #eef3f8;
+  --satcom-horizon-glow: rgba(47, 100, 142, 0.1);
+  --satcom-star: rgba(47, 100, 142, 0.05);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -206,14 +210,19 @@
 
     --shadow-elevated: 0 16px 36px -14px rgba(0, 0, 0, 0.55);
 
-    /* Cinematic dark-mode SATCOM atmosphere: deep navy stays the page
-       background (unchanged), these are just a restrained blue/violet glow
-       and faint grid on top -- see the light-mode note above. */
-    --satcom-glow-a: rgba(79, 195, 232, 0.16);
-    --satcom-glow-b: rgba(139, 92, 246, 0.12);
-    --satcom-grid-line: rgba(255, 255, 255, 0.045);
-    --satcom-orbit-line: rgba(120, 169, 204, 0.3);
-    --satcom-dish: rgba(120, 169, 204, 0.1);
+    /* Cinematic dark-mode SATCOM atmosphere -- a real deep-space canvas
+       (near-black fading through navy) behind the dish/arcs/grid, not just
+       a tint on the flat page background. Still sits strictly behind every
+       card (see SatcomBackground's own docstring). */
+    --satcom-glow-a: rgba(79, 195, 232, 0.18);
+    --satcom-glow-b: rgba(139, 92, 246, 0.14);
+    --satcom-grid-line: rgba(255, 255, 255, 0.05);
+    --satcom-orbit-line: rgba(120, 169, 204, 0.34);
+    --satcom-dish: rgba(120, 169, 204, 0.12);
+    --satcom-bg-from: #050810;
+    --satcom-bg-via: #0a1729;
+    --satcom-horizon-glow: rgba(79, 195, 232, 0.26);
+    --satcom-star: rgba(226, 236, 248, 0.55);
   }
 }
 
@@ -271,11 +280,15 @@
 
   --shadow-elevated: 0 16px 36px -14px rgba(0, 0, 0, 0.55);
 
-  --satcom-glow-a: rgba(79, 195, 232, 0.16);
-  --satcom-glow-b: rgba(139, 92, 246, 0.12);
-  --satcom-grid-line: rgba(255, 255, 255, 0.045);
-  --satcom-orbit-line: rgba(120, 169, 204, 0.3);
-  --satcom-dish: rgba(120, 169, 204, 0.1);
+  --satcom-glow-a: rgba(79, 195, 232, 0.18);
+  --satcom-glow-b: rgba(139, 92, 246, 0.14);
+  --satcom-grid-line: rgba(255, 255, 255, 0.05);
+  --satcom-orbit-line: rgba(120, 169, 204, 0.34);
+  --satcom-dish: rgba(120, 169, 204, 0.12);
+  --satcom-bg-from: #050810;
+  --satcom-bg-via: #0a1729;
+  --satcom-horizon-glow: rgba(79, 195, 232, 0.26);
+  --satcom-star: rgba(226, 236, 248, 0.55);
 }
 
 /* ---------------------------------------------------------------------- */
