@@ -130,7 +130,12 @@ export function Sidebar({ person }: SidebarProps) {
   }
 
   return (
-    <aside className="sticky top-0 hidden h-dvh w-[320px] shrink-0 flex-col border-e border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
+    <aside className="sticky top-0 hidden h-dvh w-[320px] shrink-0 flex-col overflow-hidden border-e border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-20 start-1/2 h-64 w-64 -translate-x-1/2 rounded-full blur-3xl"
+        style={{ background: "var(--sidebar-satcom-glow)" }}
+      />
       <div className="flex items-center px-6 pt-8 pb-6">
         <BrandMark size="md" className="text-sidebar-foreground" />
       </div>

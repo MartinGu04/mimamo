@@ -127,6 +127,21 @@
      palette. Never used for normal in-page cards/panels, and never
      colored/glowing. */
   --shadow-elevated: 0 12px 28px -12px rgba(24, 33, 43, 0.18);
+
+  /* SATCOM ambient background (Home/Dashboard only, see SatcomBackground) --
+     a decorative BEHIND-content layer, never used on cards/panels/text.
+     Light mode: airy, low-opacity blue-gray, never louder than the neutral
+     page chrome it sits behind. */
+  --satcom-glow-a: rgba(47, 100, 142, 0.09);
+  --satcom-glow-b: rgba(124, 58, 237, 0.05);
+  --satcom-grid-line: rgba(24, 33, 43, 0.04);
+  --satcom-orbit-line: rgba(47, 100, 142, 0.24);
+  --satcom-dish: rgba(47, 100, 142, 0.07);
+  --satcom-bg-from: #f8fafc;
+  --satcom-bg-via: #eef3f8;
+  --satcom-horizon-glow: rgba(47, 100, 142, 0.14);
+  --satcom-earth-fill: rgba(47, 100, 142, 0.035);
+  --satcom-star: rgba(47, 100, 142, 0.05);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -195,6 +210,21 @@
     --event-reserve: #a37a1f;
 
     --shadow-elevated: 0 16px 36px -14px rgba(0, 0, 0, 0.55);
+
+    /* Cinematic dark-mode SATCOM atmosphere -- a real deep-space canvas
+       (near-black fading through navy) behind the dish/arcs/grid, not just
+       a tint on the flat page background. Still sits strictly behind every
+       card (see SatcomBackground's own docstring). */
+    --satcom-glow-a: rgba(79, 195, 232, 0.18);
+    --satcom-glow-b: rgba(139, 92, 246, 0.14);
+    --satcom-grid-line: rgba(255, 255, 255, 0.05);
+    --satcom-orbit-line: rgba(120, 169, 204, 0.34);
+    --satcom-dish: rgba(120, 169, 204, 0.12);
+    --satcom-bg-from: #050810;
+    --satcom-bg-via: #0a1729;
+    --satcom-horizon-glow: rgba(79, 195, 232, 0.28);
+    --satcom-earth-fill: rgba(30, 84, 140, 0.16);
+    --satcom-star: rgba(226, 236, 248, 0.55);
   }
 }
 
@@ -251,6 +281,17 @@
   --event-reserve: #a37a1f;
 
   --shadow-elevated: 0 16px 36px -14px rgba(0, 0, 0, 0.55);
+
+  --satcom-glow-a: rgba(79, 195, 232, 0.18);
+  --satcom-glow-b: rgba(139, 92, 246, 0.14);
+  --satcom-grid-line: rgba(255, 255, 255, 0.05);
+  --satcom-orbit-line: rgba(120, 169, 204, 0.34);
+  --satcom-dish: rgba(120, 169, 204, 0.12);
+  --satcom-bg-from: #050810;
+  --satcom-bg-via: #0a1729;
+  --satcom-horizon-glow: rgba(79, 195, 232, 0.28);
+  --satcom-earth-fill: rgba(30, 84, 140, 0.16);
+  --satcom-star: rgba(226, 236, 248, 0.55);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -294,6 +335,12 @@
   --sidebar-hover-bg: color-mix(in srgb, white 7%, transparent);
   --sidebar-active-bg: color-mix(in srgb, var(--sidebar-accent) 18%, transparent);
   --sidebar-active-ring: color-mix(in srgb, var(--sidebar-accent) 45%, transparent);
+
+  /* A single, barely-there SATCOM glow hint behind the sidebar's BrandMark
+     -- fixed-tone (not per-theme) to match the sidebar's own always-dark
+     surface (see the top-of-file note). Intentionally the only ambient
+     touch the sidebar gets; it must stay clean, not decorative. */
+  --sidebar-satcom-glow: rgba(139, 158, 246, 0.07);
 
   --surface-critical: color-mix(in srgb, var(--critical) 8%, var(--surface-1));
   --surface-critical-border: color-mix(in srgb, var(--critical) 30%, transparent);
@@ -489,6 +536,95 @@ body {
   to { transform: rotate(360deg); }
 }
 
+/* ---------------------------------------------------------------------- */
+/* SATCOM ambient motion (see `SatcomBackground`). Deliberately an order of */
+/* magnitude slower than everything above -- the recommended 2.5-8s ambient */
+/* band is for motion the eye is MEANT to notice; this is background        */
+/* atmosphere that should register only subconsciously, so the cycles run   */
+/* 16s-3min. Only `transform`/`opacity` (plus one `stroke-dashoffset` on a  */
+/* single hairline path) so the compositor does the work and nothing        */
+/* triggers layout. All of it is disabled under reduced motion below.       */
+/* ---------------------------------------------------------------------- */
+
+/* Starfield parallax: the whole sky easing across a few dozen pixels. The
+   layer it runs on is inset past the canvas edges so this never exposes a
+   seam. */
+@keyframes satcom-drift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-38px, -22px, 0); }
+}
+
+/* The arcs themselves rising and settling, which is what actually reads as
+   "the environment is alive" -- a bright hairline moving is far easier to
+   catch than a glow changing brightness. Two speeds in opposite phase give
+   the set a little parallax. */
+@keyframes satcom-arc-drift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -18px, 0); }
+}
+
+@keyframes satcom-arc-drift-alt {
+  0%, 100% { transform: translate3d(0, -14px, 0); }
+  50% { transform: translate3d(0, 0, 0); }
+}
+
+/* Only the sparse bright-star layers, never the whole sky. A real swell
+   down to near-invisible and back, which at this size reads as a twinkle
+   rather than a blink. */
+@keyframes satcom-twinkle {
+  0%, 100% { opacity: 0.22; }
+  45% { opacity: 1; }
+}
+
+/* Atmospheric glows breathing. These sit at very low alpha, so the swing
+   has to be wide to register at all -- scale carries most of it. Two
+   durations, so they never pulse in unison and the loop stays illegible. */
+@keyframes satcom-breathe {
+  0%, 100% { opacity: 0.45; transform: scale(0.94); }
+  50% { opacity: 1; transform: scale(1.12); }
+}
+
+/* The dish idling on its mount: a degree and a half either side, slow
+   enough to read as a tracking servo rather than a wobble. Pivots on the
+   azimuth housing, so only the head sways and the pedestal stays planted. */
+@keyframes satcom-dish-idle {
+  0%, 100% { transform: rotate(-1.4deg); }
+  50% { transform: rotate(1.4deg); }
+}
+
+/* A light travelling along a communication path: one short dash sliding
+   around a long, otherwise-empty dash cycle. The cycle length is tuned to
+   these arcs' perimeter in viewBox units (~2930-3050 across the set), which
+   is why the traced path deliberately does NOT use `non-scaling-stroke` --
+   that would resolve the dashes in screen units instead, and the pattern
+   would break differently at every viewport width. */
+@keyframes satcom-trace {
+  from { stroke-dashoffset: 3120; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* Signal waves off the dish feed -- a slow radar ping that spends most of
+   its cycle invisible, so it reads as an occasional pulse rather than a
+   repeating animation. */
+@keyframes satcom-ping {
+  0% { transform: scale(0.45); opacity: 0; }
+  10% { opacity: 0.85; }
+  70%, 100% { transform: scale(2.8); opacity: 0; }
+}
+
+.animate-satcom-drift { animation: satcom-drift 60s ease-in-out infinite; }
+.animate-satcom-arc-drift { animation: satcom-arc-drift 19s ease-in-out infinite; }
+.animate-satcom-arc-drift-alt { animation: satcom-arc-drift-alt 26s ease-in-out infinite; }
+.animate-satcom-twinkle { animation: satcom-twinkle 6s ease-in-out infinite; }
+.animate-satcom-twinkle-late { animation: satcom-twinkle 8.5s ease-in-out 2s infinite; }
+.animate-satcom-breathe { animation: satcom-breathe 8s ease-in-out infinite; }
+.animate-satcom-breathe-slow { animation: satcom-breathe 11s ease-in-out infinite; }
+.animate-satcom-trace { animation: satcom-trace 12s linear infinite; }
+.animate-satcom-trace-late { animation: satcom-trace 12s linear 6s infinite; }
+.animate-satcom-ping { animation: satcom-ping 11s ease-out infinite; }
+.animate-satcom-ping-late { animation: satcom-ping 11s ease-out 5.5s infinite; }
+.animate-satcom-dish-idle { animation: satcom-dish-idle 28s ease-in-out infinite; }
+
 .animate-pulse-dot { animation: pulse-dot 2.4s ease-in-out infinite; }
 .animate-pulse-ring { animation: pulse-ring 2.4s cubic-bezier(0.25, 0.6, 0.35, 1) infinite; }
 .animate-fade-up { animation: fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
@@ -516,6 +652,18 @@ body {
   .animate-issue-pulse,
   .animate-login-now-drift,
   .animate-login-clock-sweep,
+  .animate-satcom-drift,
+  .animate-satcom-arc-drift,
+  .animate-satcom-arc-drift-alt,
+  .animate-satcom-twinkle,
+  .animate-satcom-twinkle-late,
+  .animate-satcom-breathe,
+  .animate-satcom-breathe-slow,
+  .animate-satcom-trace,
+  .animate-satcom-trace-late,
+  .animate-satcom-ping,
+  .animate-satcom-ping-late,
+  .animate-satcom-dish-idle,
   .skeleton {
     animation: none !important;
   }

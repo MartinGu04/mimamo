@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { BottomNav } from "./BottomNav";
+import { PageBackdrop } from "./PageBackdrop";
 import { EmergencyModeBanner } from "./EmergencyModeBanner";
 import { MobileIdentityBar } from "./MobileIdentityBar";
 import { ShellUtilityBar } from "./ShellUtilityBar";
@@ -82,9 +83,10 @@ export function AppShell({
   emergencyModeActive = false,
 }: AppShellProps) {
   return (
-    <div className="flex min-h-dvh bg-background text-foreground">
+    <div className="isolate flex min-h-dvh bg-background text-foreground">
       <Sidebar person={person} />
-      <div className="flex min-h-dvh w-full flex-1 flex-col">
+      <div className="relative flex min-h-dvh w-full flex-1 flex-col">
+        <PageBackdrop />
         {person ? (
           <MobileIdentityBar
             name={person.name}
