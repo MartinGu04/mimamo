@@ -110,6 +110,42 @@ describe("globals.css glass materials", () => {
   });
 
   it("derives the environmental tint from the palette's own accent, never a hardcoded hex", () => {
-    expect(css).toMatch(/--glass-env-tint:\s*color-mix\(in srgb, var\(--accent\)/);
+    for (const level of ["strong", "medium", "subtle"]) {
+      expect(css).toMatch(new RegExp(`--glass-env-tint-${level}:\\s*color-mix\\(in srgb, var\\(--accent\\)`));
+    }
+  });
+
+  it("steps the alpha evenly between levels, so each one is perceptibly different from its neighbour", () => {
+    // The whole point of the level ladder: `subtle` that sits at the same
+    // alpha as an opaque surface is not a level, it is a no-op.
+    const darkBlock = blockAt(':root[data-theme="dark"]');
+    const read = (name: string) => {
+      const m = darkBlock.match(new RegExp(`--glass-alpha-${name}:\\s*([\\d.]+)`));
+      expect(m, `missing --glass-alpha-${name}`).not.toBeNull();
+      return Number(m?.[1]);
+    };
+
+    const strong = read("strong");
+    const medium = read("medium");
+    const subtle = read("subtle");
+
+    expect(strong).toBeLessThan(medium);
+    expect(medium).toBeLessThan(subtle);
+    // Every step big enough to actually read as a different material, and
+    // `subtle` still transparent enough to show the canvas at all.
+    expect(medium - strong).toBeGreaterThanOrEqual(0.1);
+    expect(subtle - medium).toBeGreaterThanOrEqual(0.1);
+    expect(subtle).toBeLessThanOrEqual(0.8);
+  });
+
+  it("parameterises the ring so a glass surface can keep an accent edge, or none at all", () => {
+    const block = glassSupportsBlock();
+    // The levels set `box-shadow` wholesale, which silently erases a
+    // Tailwind `ring-2 ring-primary` in the same class list -- these two
+    // utilities are what keep a selection state (or an existing real
+    // `border`) intact through the material.
+    expect(block).toMatch(/0 0 0 var\(--glass-ring-width, 1px\) var\(--glass-ring-color, var\(--glass-line\)\)/);
+    expect(block).toMatch(/\.glass-ring-primary\s*{[^}]*--glass-ring-color:\s*var\(--primary\)/);
+    expect(block).toMatch(/\.glass-ring-none\s*{[^}]*--glass-ring-width:\s*0px/);
   });
 });

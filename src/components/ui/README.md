@@ -41,9 +41,44 @@ Things worth knowing before changing any of it:
   full-viewport blur.
 
 Measured on the real rendered canvas (worst point inside each surface's
-content box, glyphs hidden): dark ≥ 13.8:1 foreground / 6.3:1 muted,
+content box, glyphs hidden): dark ≥ 14.1:1 foreground / 6.4:1 muted,
 light ≥ 15.0:1 / 5.0:1 — the light theme's own `--muted`-on-white
 baseline is 5.12:1, so the material costs under a tenth of a step.
+
+### Which surfaces are solid, and why
+
+Every card-like surface in the app has been classified once. If you are
+adding one, put it in the right bucket rather than copying whatever is
+nearest:
+
+**Glass.** Anything that sits directly on the page canvas with the SATCOM
+backdrop behind it: `Panel` in any variant except `inline`/`critical`,
+fairness person cards, "דורש טיפול" finding cards, potential rows, the
+week strip, the countdown roster cards, and floating popovers (the person
+pickers, the profile menu, the notification panel) — a popover has no
+scrim of its own, so the blur is what separates it from what it covers.
+
+**Deliberately solid.** These are not oversights:
+
+- `critical` panels, and coverage cards whose date has a real staffing
+  problem — color is the message.
+- Inputs, buttons and control pills (the range selector, the category
+  nav). A filled `bg-surface-1` pill means *selected*; that is state, not
+  a surface.
+- Rows nested inside another surface — duty rows, desk slots, timeline
+  items, counterpart rows, the fairness cards' own data strip. These read
+  as a solid block sitting ON the card's material, which is what keeps
+  the card's identity legible through them.
+- Dialog/sheet/palette panels. Their separation comes from `.glass-scrim`
+  behind them, not from a second blurred layer.
+
+**Edge cases the parameterised ring exists for.** The levels set
+`box-shadow` wholesale, so a surface carrying its own accent ring or a
+real `border` needs to say so: `glass-ring-primary` keeps a `ring-2
+ring-primary` selection state visible through the material (today's week
+card), and `glass-ring-none` suppresses the material's own edge where the
+surface already draws a `border` (the countdown roster card), so the two
+never stack into a doubled hairline.
 
 - `LinkPendingWatcher.tsx` — a tiny bridge component (renders nothing)
   that reports the enclosing `next/link` `<Link>`'s own pending-navigation

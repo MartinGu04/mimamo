@@ -157,14 +157,14 @@
   --glass-base: 255 255 255;
 
   --glass-alpha-strong: 0.72;
-  --glass-alpha-medium: 0.82;
-  --glass-alpha-subtle: 0.9;
+  --glass-alpha-medium: 0.8;
+  --glass-alpha-subtle: 0.87;
   /* The one background every nested glass surface falls back to (see the
      glass-in-glass guard). Deliberately more opaque than any top-level
      level: a nested surface has no blur of its own to separate it from
      what it sits on, so opacity is the only thing left to make it read as
      its own surface. */
-  --glass-nested-bg: rgba(255, 255, 255, 0.86);
+  --glass-nested-bg: rgba(255, 255, 255, 0.92);
 
   --glass-line-strong: rgba(24, 33, 43, 0.13);
   --glass-line-medium: rgba(24, 33, 43, 0.12);
@@ -269,21 +269,31 @@
        tuned independently. */
     --glass-base: 18 25 34;
 
-    --glass-alpha-strong: 0.54;
-    --glass-alpha-medium: 0.7;
-    --glass-alpha-subtle: 0.86;
-    --glass-nested-bg: rgba(22, 29, 36, 0.78);
+    /* Evenly spaced on purpose: 0.52 -> 0.64 -> 0.76, then a deliberately
+       larger jump to fully opaque for `none`. Over a dark canvas the alpha
+       is what the eye actually reads as "how much material is this", so
+       even steps here are what make each level tell itself apart from its
+       neighbours. `subtle` in particular has to let enough canvas through
+       to be recognisable AS glass -- at 0.86 it was indistinguishable from
+       the opaque surface it replaced. */
+    --glass-alpha-strong: 0.52;
+    --glass-alpha-medium: 0.64;
+    --glass-alpha-subtle: 0.76;
+    /* More opaque than any top-level level, and no blur -- a nested strip
+       should read as its own solid block sitting ON the card's material,
+       which is what keeps the card's own identity legible through it. */
+    --glass-nested-bg: rgba(22, 29, 36, 0.86);
 
-    --glass-line-strong: rgba(255, 255, 255, 0.11);
-    --glass-line-medium: rgba(255, 255, 255, 0.085);
-    --glass-line-subtle: rgba(255, 255, 255, 0.07);
+    --glass-line-strong: rgba(255, 255, 255, 0.115);
+    --glass-line-medium: rgba(255, 255, 255, 0.095);
+    --glass-line-subtle: rgba(255, 255, 255, 0.08);
 
     /* The restrained top-edge catch of light. Kept well under the 0.08
        ceiling the design direction allows -- anything brighter turns into
        the glowing-border look this system is explicitly not. */
-    --glass-highlight-strong: rgba(255, 255, 255, 0.07);
-    --glass-highlight-medium: rgba(255, 255, 255, 0.05);
-    --glass-highlight-subtle: rgba(255, 255, 255, 0.035);
+    --glass-highlight-strong: rgba(255, 255, 255, 0.075);
+    --glass-highlight-medium: rgba(255, 255, 255, 0.055);
+    --glass-highlight-subtle: rgba(255, 255, 255, 0.04);
 
     --glass-depth-strong: 0 18px 40px -18px rgba(0, 0, 0, 0.55);
     --glass-depth-medium: 0 12px 30px -16px rgba(0, 0, 0, 0.45);
@@ -361,18 +371,18 @@
      `data-theme="dark"` choice must not depend on the system preference). */
   --glass-base: 18 25 34;
 
-  --glass-alpha-strong: 0.54;
-  --glass-alpha-medium: 0.7;
-  --glass-alpha-subtle: 0.86;
-  --glass-nested-bg: rgba(22, 29, 36, 0.78);
+  --glass-alpha-strong: 0.52;
+  --glass-alpha-medium: 0.64;
+  --glass-alpha-subtle: 0.76;
+  --glass-nested-bg: rgba(22, 29, 36, 0.86);
 
-  --glass-line-strong: rgba(255, 255, 255, 0.11);
-  --glass-line-medium: rgba(255, 255, 255, 0.085);
-  --glass-line-subtle: rgba(255, 255, 255, 0.07);
+  --glass-line-strong: rgba(255, 255, 255, 0.115);
+  --glass-line-medium: rgba(255, 255, 255, 0.095);
+  --glass-line-subtle: rgba(255, 255, 255, 0.08);
 
-  --glass-highlight-strong: rgba(255, 255, 255, 0.07);
-  --glass-highlight-medium: rgba(255, 255, 255, 0.05);
-  --glass-highlight-subtle: rgba(255, 255, 255, 0.035);
+  --glass-highlight-strong: rgba(255, 255, 255, 0.075);
+  --glass-highlight-medium: rgba(255, 255, 255, 0.055);
+  --glass-highlight-subtle: rgba(255, 255, 255, 0.04);
 
   --glass-depth-strong: 0 18px 40px -18px rgba(0, 0, 0, 0.55);
   --glass-depth-medium: 0 12px 30px -16px rgba(0, 0, 0, 0.45);
@@ -479,18 +489,18 @@
   /* blocks is what lets the viewport/accessibility overrides at the end */
   /* of this file re-tune them from ONE place at matching specificity.   */
   /* ------------------------------------------------------------------ */
-  --glass-blur-strong: 24px;
-  --glass-blur-medium: 15px;
-  --glass-blur-subtle: 9px;
+  --glass-blur-strong: 26px;
+  --glass-blur-medium: 18px;
+  --glass-blur-subtle: 12px;
 
   /* The saturation boost is what makes the SATCOM canvas actually read
      THROUGH a surface -- the blurred backdrop keeps its blue/cyan life
      instead of averaging out to gray. This is the "environmental tint",
      sampled from the real background rather than painted on as a
      decorative gradient that would ignore what is actually behind. */
-  --glass-saturate-strong: 140%;
-  --glass-saturate-medium: 130%;
-  --glass-saturate-subtle: 118%;
+  --glass-saturate-strong: 145%;
+  --glass-saturate-medium: 133%;
+  --glass-saturate-subtle: 122%;
 
   /* Added to every level's alpha. 0 on desktop; the viewport and
      accessibility blocks at the end of this file raise it to make every
@@ -503,11 +513,16 @@
      levels do. */
   --glass-scrim-blur: 10px;
 
-  /* The one extra environmental cue, on STRONG glass only: a barely-there
-     wash of the app's own cyan accent across the top edge, which is where
-     the SATCOM canvas is brightest. Derived from `--accent` (never a
-     hand-picked hex), so it tracks whichever theme is active. */
-  --glass-env-tint: color-mix(in srgb, var(--accent) 5%, transparent);
+  /* The environmental cue: a barely-there wash of the app's own cyan
+     accent across the top edge, where the SATCOM canvas is brightest.
+     Derived from `--accent` (never a hand-picked hex), so it tracks
+     whichever theme is active, and scaled per level so the tint steps down
+     with the rest of the material instead of appearing all at once.
+     This is a TINT, not a glow -- it sits inside the surface, never on its
+     border. */
+  --glass-env-tint-strong: color-mix(in srgb, var(--accent) 5%, transparent);
+  --glass-env-tint-medium: color-mix(in srgb, var(--accent) 3.5%, transparent);
+  --glass-env-tint-subtle: color-mix(in srgb, var(--accent) 2%, transparent);
 }
 
 @theme inline {
@@ -630,6 +645,7 @@ body {
   .glass-medium,
   .glass-subtle {
     background-color: rgb(var(--glass-base) / calc(var(--glass-alpha) + var(--glass-alpha-bump)));
+    background-image: linear-gradient(160deg, var(--glass-env-tint), transparent 62%);
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
     /* One declaration carries all three of the material's edges: the inner
@@ -639,8 +655,28 @@ body {
        swapping variables rather than by restating shadows. */
     box-shadow:
       inset 0 1px 0 0 var(--glass-highlight),
-      0 0 0 1px var(--glass-line),
+      0 0 0 var(--glass-ring-width, 1px) var(--glass-ring-color, var(--glass-line)),
       var(--glass-depth);
+  }
+
+  /* A glass surface that also carries a SELECTION/accent ring.
+     The levels above set `box-shadow` wholesale (that is how the hairline
+     costs no layout), which would otherwise silently erase a Tailwind
+     `ring-2 ring-primary` sitting in the same class list -- a selected day
+     or "today" card would lose the only thing marking it. Parameterising
+     the ring keeps that state visible THROUGH the material rather than
+     forcing such surfaces to opt out of it. */
+  .glass-ring-primary {
+    --glass-ring-width: 2px;
+    --glass-ring-color: var(--primary);
+  }
+
+  /* For a surface that already draws its own real `border` (rather than the
+     ring every `Panel` variant uses): the material contributes no edge of
+     its own, so the two never stack into the doubled hairline this system
+     is specifically trying not to produce. */
+  .glass-ring-none {
+    --glass-ring-width: 0px;
   }
 
   .glass-strong {
@@ -650,7 +686,7 @@ body {
     --glass-line: var(--glass-line-strong);
     --glass-highlight: var(--glass-highlight-strong);
     --glass-depth: var(--glass-depth-strong);
-    background-image: linear-gradient(160deg, var(--glass-env-tint), transparent 62%);
+    --glass-env-tint: var(--glass-env-tint-strong);
   }
 
   .glass-medium {
@@ -660,6 +696,7 @@ body {
     --glass-line: var(--glass-line-medium);
     --glass-highlight: var(--glass-highlight-medium);
     --glass-depth: var(--glass-depth-medium);
+    --glass-env-tint: var(--glass-env-tint-medium);
   }
 
   .glass-subtle {
@@ -669,6 +706,7 @@ body {
     --glass-line: var(--glass-line-subtle);
     --glass-highlight: var(--glass-highlight-subtle);
     --glass-depth: var(--glass-depth-subtle);
+    --glass-env-tint: var(--glass-env-tint-subtle);
   }
 
   /* The dimming layer behind a dialog/sheet/palette, which is the ONE
@@ -700,7 +738,7 @@ body {
     backdrop-filter: none;
     box-shadow:
       inset 0 1px 0 0 var(--glass-highlight-subtle),
-      0 0 0 1px var(--glass-line-subtle);
+      0 0 0 var(--glass-ring-width, 1px) var(--glass-ring-color, var(--glass-line-subtle));
   }
 
   /* Small viewports: the canvas behind a surface is mostly covered by the

@@ -58,13 +58,22 @@ interface WeekDayCardProps {
   isPastDay: boolean;
 }
 
+/**
+ * `glass-subtle` on every card, today included: these sit straight on the
+ * page canvas with nothing above them, so leaving them opaque made the
+ * whole strip read as un-upgraded next to the glassed panels above it.
+ * `glass-ring-primary` is what keeps today's selection ring visible
+ * THROUGH the material -- the glass levels set `box-shadow` wholesale
+ * (see globals.css), which would otherwise erase the `ring-2 ring-primary`
+ * that is the only thing marking today.
+ */
 function WeekDayCard({ day, isPastDay }: WeekDayCardProps) {
   return (
     <li
       id={dayElementId(day.date)}
       aria-current={day.isToday ? "date" : undefined}
-      className={`min-w-[78%] shrink-0 snap-center rounded-xl p-4 ring-1 sm:min-w-[280px] lg:min-w-0 ${
-        day.isToday ? "bg-surface-2 ring-2 ring-primary" : "bg-surface-1 ring-border"
+      className={`glass-subtle min-w-[78%] shrink-0 snap-center rounded-xl p-4 ring-1 sm:min-w-[280px] lg:min-w-0 ${
+        day.isToday ? "glass-ring-primary bg-surface-2 ring-2 ring-primary" : "bg-surface-1 ring-border"
       } ${isPastDay ? "opacity-85" : ""}`}
     >
       <div className="flex items-baseline justify-between gap-2">

@@ -33,7 +33,7 @@ interface IssueRowProps {
 
 const ROOT_CLASS: Record<NonNullable<IssueRowProps["variant"]>, string> = {
   row: "flex items-start gap-3 py-3",
-  card: "flex items-start gap-3 rounded-xl bg-surface-1 ring-1 ring-border p-4",
+  card: "glass-subtle flex items-start gap-3 rounded-xl bg-surface-1 ring-1 ring-border p-4",
 };
 
 /**
