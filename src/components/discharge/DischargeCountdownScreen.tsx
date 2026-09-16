@@ -15,6 +15,13 @@ export interface DischargeCountdownScreenProps {
   dischargeInstantIso: string;
   dischargeDayEndInstantIso: string;
   enlistmentInstantIso: string | null;
+  /**
+   * Whose countdown this is, shown under the title ONLY when looking at
+   * someone else from the "כולם" overview. Omitted for the viewer's own
+   * countdown, which is why the personal view renders exactly as it did
+   * before this prop existed -- there is no "אני" label to state the obvious.
+   */
+  personName?: string | null;
 }
 
 /**
@@ -35,6 +42,7 @@ export function DischargeCountdownScreen({
   dischargeInstantIso,
   dischargeDayEndInstantIso,
   enlistmentInstantIso,
+  personName = null,
 }: DischargeCountdownScreenProps) {
   const nowMs = useLiveClock();
 
@@ -62,6 +70,7 @@ export function DischargeCountdownScreen({
 
       <div className="relative flex flex-col items-center gap-2">
         <h1 className="text-4xl font-black tracking-tight sm:text-6xl">עד מתי???</h1>
+        {personName ? <p className="text-base font-semibold text-foreground sm:text-lg">{personName}</p> : null}
         {state?.phase === "counting_down" ? (
           <p className="text-sm text-muted sm:text-base">עד השחרור נשארו</p>
         ) : null}
