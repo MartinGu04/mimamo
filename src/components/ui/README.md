@@ -4,6 +4,47 @@ Small, generic building blocks reused across feature areas: `Panel`
 surface variants, `Badge`, `Avatar`, `Card`, `CoverageBadge`,
 `IssueSeverityBadge`, `LiveClock`.
 
+## Glass materials
+
+`glass.ts` holds the app's glass vocabulary — `strong` / `medium` /
+`subtle` / `none` — and `Panel` applies a default level per variant
+(`hero` → strong, `panel` → medium, `compact` → subtle, `inline` and
+`critical` → none). The material itself lives entirely in
+`app/globals.css`; this layer only chooses how much of it a surface gets.
+
+Things worth knowing before changing any of it:
+
+- **Tune from the tokens, not the call sites.** Every level is five
+  variables (`--glass-alpha-*`, `--glass-blur-*`, `--glass-saturate-*`,
+  `--glass-line-*`, `--glass-highlight-*`/`--glass-depth-*`). The whole
+  system can be made louder or quieter without touching a component.
+- **The shape tokens are deliberately not per-theme.** Blur/saturation/
+  `--glass-alpha-bump` are defined once in plain `:root` so the
+  small-viewport and `prefers-reduced-transparency` overrides can win at
+  matching specificity. Redefining one inside a `data-theme` block
+  silently disables those — `globalsGlass.test.ts` guards this.
+- **The opaque classes stay.** A glassed `Panel` keeps its
+  `bg-surface-*` + `ring-*` classes; the material is layered on by an
+  `@supports`-gated rule, so a browser without `backdrop-filter` renders
+  exactly the surface that shipped before it.
+- **Glass never nests.** A CSS guard strips the blur from any glass
+  surface inside another one — a second `backdrop-filter` samples an
+  already-composited layer, doubling the softness and paying for a full
+  extra GPU pass to do it. Don't work around it; use `inline` (or
+  `glass="none"`) for surfaces meant to sit inside another.
+- **Color-as-meaning stays opaque.** `critical` ignores a passed `glass`
+  outright, and `ManagerCoverageSection` picks its level from a date's
+  coverage status so a staffing warning never dilutes into the canvas
+  behind it. Inputs, and rows whose tone carries state, get no glass.
+- **Modals separate via the scrim.** `.glass-scrim` blurs the dimming
+  layer; the dialog panel above it stays solid. That is the app's one
+  full-viewport blur.
+
+Measured on the real rendered canvas (worst point inside each surface's
+content box, glyphs hidden): dark ≥ 13.8:1 foreground / 6.3:1 muted,
+light ≥ 15.0:1 / 5.0:1 — the light theme's own `--muted`-on-white
+baseline is 5.12:1, so the material costs under a tenth of a step.
+
 - `LinkPendingWatcher.tsx` — a tiny bridge component (renders nothing)
   that reports the enclosing `next/link` `<Link>`'s own pending-navigation
   state (`useLinkStatus`) up to a parent via callback. Extracted from

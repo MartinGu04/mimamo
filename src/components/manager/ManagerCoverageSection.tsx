@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Panel } from "@/components/ui/Panel";
+import type { GlassLevel } from "@/components/ui/glass";
 import { CoverageBadge } from "@/components/ui/CoverageBadge";
 import type { CoverageStatus } from "@/lib/domain/shiftCoverage";
 import { inRoleDisplayOrder } from "@/lib/presentation/roleCoverage";
@@ -31,6 +32,26 @@ const CARD_ACCENT_CLASS: Record<CoverageStatus, string> = {
   not_evaluable: "",
   partial: "border-s-2 border-s-warning",
   missing: "border-s-2 border-s-critical",
+};
+
+/**
+ * A day card's glass level follows its COVERAGE STATUS, not its position on
+ * the page -- the one place in the app where the material is chosen from
+ * data rather than from a component's role.
+ *
+ * A quiet, fully-covered date is just another cell in a dense grid, so it
+ * takes the same restrained `subtle` the rest of the manager surfaces use.
+ * A date carrying a real staffing problem drops the material entirely: its
+ * accent border and its badge are the whole point of the card, and a
+ * translucent surface would let whatever the SATCOM canvas is doing behind
+ * it dilute exactly the signal a manager is scanning for. A warning has to
+ * look equally urgent over an empty patch of sky and over the dish.
+ */
+const CARD_GLASS: Record<CoverageStatus, GlassLevel> = {
+  full: "subtle",
+  not_evaluable: "subtle",
+  partial: "none",
+  missing: "none",
 };
 
 function ShadowList({ label, names }: { label: string; names: string[] }) {
@@ -127,10 +148,11 @@ function PeriodColumn({ emoji, periodLabel, group }: { emoji: string; periodLabe
 }
 
 function DayCard({ view }: { view: ManagerShiftDayView }) {
-  const accent = CARD_ACCENT_CLASS[worstCoverageStatus(view.day, view.night) ?? "full"];
+  const status = worstCoverageStatus(view.day, view.night) ?? "full";
+  const accent = CARD_ACCENT_CLASS[status];
 
   return (
-    <Panel variant="panel" className={`flex flex-col gap-2.5 ${accent}`}>
+    <Panel variant="panel" glass={CARD_GLASS[status]} className={`flex flex-col gap-2.5 ${accent}`}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-semibold text-foreground">{view.dateLabel}</p>
         <Link

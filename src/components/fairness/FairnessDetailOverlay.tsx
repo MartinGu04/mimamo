@@ -127,7 +127,7 @@ export function FairnessDetailOverlay({ closeHref, title, children }: FairnessDe
       <div
         role="presentation"
         aria-hidden="true"
-        className="absolute inset-0 bg-black/40"
+        className="glass-scrim absolute inset-0 bg-black/40"
         onClick={() => router.push(closeHref)}
       />
 

@@ -339,7 +339,7 @@ export function ManagerFixedNotificationsSection({ roster, adoptionPeople }: Man
   }
 
   return (
-    <Panel variant="panel" data-testid="manager-fixed-notifications">
+    <Panel variant="panel" glass="subtle" data-testid="manager-fixed-notifications">
       <div>
         <h3 className="text-sm font-semibold text-foreground">📌 התראות קבועות</h3>
         <p className="mt-0.5 text-xs text-muted">תזכורות מערכת קיימות והתראות מחזוריות שהוגדרו על ידי מנהלים -- כולן במקום אחד.</p>

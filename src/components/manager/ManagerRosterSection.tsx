@@ -100,7 +100,7 @@ export function ManagerRosterSection({
   }
 
   return (
-    <Panel variant="panel">
+    <Panel variant="panel" glass="subtle">
       <h3 className="text-[15px] font-semibold text-foreground">צוות</h3>
       <div className="mt-3 flex flex-col gap-5">
         {groups.map((group) => (

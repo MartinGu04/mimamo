@@ -87,7 +87,7 @@ function SelfReportQueue({ reports }: { reports: ManagerPendingSelfReportRow[] }
   }
 
   return (
-    <Panel variant="panel" className="flex flex-col gap-3">
+    <Panel variant="panel" glass="subtle" className="flex flex-col gap-3">
       <h2 className="text-sm font-semibold text-foreground">דיווחים ממתינים לאישור</h2>
       <ul className="flex flex-col gap-2">
         {reports.map((report) => (
@@ -354,7 +354,7 @@ export function ShootingRangeManagerPanel({
 
       <SelfReportQueue reports={pendingSelfReports} />
 
-      <Panel variant="panel" className="flex flex-col gap-4">
+      <Panel variant="panel" glass="subtle" className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-foreground">אנשי צוות</h2>
           <label className="flex items-center gap-2 text-xs text-muted">
