@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, within } from "@testing-library/react";
-import type { PersonalAssignmentView, PersonalEventView, PersonalScheduleReadModel } from "@/lib/readModels/types";
+import type {
+  PersonalAssignmentView,
+  PersonalCalendarEventView,
+  PersonalScheduleReadModel,
+} from "@/lib/readModels/types";
 
 const getRequestPersonalSchedule = vi.fn();
 vi.mock("@/lib/readModels/getRequestPersonalSchedule", () => ({ getRequestPersonalSchedule }));
@@ -19,7 +23,7 @@ beforeEach(() => {
   getRequestPersonalSchedule.mockReset();
 });
 
-function shiftEvent(overrides: Partial<PersonalEventView> = {}): PersonalEventView {
+function shiftEvent(overrides: Partial<PersonalCalendarEventView> = {}): PersonalCalendarEventView {
   return {
     date: "2026-08-12",
     title: "טכנאי יום",
@@ -36,6 +40,7 @@ function shiftEvent(overrides: Partial<PersonalEventView> = {}): PersonalEventVi
     absenceKind: null,
     changeNote: null,
     timing: { status: "not_evaluable" },
+    shiftCompanions: [],
     ...overrides,
   };
 }

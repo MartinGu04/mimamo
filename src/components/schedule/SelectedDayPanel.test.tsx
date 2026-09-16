@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import type { PersonalEventView } from "@/lib/readModels/types";
+import type { PersonalCalendarEventView } from "@/lib/readModels/types";
 import type { HolidayContext } from "@/lib/presentation/hebrewCalendar";
 import { SelectedDayPanel } from "./SelectedDayPanel";
 import type { DayMeta } from "./types";
@@ -9,7 +9,7 @@ afterEach(() => {
   cleanup();
 });
 
-function shiftEvent(overrides: Partial<PersonalEventView> = {}): PersonalEventView {
+function shiftEvent(overrides: Partial<PersonalCalendarEventView> = {}): PersonalCalendarEventView {
   return {
     date: "2026-08-16",
     title: "טכנאי יום",
@@ -26,11 +26,12 @@ function shiftEvent(overrides: Partial<PersonalEventView> = {}): PersonalEventVi
     absenceKind: null,
     changeNote: null,
     timing: { status: "not_evaluable" },
+    shiftCompanions: [],
     ...overrides,
   };
 }
 
-function dutyEvent(overrides: Partial<PersonalEventView> = {}): PersonalEventView {
+function dutyEvent(overrides: Partial<PersonalCalendarEventView> = {}): PersonalCalendarEventView {
   return shiftEvent({
     title: "שומר 1",
     rawValue: "שומר 1",
@@ -39,11 +40,12 @@ function dutyEvent(overrides: Partial<PersonalEventView> = {}): PersonalEventVie
     period: "unspecified",
     dutyFamily: "guard",
     slot: 1,
+    shiftCompanions: null,
     ...overrides,
   });
 }
 
-function absenceEvent(overrides: Partial<PersonalEventView> = {}): PersonalEventView {
+function absenceEvent(overrides: Partial<PersonalCalendarEventView> = {}): PersonalCalendarEventView {
   return shiftEvent({
     title: "חופש",
     rawValue: "חופש",
@@ -51,17 +53,19 @@ function absenceEvent(overrides: Partial<PersonalEventView> = {}): PersonalEvent
     role: null,
     period: "unspecified",
     absenceKind: "vacation",
+    shiftCompanions: null,
     ...overrides,
   });
 }
 
-function activityEvent(overrides: Partial<PersonalEventView> = {}): PersonalEventView {
+function activityEvent(overrides: Partial<PersonalCalendarEventView> = {}): PersonalCalendarEventView {
   return shiftEvent({
     title: "סוגר",
     rawValue: "סוגר",
     category: "status",
     role: null,
     period: "unspecified",
+    shiftCompanions: null,
     ...overrides,
   });
 }
@@ -298,5 +302,90 @@ describe("SelectedDayPanel", () => {
     render(<SelectedDayPanel dayMeta={meta()} events={[shiftEvent({ changeNote: null })]} />);
     // No stray empty line for the change note beyond the subtitle content already asserted elsewhere.
     expect(screen.queryByText("null")).toBeNull();
+  });
+
+  describe('"מי איתי במשמרת"', () => {
+    it("lists every companion as 'שם מלא — תפקיד במשמרת', using their own recorded shift label", () => {
+      render(
+        <SelectedDayPanel
+          dayMeta={meta()}
+          events={[
+            shiftEvent({
+              shiftCompanions: [
+                { personId: "p_1", personName: "יובל ישראלי", shiftLabel: "טכנאי יום" },
+                { personId: "p_2", personName: "דניאל כהן", shiftLabel: 'אחמ"ש צל' },
+                { personId: "p_3", personName: "נועה לוי", shiftLabel: "טכנאית צל" },
+              ],
+            }),
+          ]}
+        />,
+      );
+
+      expect(screen.getByText("מי איתי במשמרת")).toBeInTheDocument();
+      expect(screen.getByText("יובל ישראלי — טכנאי יום")).toBeInTheDocument();
+      expect(screen.getByText('דניאל כהן — אחמ"ש צל')).toBeInTheDocument();
+      expect(screen.getByText("נועה לוי — טכנאית צל")).toBeInTheDocument();
+      expect(screen.queryByText("אין שיבוצים נוספים למשמרת זו")).toBeNull();
+    });
+
+    it("9. shows the empty state when the shift has no other assignments", () => {
+      render(<SelectedDayPanel dayMeta={meta()} events={[shiftEvent({ shiftCompanions: [] })]} />);
+      expect(screen.getByText("מי איתי במשמרת")).toBeInTheDocument();
+      expect(screen.getByText("אין שיבוצים נוספים למשמרת זו")).toBeInTheDocument();
+    });
+
+    it("8. never renders the section for a non-shift event -- duty, absence, or display-only activity", () => {
+      render(
+        <SelectedDayPanel
+          dayMeta={meta()}
+          events={[
+            dutyEvent({ shiftCompanions: null }),
+            absenceEvent({ date: "2026-08-16", shiftCompanions: null }),
+            activityEvent({ shiftCompanions: null }),
+          ]}
+        />,
+      );
+      expect(screen.queryByText("מי איתי במשמרת")).toBeNull();
+      expect(screen.queryByText("אין שיבוצים נוספים למשמרת זו")).toBeNull();
+    });
+
+    it("scopes each roster to its own shift when the day holds more than one", () => {
+      render(
+        <SelectedDayPanel
+          dayMeta={meta()}
+          events={[
+            shiftEvent({
+              title: "טכנאי יום",
+              shiftCompanions: [{ personId: "p_1", personName: "יובל ישראלי", shiftLabel: 'אחמ"ש יום' }],
+            }),
+            shiftEvent({
+              title: "טכנאי לילה",
+              period: "night",
+              shiftCompanions: [{ personId: "p_2", personName: "דניאל כהן", shiftLabel: 'אחמ"ש לילה' }],
+            }),
+          ]}
+        />,
+      );
+
+      expect(screen.getAllByText("מי איתי במשמרת")).toHaveLength(2);
+      expect(screen.getByText('יובל ישראלי — אחמ"ש יום')).toBeInTheDocument();
+      expect(screen.getByText('דניאל כהן — אחמ"ש לילה')).toBeInTheDocument();
+    });
+
+    it("stays inside the existing day card -- no dialog, no separate region", () => {
+      render(
+        <SelectedDayPanel
+          dayMeta={meta()}
+          events={[
+            shiftEvent({ shiftCompanions: [{ personId: "p_1", personName: "יובל ישראלי", shiftLabel: "טכנאי יום" }] }),
+          ]}
+        />,
+      );
+
+      expect(screen.queryByRole("dialog")).toBeNull();
+      const panel = screen.getByRole("region", { name: "פרטי היום הנבחר" });
+      expect(panel.textContent).toContain("מי איתי במשמרת");
+      expect(panel.textContent).toContain("יובל ישראלי — טכנאי יום");
+    });
   });
 });

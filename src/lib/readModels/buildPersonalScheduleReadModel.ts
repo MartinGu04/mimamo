@@ -15,6 +15,7 @@ import {
 } from "@/lib/domain/operationalIssues";
 import type { PotentialAllocation } from "@/lib/domain/potentialAllocation";
 import { buildPotentialDutyEvents } from "@/lib/domain/potentialDutyEvents";
+import { findOverlappingShiftCompanionEvents } from "@/lib/domain/shiftCompanions";
 import { analyzeShiftCounterparts, buildShiftRoster, findShiftGroupEvents } from "@/lib/domain/shiftCoverage";
 import {
   nextShiftPeriod,
@@ -22,11 +23,14 @@ import {
   resolveEventShiftInterval,
   type ShiftSchedule,
 } from "@/lib/domain/shiftSchedule";
+import { addCalendarDays, formatCalendarDate, subtractCalendarDays } from "@/lib/domain/dateRange";
+import { parseCalendarDate } from "@/lib/domain/dutyBlocks";
 import type { Person } from "@/lib/domain/types";
 import type {
   PersonalAdjacentShift,
   PersonalAdjacentShiftContext,
   PersonalAssignmentView,
+  PersonalCalendarEventView,
   PersonalCounterpart,
   PersonalDutyAction,
   PersonalDutyBlock,
@@ -36,6 +40,7 @@ import type {
   PersonalNextAssignmentGroup,
   PersonalProfile,
   PersonalScheduleReadModel,
+  PersonalShiftCompanion,
   PersonalShiftContext,
 } from "./types";
 
@@ -138,9 +143,15 @@ export function buildPersonalScheduleReadModel(
     .filter((event) => isEventStillRelevant(event, shiftSchedule, now))
     .map((event) => toEventView(event, shiftSchedule, now));
 
+  // Indexed ONCE for the whole calendar, from the same raw `events` every
+  // other roster/coverage section reads -- so resolving "מי איתי במשמרת"
+  // for a month of shifts stays a handful of date lookups rather than a
+  // full scan per shift (and never a per-shift or per-person data request).
+  const shiftEventsByDate = indexShiftEventsByDate(events);
+
   const calendarEvents = sortedPersonEvents
     .filter((event) => isPersonalCalendarActivityEvent(event))
-    .map((event) => toEventView(event, shiftSchedule, now));
+    .map((event) => toCalendarEventView(event, shiftSchedule, now, shiftEventsByDate));
 
   const assignmentEvents = sortedPersonEvents.filter(isAssignmentEvent);
 
@@ -459,6 +470,89 @@ function toEventView(event: Event, schedule: ShiftSchedule, now: LocalNow): Pers
     absenceKind: event.absenceKind,
     changeNote: event.changeNote,
     timing: computeAssignmentTiming(event, schedule, now),
+  };
+}
+
+/**
+ * Every `category === "shift"` Event bucketed by its own `date`. Built once
+ * per read model so `buildShiftCompanions` below can look at only the three
+ * dates a shift can possibly overlap, instead of re-filtering the full
+ * server-side Event set for every single calendar shift.
+ */
+function indexShiftEventsByDate(events: readonly Event[]): Map<string, Event[]> {
+  const byDate = new Map<string, Event[]>();
+  for (const event of events) {
+    if (event.category !== "shift") continue;
+    const bucket = byDate.get(event.date);
+    if (bucket) bucket.push(event);
+    else byDate.set(event.date, [event]);
+  }
+  return byDate;
+}
+
+/**
+ * The only dates a shift dated `date` can overlap: its own, the previous,
+ * and the next. A shift interval starts within its own date and runs at
+ * most 12 hours past the end of it (`nightEndMinute` never reaches 2880 --
+ * see `shiftSchedule.ts`), so anything two or more days out is
+ * structurally unable to overlap, whatever its time overrides say. An
+ * unparseable date yields just its own bucket -- `shiftsOverlapInTime`
+ * falls back to its structural date+period rule there anyway.
+ */
+function candidateShiftEventsAround(date: string, shiftEventsByDate: Map<string, Event[]>): Event[] {
+  const parsed = parseCalendarDate(date);
+  const dates =
+    parsed === null
+      ? [date]
+      : [
+          formatCalendarDate(subtractCalendarDays(parsed, 1)),
+          date,
+          formatCalendarDate(addCalendarDays(parsed, 1)),
+        ];
+
+  return dates.flatMap((candidateDate) => shiftEventsByDate.get(candidateDate) ?? []);
+}
+
+/**
+ * "מי איתי במשמרת" for ONE of the viewed person's own shifts: every other
+ * person whose shift genuinely overlaps it in time (see
+ * `findOverlappingShiftCompanionEvents` -- never same-date alone, and
+ * correct across midnight), collapsed to one row per person by the same
+ * `sortAndDedupeRoster` the dashboard's own מי איתי roster already uses, so
+ * a split-shift colleague with two Events is listed once.
+ */
+function buildShiftCompanions(
+  target: Event,
+  shiftEventsByDate: Map<string, Event[]>,
+  schedule: ShiftSchedule,
+): PersonalShiftCompanion[] {
+  const candidates = candidateShiftEventsAround(target.date, shiftEventsByDate);
+  const overlapping = findOverlappingShiftCompanionEvents(target, candidates, schedule);
+  return sortAndDedupeRoster(overlapping, schedule).map(toShiftCompanion);
+}
+
+function toShiftCompanion(event: Event): PersonalShiftCompanion {
+  const title = event.title.trim();
+  return {
+    personId: event.personId,
+    personName: event.personName,
+    // The colleague's own recorded shift text, never recomposed from
+    // role+period (which would turn "טכנאית צל" into "טכנאי · לילה").
+    // `rawValue` only ever backstops a structurally-impossible empty title.
+    shiftLabel: title !== "" ? title : event.rawValue.trim(),
+  };
+}
+
+function toCalendarEventView(
+  event: Event,
+  schedule: ShiftSchedule,
+  now: LocalNow,
+  shiftEventsByDate: Map<string, Event[]>,
+): PersonalCalendarEventView {
+  return {
+    ...toEventView(event, schedule, now),
+    shiftCompanions:
+      event.category === "shift" ? buildShiftCompanions(event, shiftEventsByDate, schedule) : null,
   };
 }
 

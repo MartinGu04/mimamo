@@ -68,6 +68,47 @@ export interface PersonalAssignmentView extends PersonalEventView {
 }
 
 /**
+ * One person working at the same time as one of the viewed person's own
+ * shifts -- "מי איתי במשמרת" on the personal calendar.
+ *
+ * Deliberately NARROWER than `PersonalCounterpart` (itself already the
+ * minimal colleague projection): no certainty, no shadow flag, no period,
+ * no time overrides, and -- as everywhere in this layer -- no email, no
+ * manager/capability flags, no personnelType, no unrelated Events, no
+ * sourceSheet/sourceCell. Just who, and what they're doing on that shift.
+ *
+ * `shiftLabel` is the colleague's OWN shift text as the schedule records
+ * it (`Event.title`, the parser's normalized display form of the raw cell)
+ * -- e.g. "טכנאי יום", 'אחמ"ש צל', "טכנאית צל". Never recomposed from
+ * `role`+`period`, which would flatten every one of those real variants
+ * into the same two generic words.
+ */
+export interface PersonalShiftCompanion {
+  personId: string;
+  personName: string;
+  shiftLabel: string;
+}
+
+/**
+ * A `PersonalEventView` as it appears on "הלוח שלי" (`/schedule`), where a
+ * shift additionally carries who else is on it.
+ *
+ * A separate type rather than a widening of `PersonalEventView` itself, so
+ * roster context reaches ONLY the personal calendar's own events -- never
+ * `todayEvents`/`upcomingEvents`/`currentAssignments`, never the ICS feed,
+ * and never any other consumer of the base shape (all of which keep
+ * accepting these values unchanged, since this only extends it).
+ *
+ * `shiftCompanions` is `null` for every non-shift event -- a duty,
+ * absence, הפנייה or display-only activity has no shift to share, so the
+ * question is never asked, which is distinct from asking it and finding
+ * nobody (`[]`).
+ */
+export interface PersonalCalendarEventView extends PersonalEventView {
+  shiftCompanions: PersonalShiftCompanion[] | null;
+}
+
+/**
  * The earliest upcoming assignment date/time group after
  * `currentAssignments`. May contain more than one Event when several
  * assignments share the same next logical date/start.
@@ -215,8 +256,13 @@ export interface PersonalScheduleReadModel {
    * excludes every other `EventCategory` (constraint/status/context/
    * change_note/other/unknown) -- those aren't calendar-worthy entries on
    * their own. Deterministically ordered, same as every other array here.
+   *
+   * Each shift additionally carries its own "מי איתי במשמרת" roster (see
+   * `PersonalCalendarEventView`), resolved once here from the same
+   * server-side Event set every other section reads -- never a per-day or
+   * per-person follow-up request from the calendar UI.
    */
-  calendarEvents: PersonalEventView[];
+  calendarEvents: PersonalCalendarEventView[];
 
   currentAssignments: PersonalAssignmentView[];
   nextAssignmentGroup: PersonalNextAssignmentGroup | null;

@@ -444,11 +444,18 @@ describe("calendarEvents", () => {
     });
   });
 
-  it("excludes an unrelated person's events", () => {
+  it("excludes an unrelated person's events -- a colleague never becomes a calendar entry of mine", () => {
     const events = [myShift({ date: "2026-08-12" }), colleagueShift({ date: "2026-08-12" })];
     const model = build({ events, people: [me(), colleague()] });
     expect(model.calendarEvents).toHaveLength(1);
-    expect(JSON.stringify(model.calendarEvents)).not.toContain("נועה");
+    // The colleague's own Event never appears as an entry, and nothing about
+    // them leaks onto MY event's own fields. Their name IS resolvable from
+    // that shift's own `shiftCompanions` roster ("מי איתי במשמרת" -- asserted
+    // in its own describe below), which is the single, deliberate place a
+    // colleague is named on this page.
+    const { shiftCompanions, ...ownFields } = model.calendarEvents[0];
+    expect(shiftCompanions).not.toBeNull();
+    expect(JSON.stringify(ownFields)).not.toContain("נועה");
   });
 
   it("is sorted deterministically by date, past through future, shifts before same-date duties/absences", () => {
@@ -509,6 +516,188 @@ describe("calendarEvents", () => {
       expect(event).not.toHaveProperty("sourceCell");
     }
     expect(JSON.stringify(model.calendarEvents)).not.toContain("dani@example.invalid");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// calendarEvents[].shiftCompanions -- "מי איתי במשמרת"
+// ---------------------------------------------------------------------------
+
+describe('calendarEvents[].shiftCompanions — "מי איתי במשמרת"', () => {
+  const THIRD_ID = "p_third";
+
+  function thirdPerson(overrides: Partial<Person> = {}): Person {
+    return colleague({ id: THIRD_ID, name: "יובל ישראלי", email: "yuval@example.invalid", ...overrides });
+  }
+
+  function thirdShift(overrides: Partial<Event> = {}): Event {
+    return colleagueShift({ personId: THIRD_ID, personName: "יובל ישראלי", ...overrides });
+  }
+
+  function companionsOfFirstEvent(model: PersonalScheduleReadModel) {
+    return model.calendarEvents[0].shiftCompanions;
+  }
+
+  const everyone = () => [me(), colleague(), thirdPerson()];
+
+  it("1. a day shift lists another person's overlapping day shift", () => {
+    const events = [
+      myShift({ date: "2026-08-12", period: "day" }),
+      thirdShift({ date: "2026-08-12", period: "day", role: "technician", title: "טכנאי יום", rawValue: "טכנאי יום" }),
+    ];
+    const model = build({ events, people: everyone() });
+    expect(companionsOfFirstEvent(model)).toEqual([
+      { personId: THIRD_ID, personName: "יובל ישראלי", shiftLabel: "טכנאי יום" },
+    ]);
+  });
+
+  it("2. a shadow-role colleague is listed with their own צל label", () => {
+    const events = [
+      myShift({ date: "2026-08-12", period: "day" }),
+      colleagueShift({
+        date: "2026-08-12",
+        period: "day",
+        shadow: true,
+        title: 'אחמ"ש צל',
+        rawValue: 'אחמ"ש צל',
+      }),
+    ];
+    const model = build({ events, people: everyone() });
+    expect(companionsOfFirstEvent(model)).toEqual([
+      { personId: COLLEAGUE_ID, personName: "נועה דוגמה", shiftLabel: 'אחמ"ש צל' },
+    ]);
+  });
+
+  it("3. a same-day shift whose hours don't overlap is excluded", () => {
+    const events = [
+      myShift({ date: "2026-08-12", period: "day", endTimeOverride: "10:00" }),
+      colleagueShift({ date: "2026-08-12", period: "day", startTimeOverride: "12:00" }),
+    ];
+    const model = build({ events, people: everyone() });
+    expect(companionsOfFirstEvent(model)).toEqual([]);
+  });
+
+  it("4. same-day vacation / הפנייה / duty never appear as companions", () => {
+    const events = [
+      myShift({ date: "2026-08-12", period: "day" }),
+      colleagueShift({
+        date: "2026-08-12",
+        category: "absence",
+        absenceKind: "vacation",
+        role: null,
+        period: "unspecified",
+        title: "חופש",
+        rawValue: "חופש",
+      }),
+      thirdShift({
+        date: "2026-08-12",
+        category: "duty",
+        dutyFamily: "guard",
+        slot: 1,
+        role: null,
+        period: "unspecified",
+        title: "שומר 1",
+        rawValue: "שומר 1",
+      }),
+    ];
+    const model = build({ events, people: everyone() });
+    expect(companionsOfFirstEvent(model)).toEqual([]);
+  });
+
+  it("5. the viewed person is never their own companion, not even via a second shift that day", () => {
+    const events = [
+      myShift({ date: "2026-08-12", period: "day" }),
+      myShift({ date: "2026-08-12", period: "day", startTimeOverride: "12:00" }),
+    ];
+    const model = build({ events, people: everyone() });
+    for (const event of model.calendarEvents) expect(event.shiftCompanions).toEqual([]);
+  });
+
+  it("6. a colleague assigned twice to the same shift is listed exactly once", () => {
+    const events = [
+      myShift({ date: "2026-08-12", period: "day" }),
+      colleagueShift({
+        date: "2026-08-12",
+        period: "day",
+        endTimeOverride: "13:00",
+        title: 'אחמ"ש יום',
+        rawValue: 'אחמ"ש יום',
+      }),
+      colleagueShift({
+        date: "2026-08-12",
+        period: "day",
+        startTimeOverride: "13:00",
+        title: 'אחמ"ש יום',
+        rawValue: 'אחמ"ש יום',
+      }),
+    ];
+    const model = build({ events, people: everyone() });
+    expect(companionsOfFirstEvent(model)).toEqual([
+      { personId: COLLEAGUE_ID, personName: "נועה דוגמה", shiftLabel: 'אחמ"ש יום' },
+    ]);
+  });
+
+  it("7. an overnight shift resolves its companions across midnight, never by date alone", () => {
+    const events = [
+      myShift({ date: "2026-08-12", period: "night", title: "טכנאי לילה", rawValue: "טכנאי לילה" }),
+      // Starts 02:00 -- the NEXT calendar morning, still the same night shift.
+      colleagueShift({
+        date: "2026-08-12",
+        period: "night",
+        startTimeOverride: "02:00",
+        title: 'אחמ"ש לילה',
+        rawValue: 'אחמ"ש לילה',
+      }),
+      // Neighbouring nights: same period, adjacent dates, never overlapping.
+      thirdShift({ date: "2026-08-11", period: "night" }),
+      thirdShift({ date: "2026-08-13", period: "night" }),
+    ];
+    const model = build({ events, people: everyone() });
+    expect(companionsOfFirstEvent(model)).toEqual([
+      { personId: COLLEAGUE_ID, personName: "נועה דוגמה", shiftLabel: 'אחמ"ש לילה' },
+    ]);
+  });
+
+  it("is null for every non-shift calendar entry -- a duty/absence is never asked the question", () => {
+    const events = [
+      myDuty({ date: "2026-08-12" }),
+      myAbsence({ date: "2026-08-13" }),
+      baseEvent({ date: "2026-08-14", category: "status", title: "סוגר", rawValue: "סוגר" }),
+      colleagueShift({ date: "2026-08-12" }),
+      colleagueShift({ date: "2026-08-13" }),
+      colleagueShift({ date: "2026-08-14" }),
+    ];
+    const model = build({ events, people: everyone() });
+    expect(model.calendarEvents).toHaveLength(3);
+    for (const event of model.calendarEvents) expect(event.shiftCompanions).toBeNull();
+  });
+
+  it("carries the companion's own recorded shift text, never a role+period recomposition", () => {
+    const events = [
+      myShift({ date: "2026-08-12", period: "day" }),
+      colleagueShift({ date: "2026-08-12", period: "day", title: "טכנאית צל", rawValue: "טכנאית צל", shadow: true }),
+    ];
+    const model = build({ events, people: everyone() });
+    expect(companionsOfFirstEvent(model)?.[0].shiftLabel).toBe("טכנאית צל");
+  });
+
+  it("carries nothing about a companion beyond who they are and what they're on -- no email, no flags, no Events", () => {
+    const events = [myShift({ date: "2026-08-12", period: "day" }), colleagueShift({ date: "2026-08-12" })];
+    const model = build({ events, people: everyone() });
+    const companion = companionsOfFirstEvent(model)?.[0];
+    expect(Object.keys(companion ?? {}).sort()).toEqual(["personId", "personName", "shiftLabel"]);
+    expect(JSON.stringify(companion)).not.toContain("noa@example.invalid");
+  });
+
+  it("is deterministic regardless of the input Event order", () => {
+    const mine = myShift({ date: "2026-08-12", period: "day" });
+    const first = colleagueShift({ date: "2026-08-12", period: "day" });
+    const second = thirdShift({ date: "2026-08-12", period: "day" });
+
+    const forward = build({ events: [mine, first, second], people: everyone() });
+    const reversed = build({ events: [second, first, mine], people: everyone() });
+    expect(companionsOfFirstEvent(forward)).toEqual(companionsOfFirstEvent(reversed));
+    expect(companionsOfFirstEvent(forward)).toHaveLength(2);
   });
 });
 

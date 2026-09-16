@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import type { ManagerAbsenceEntry, ManagerDutyEntry, ManagerShiftOverviewEntry } from "@/lib/readModels/managerTypes";
 import type { ScheduleReadModel, ScheduleRosterOption } from "@/lib/readModels/scheduleTypes";
 import type { PersonalScheduleReadModel } from "@/lib/readModels/types";
@@ -203,6 +203,7 @@ describe("SchedulePage — semantic event colors: single-person mode vs. 'כול
       absenceKind: null,
       changeNote: null,
       timing: { status: "not_evaluable" },
+      shiftCompanions: [],
     };
   }
 
@@ -347,5 +348,88 @@ describe("SchedulePage — privacy regression (PR #24 §37)", () => {
     expect(container.textContent).not.toContain("@");
     expect(container.textContent).not.toContain("sourceSheet");
     expect(container.textContent).not.toContain("sourceCell");
+  });
+});
+
+describe('SchedulePage — "מי איתי במשמרת" works for whoever is selected in "מציג לוח עבור"', () => {
+  function shiftWithCompanions(
+    overrides: Partial<PersonalScheduleReadModel["calendarEvents"][number]> = {},
+  ): PersonalScheduleReadModel["calendarEvents"][number] {
+    return {
+      date: "2026-08-12",
+      title: "טכנאי יום",
+      rawValue: "טכנאי יום",
+      category: "shift",
+      certainty: "confirmed",
+      role: "technician",
+      period: "day",
+      slot: null,
+      shadow: false,
+      startTimeOverride: null,
+      endTimeOverride: null,
+      dutyFamily: null,
+      absenceKind: null,
+      changeNote: null,
+      timing: { status: "not_evaluable" },
+      shiftCompanions: [{ personId: "p_eitan", personName: "איתן דוגמה", shiftLabel: 'אחמ"ש יום' }],
+      ...overrides,
+    };
+  }
+
+  it("10. shows the selected person's own companions when a manager views someone other than אני", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(
+        managerSelfModel({
+          perspective: "person",
+          selectedPersonId: "p_daniel",
+          selectedPersonName: "דניאל כהן",
+          personal: personalModel({
+            person: { id: "p_daniel", name: "דניאל כהן", isManager: false, isTechnician: true, isSupervisor: false, personnelType: null },
+            calendarEvents: [shiftWithCompanions()],
+          }),
+        }),
+      ),
+    );
+    const element = await SchedulePage({ searchParams: searchParams({ month: "2026-08", person: "p_daniel" }) });
+    render(element);
+
+    const panel = within(screen.getByRole("region", { name: "פרטי היום הנבחר" }));
+    expect(panel.getByText("מי איתי במשמרת")).toBeInTheDocument();
+    expect(panel.getByText('איתן דוגמה — אחמ"ש יום')).toBeInTheDocument();
+  });
+
+  it("shows the same section for the manager's own 'אני' view -- identical composition, never a special case", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(managerSelfModel({ personal: personalModel({ calendarEvents: [shiftWithCompanions()] }) })),
+    );
+    const element = await SchedulePage({ searchParams: searchParams({ month: "2026-08" }) });
+    render(element);
+
+    const panel = within(screen.getByRole("region", { name: "פרטי היום הנבחר" }));
+    expect(panel.getByText("מי איתי במשמרת")).toBeInTheDocument();
+    expect(panel.getByText('איתן דוגמה — אחמ"ש יום')).toBeInTheDocument();
+  });
+
+  it("never puts companion names into a calendar cell -- the grid stays exactly as compact as before", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(
+        managerSelfModel({
+          perspective: "person",
+          selectedPersonId: "p_daniel",
+          selectedPersonName: "דניאל כהן",
+          personal: personalModel({
+            person: { id: "p_daniel", name: "דניאל כהן", isManager: false, isTechnician: true, isSupervisor: false, personnelType: null },
+            calendarEvents: [shiftWithCompanions()],
+          }),
+        }),
+      ),
+    );
+    const element = await SchedulePage({ searchParams: searchParams({ month: "2026-08", person: "p_daniel" }) });
+    render(element);
+
+    const cell = screen.getByRole("button", { name: /12 באוגוסט/ });
+    expect(cell.textContent).not.toContain("איתן דוגמה");
+    expect(cell.textContent).not.toContain("מי איתי במשמרת");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import type { CalendarGridCell } from "@/lib/domain/calendarMonth";
-import type { PersonalEventView } from "@/lib/readModels/types";
+import type { PersonalCalendarEventView } from "@/lib/readModels/types";
 import { ScheduleCalendar } from "./ScheduleCalendar";
 import type { DayMeta } from "./types";
 
@@ -40,7 +40,7 @@ function weekDays(overrides: Record<string, Partial<DayMeta>> = {}): Record<stri
   return days;
 }
 
-function shiftEvent(overrides: Partial<PersonalEventView> = {}): PersonalEventView {
+function shiftEvent(overrides: Partial<PersonalCalendarEventView> = {}): PersonalCalendarEventView {
   return {
     date: "2026-08-12",
     title: "טכנאי יום",
@@ -57,6 +57,7 @@ function shiftEvent(overrides: Partial<PersonalEventView> = {}): PersonalEventVi
     absenceKind: null,
     changeNote: null,
     timing: { status: "not_evaluable" },
+    shiftCompanions: [],
     ...overrides,
   };
 }

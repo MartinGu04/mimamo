@@ -308,7 +308,7 @@ describe("Dashboard — 'השבוע הקרוב' weekly overview", () => {
         model={model({
           currentAssignments: [currentShift],
           todayEvents: [currentShift],
-          calendarEvents: [currentShift],
+          calendarEvents: [{ ...currentShift, shiftCompanions: [] }],
         })}
         visitRecap={{
           visitStartedAt: "2026-08-25T10:00:00.000Z",
@@ -345,7 +345,7 @@ describe("Dashboard — 'השבוע הקרוב' weekly overview", () => {
       <Dashboard
         model={model({
           localNow: { date: "2026-08-19", minuteOfDay: 600 },
-          calendarEvents: [mondayShift],
+          calendarEvents: [{ ...mondayShift, shiftCompanions: [] }],
           upcomingEvents: [], // deliberately empty -- proves the week section didn't source from here
         })}
       />,
