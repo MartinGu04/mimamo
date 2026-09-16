@@ -15,6 +15,13 @@ export interface DischargeCountdownScreenProps {
   dischargeInstantIso: string;
   dischargeDayEndInstantIso: string;
   enlistmentInstantIso: string | null;
+  /**
+   * Whose countdown this is, shown under the title ONLY when looking at
+   * someone else from the "כולם" overview. Omitted for the viewer's own
+   * countdown, which is why the personal view renders exactly as it did
+   * before this prop existed -- there is no "אני" label to state the obvious.
+   */
+  personName?: string | null;
 }
 
 /**
@@ -35,6 +42,7 @@ export function DischargeCountdownScreen({
   dischargeInstantIso,
   dischargeDayEndInstantIso,
   enlistmentInstantIso,
+  personName = null,
 }: DischargeCountdownScreenProps) {
   const nowMs = useLiveClock();
 
@@ -54,16 +62,17 @@ export function DischargeCountdownScreen({
   const showStatsRow = state?.phase === "counting_down" || state?.phase === "discharge_day";
 
   return (
-    <div className="relative flex min-h-[calc(100dvh-10rem)] flex-col items-center justify-center overflow-hidden rounded-3xl bg-[#05070a] px-4 py-16 text-center text-white sm:px-8">
+    <div className="relative flex min-h-[calc(100dvh-10rem)] flex-col items-center justify-center overflow-hidden px-4 py-16 text-center text-foreground sm:px-8">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(79,195,232,0.16),_transparent_60%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--satcom-horizon-glow),_transparent_60%)]"
       />
 
       <div className="relative flex flex-col items-center gap-2">
         <h1 className="text-4xl font-black tracking-tight sm:text-6xl">עד מתי???</h1>
+        {personName ? <p className="text-base font-semibold text-foreground sm:text-lg">{personName}</p> : null}
         {state?.phase === "counting_down" ? (
-          <p className="text-sm text-white/60 sm:text-base">עד השחרור נשארו</p>
+          <p className="text-sm text-muted sm:text-base">עד השחרור נשארו</p>
         ) : null}
       </div>
 
@@ -71,20 +80,20 @@ export function DischargeCountdownScreen({
         {renderMainState(state)}
       </div>
 
-      <div className="relative mt-10 flex flex-col items-center gap-1.5 text-sm text-white/70 sm:mt-14 sm:text-base">
+      <div className="relative mt-10 flex flex-col items-center gap-1.5 text-sm text-muted sm:mt-14 sm:text-base">
         <p>תאריך שחרור: {dischargeDateLabel}</p>
         {showStatsRow ? (
           <>
             {serviceProgress ? (
               <>
-                <p className="font-semibold text-white">{serviceProgress.percentServed}% מאחוריך</p>
+                <p className="font-semibold text-foreground">{serviceProgress.percentServed}% מאחוריך</p>
                 <div
                   role="progressbar"
                   aria-label="התקדמות השירות מגיוס ועד שחרור"
                   aria-valuenow={serviceProgress.percentServed}
                   aria-valuemin={0}
                   aria-valuemax={100}
-                  className="mt-1 h-2.5 w-56 max-w-[70vw] overflow-hidden rounded-full bg-white/15 sm:w-72"
+                  className="mt-1 h-2.5 w-56 max-w-[70vw] overflow-hidden rounded-full bg-overlay-strong sm:w-72"
                 >
                   <div
                     className="h-full rounded-full transition-[width] duration-500 ease-out"
@@ -107,7 +116,7 @@ function renderMainState(state: DischargeCountdownState | null) {
     return (
       <>
         <span className="text-7xl font-black tabular-nums leading-none sm:text-9xl">--</span>
-        <span className="text-2xl font-semibold text-white/80 sm:text-4xl">ימים</span>
+        <span className="text-2xl font-semibold text-foreground/80 sm:text-4xl">ימים</span>
         <ClockGrid clock={null} />
       </>
     );
@@ -115,7 +124,7 @@ function renderMainState(state: DischargeCountdownState | null) {
 
   if (state.phase === "discharge_day") {
     return (
-      <p className="text-4xl font-black leading-tight sm:text-7xl" style={{ color: "#3ecf8e" }}>
+      <p className="text-4xl font-black leading-tight sm:text-7xl" style={{ color: "var(--success)" }}>
         זהו. השתחררת.
       </p>
     );
@@ -141,7 +150,7 @@ function renderMainState(state: DischargeCountdownState | null) {
       <span className="text-7xl font-black tabular-nums leading-none sm:text-9xl" style={{ color: copy.accentColor }}>
         {state.daysRemaining}
       </span>
-      <span className="text-2xl font-semibold text-white/80 sm:text-4xl">ימים</span>
+      <span className="text-2xl font-semibold text-foreground/80 sm:text-4xl">ימים</span>
       <ClockGrid clock={state.clock} />
     </>
   );
@@ -167,9 +176,9 @@ function ClockGrid({ clock }: { clock: DischargeClockParts | null }) {
   const minutes = clock ? pad2(clock.minutes) : "--";
   const seconds = clock ? pad2(clock.seconds) : "--";
   const numberClassName = clock
-    ? "font-mono text-3xl font-bold tabular-nums tracking-widest text-white/90 sm:text-5xl"
-    : "font-mono text-3xl font-bold tabular-nums tracking-widest text-white/50 sm:text-5xl";
-  const labelClassName = "text-center text-[10px] font-medium text-white/40 sm:text-xs";
+    ? "font-mono text-3xl font-bold tabular-nums tracking-widest text-foreground/90 sm:text-5xl"
+    : "font-mono text-3xl font-bold tabular-nums tracking-widest text-muted sm:text-5xl";
+  const labelClassName = "text-center text-[10px] font-medium text-muted-2 sm:text-xs";
 
   return (
     <div

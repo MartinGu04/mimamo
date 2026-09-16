@@ -135,22 +135,25 @@ export interface DischargeMilestoneCopy {
   /**
    * A fixed hex color, NOT a theme-aware `--foreground`/`--primary` token --
    * this screen is a deliberately always-dark cinematic canvas regardless of
-   * the viewer's light/dark app-theme setting (same reasoning as the login
-   * route's own fixed `--login-cta-fixed-*` tokens in `globals.css`), so its
-   * accents must stay legible against that fixed dark background in both
-   * app themes rather than flipping to a light-mode tone tuned for a white
-   * surface.
+   * the page background like every other screen, so these are theme tokens
+   * rather than fixed hexes. Each one below used to be hardcoded to exactly
+   * its own token's DARK value (`--foreground` was `#edf1f4`, `--accent`
+   * `#4fc3e8`, and so on), back when this screen sat on a fixed dark panel
+   * that made a light-mode tone wrong. That panel is gone, so the fixed
+   * hexes would now put near-white digits on a near-white page -- pointing
+   * at the tokens keeps dark mode pixel-identical and lets light mode pick
+   * up the contrast-tuned tone it always had available.
    */
   accentColor: string;
 }
 
 const MILESTONE_COPY: Record<DischargeMilestone, DischargeMilestoneCopy> = {
-  none: { badge: null, accentColor: "#edf1f4" },
-  hundred: { badge: "100 ימים!", accentColor: "#4fc3e8" },
-  fifty: { badge: "50 ימים!", accentColor: "#78a9cc" },
-  thirty: { badge: "30 הימים האחרונים!", accentColor: "#f5b84e" },
-  week: { badge: "השבוע האחרון!", accentColor: "#3ecf8e" },
-  tomorrow: { badge: "מחר!", accentColor: "#3ecf8e" },
+  none: { badge: null, accentColor: "var(--foreground)" },
+  hundred: { badge: "100 ימים!", accentColor: "var(--accent)" },
+  fifty: { badge: "50 ימים!", accentColor: "var(--primary)" },
+  thirty: { badge: "30 הימים האחרונים!", accentColor: "var(--warning)" },
+  week: { badge: "השבוע האחרון!", accentColor: "var(--success)" },
+  tomorrow: { badge: "מחר!", accentColor: "var(--success)" },
 };
 
 /** The badge copy + accent color for a given milestone phase -- a plain lookup, kept as its own function so the mapping is independently testable. */

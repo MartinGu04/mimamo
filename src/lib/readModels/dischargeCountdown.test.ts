@@ -130,3 +130,113 @@ describe("loadDischargeCountdownView — resolved view", () => {
     expect(result.view.enlistmentInstantIso).not.toBeNull();
   });
 });
+
+describe('loadDischargeCountdownView — the "כולם" roster gate', () => {
+  const HEADERS = ["שם", "מייל", 'סוג כ"א', "תאריך שחרור", "תאריך גיוס", "מנהל"];
+
+  /** `dani@example.invalid` is always the caller (see the identity mock above). */
+  function snapshotWith(rows: (string | boolean)[][]) {
+    return personnelSnapshot([HEADERS, ...rows]);
+  }
+
+  async function loadOk() {
+    const result = await loadDischargeCountdownView();
+    if (result.status !== "ok") throw new Error(`expected ok, got ${result.status}`);
+    return result.view;
+  }
+
+  it("gives a regular-service caller the roster", async () => {
+    getWorkbookSnapshot.mockResolvedValue(
+      snapshotWith([["דני בדיקה", "dani@example.invalid", "חובה", "2027-01-01", "2025-01-01", ""]]),
+    );
+    const view = await loadOk();
+    expect(view.everyone).not.toBeNull();
+    expect(view.everyone?.map((p) => p.personName)).toEqual(["דני בדיקה"]);
+  });
+
+  it("gives a manager the roster even when the manager is not regular service", async () => {
+    getWorkbookSnapshot.mockResolvedValue(
+      snapshotWith([
+        ["דני בדיקה", "dani@example.invalid", "קבע", "", "", true],
+        ["נועה דוגמה", "noa@example.invalid", "חובה", "2027-03-01", "2025-03-01", ""],
+      ]),
+    );
+    const view = await loadOk();
+    expect(view.everyone?.map((p) => p.personName)).toEqual(["נועה דוגמה"]);
+  });
+
+  it("withholds the roster entirely from a non-manager permanent or reserve caller", async () => {
+    for (const personnelType of ["קבע", "מילואים"]) {
+      getWorkbookSnapshot.mockResolvedValue(
+        snapshotWith([
+          ["דני בדיקה", "dani@example.invalid", personnelType, "", "", ""],
+          ["נועה דוגמה", "noa@example.invalid", "חובה", "2027-03-01", "2025-03-01", ""],
+        ]),
+      );
+      // null, not [] -- the page treats the absent roster as the authorization
+      // answer and ignores ?view=/?person= outright.
+      expect((await loadOk()).everyone).toBeNull();
+    }
+  });
+
+  it("lists regular service only -- permanent and reserve personnel never appear", async () => {
+    getWorkbookSnapshot.mockResolvedValue(
+      snapshotWith([
+        ["דני בדיקה", "dani@example.invalid", "חובה", "2027-01-01", "2025-01-01", ""],
+        ["קבוע", "kavua@example.invalid", "קבע", "2027-01-02", "2025-01-01", ""],
+        ["מילואימניק", "miluim@example.invalid", "מילואים", "2027-01-03", "2025-01-01", ""],
+        ["לא מסווג", "none@example.invalid", "", "2027-01-04", "2025-01-01", ""],
+      ]),
+    );
+    expect((await loadOk()).everyone?.map((p) => p.personName)).toEqual(["דני בדיקה"]);
+  });
+
+  it("orders the roster by discharge date, closest first, undated last", async () => {
+    getWorkbookSnapshot.mockResolvedValue(
+      snapshotWith([
+        ["דני בדיקה", "dani@example.invalid", "חובה", "2027-12-31", "2025-01-01", ""],
+        ["ללא תאריך", "nodate@example.invalid", "חובה", "", "2025-01-01", ""],
+        ["הכי קרוב", "soon@example.invalid", "חובה", "2026-02-01", "2025-01-01", ""],
+      ]),
+    );
+    expect((await loadOk()).everyone?.map((p) => p.personName)).toEqual([
+      "הכי קרוב",
+      "דני בדיקה",
+      "ללא תאריך",
+    ]);
+  });
+
+  it("resolves each roster entry's instants the same Jerusalem way as the personal view", async () => {
+    getWorkbookSnapshot.mockResolvedValue(
+      snapshotWith([["דני בדיקה", "dani@example.invalid", "חובה", "2027-01-01", "2025-01-01", ""]]),
+    );
+    const view = await loadOk();
+    const self = view.everyone?.[0];
+    // Same person, so the roster entry and the personal view must agree
+    // exactly -- a card and that person's full countdown can never disagree
+    // about which civil day their discharge falls on.
+    expect(self?.dischargeInstantIso).toBe(view.dischargeInstantIso);
+    expect(self?.dischargeDayEndInstantIso).toBe(view.dischargeDayEndInstantIso);
+    expect(self?.enlistmentInstantIso).toBe(view.enlistmentInstantIso);
+  });
+
+  it("leaves an undated roster entry's instants null rather than guessing a date", async () => {
+    getWorkbookSnapshot.mockResolvedValue(
+      snapshotWith([["דני בדיקה", "dani@example.invalid", "חובה", "", "", ""]]),
+    );
+    const self = (await loadOk()).everyone?.[0];
+    expect(self?.dischargeDate).toBeNull();
+    expect(self?.dischargeInstantIso).toBeNull();
+    expect(self?.dischargeDayEndInstantIso).toBeNull();
+    expect(self?.enlistmentInstantIso).toBeNull();
+  });
+
+  it("returns an empty roster -- not null -- when an allowed caller has nobody to list", async () => {
+    getWorkbookSnapshot.mockResolvedValue(
+      snapshotWith([["דני בדיקה", "dani@example.invalid", "קבע", "", "", true]]),
+    );
+    // Allowed (manager) but no regular-service personnel exist: the overview
+    // shows its empty state rather than the page hiding the toggle.
+    expect((await loadOk()).everyone).toEqual([]);
+  });
+});

@@ -116,11 +116,13 @@ describe("resolveDischargeMilestoneCopy", () => {
     expect(resolveDischargeMilestoneCopy("none").badge).toBeNull();
   });
 
-  it("gives every other milestone a non-empty Hebrew badge and a fixed hex accent", () => {
+  it("gives every other milestone a non-empty Hebrew badge and a theme-token accent", () => {
     for (const milestone of ["hundred", "fifty", "thirty", "week", "tomorrow"] as const) {
       const copy = resolveDischargeMilestoneCopy(milestone);
       expect(copy.badge).toBeTruthy();
-      expect(copy.accentColor).toMatch(/^#[0-9a-f]{6}$/i);
+      // A token, never a fixed hex -- the countdown sits on the ordinary
+      // page background now, so the accent has to follow the active theme.
+      expect(copy.accentColor).toMatch(/^var\(--[a-z-]+\)$/);
     }
   });
 
