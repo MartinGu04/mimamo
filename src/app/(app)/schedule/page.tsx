@@ -28,7 +28,7 @@ import { buildScheduleEveryoneDayViews } from "@/lib/presentation/scheduleEveryo
 import { getRequestSchedule } from "@/lib/readModels/getRequestSchedule";
 import type { EmergencyScheduleReadModel } from "@/lib/readModels/emergencyScheduleTypes";
 import type { SchedulePerspective } from "@/lib/readModels/scheduleTypes";
-import type { PersonalEventView } from "@/lib/readModels/types";
+import type { PersonalCalendarEventView } from "@/lib/readModels/types";
 
 function buildDayMeta(date: string, todayDate: string): DayMeta {
   const day = Number(date.slice(8, 10));
@@ -231,7 +231,7 @@ interface PersonalPerspectiveProps {
   grid: CalendarGridCell[];
   days: Record<string, DayMeta>;
   defaultSelectedDate: string | null;
-  monthEvents: PersonalEventView[];
+  monthEvents: PersonalCalendarEventView[];
   activeShiftDates: string[];
   /** Set only for perspective "person" -- the selected colleague's name, used for the empty-month message (PR #24 §12). Null for "self" (a manager viewing their own empty month is not a noteworthy state). */
   emptyStateName: string | null;

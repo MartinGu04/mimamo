@@ -1,6 +1,6 @@
 import { assignmentEmoji, personalActivityEmoji } from "@/lib/presentation/emoji";
 import { absenceKindLabel, dutyFamilyLabel, periodLabel, roleLabel } from "@/lib/presentation/labels";
-import type { PersonalEventView } from "@/lib/readModels/types";
+import type { PersonalCalendarEventView, PersonalEventView, PersonalShiftCompanion } from "@/lib/readModels/types";
 import { Badge } from "@/components/ui/Badge";
 import { Panel } from "@/components/ui/Panel";
 import { TimeRange } from "@/components/dashboard/TimeRange";
@@ -9,7 +9,7 @@ import type { DayMeta } from "./types";
 
 interface SelectedDayPanelProps {
   dayMeta: DayMeta | null;
-  events: PersonalEventView[];
+  events: PersonalCalendarEventView[];
 }
 
 /**
@@ -47,6 +47,40 @@ function eventSubtitle(event: PersonalEventView): string | null {
     return absenceKindLabel(event.absenceKind);
   }
   return null;
+}
+
+/**
+ * "מי איתי במשמרת" -- who else is working at the same time as THIS shift,
+ * sitting directly beneath that shift's own details inside the very same
+ * card, separated by nothing louder than a hairline rule. Never a modal,
+ * never a popup, and never rendered into a calendar cell: the month grid
+ * next to this panel stays exactly as compact as it was.
+ *
+ * Renders only what the read model already resolved
+ * (`PersonalCalendarEventView.shiftCompanions` -- real time overlap, the
+ * viewed person excluded, one row per person) and only for a shift: a
+ * `null` companion list means the event isn't a shift at all, so the
+ * section doesn't exist for it. An empty list is the opposite -- the
+ * question WAS asked and nobody else is on this shift, which is worth
+ * saying out loud rather than leaving the reader to guess.
+ */
+function ShiftCompanions({ companions }: { companions: PersonalShiftCompanion[] }) {
+  return (
+    <div className="mt-2.5 border-t border-border pt-2.5">
+      <p className="text-xs font-medium text-muted-2">מי איתי במשמרת</p>
+      {companions.length === 0 ? (
+        <p className="mt-1 text-xs text-muted">אין שיבוצים נוספים למשמרת זו</p>
+      ) : (
+        <ul className="mt-1 space-y-0.5">
+          {companions.map((companion) => (
+            <li key={companion.personId} className="text-sm text-foreground">
+              {[companion.personName, companion.shiftLabel].filter(Boolean).join(" — ")}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -119,6 +153,9 @@ export function SelectedDayPanel({ dayMeta, events }: SelectedDayPanelProps) {
                       {event.shadow ? <Badge tone="primary">חפיפה / צל</Badge> : null}
                       {event.changeNote ? <span className="w-full text-muted-2">{event.changeNote}</span> : null}
                     </div>
+                  ) : null}
+                  {event.category === "shift" ? (
+                    <ShiftCompanions companions={event.shiftCompanions ?? []} />
                   ) : null}
                 </li>
               );

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { CalendarGridCell } from "@/lib/domain/calendarMonth";
-import type { PersonalEventView } from "@/lib/readModels/types";
+import type { PersonalCalendarEventView } from "@/lib/readModels/types";
 import { Panel } from "@/components/ui/Panel";
 import { CalendarGrid } from "./CalendarGrid";
 import { SelectedDayPanel } from "./SelectedDayPanel";
@@ -11,8 +11,8 @@ import type { DayMeta } from "./types";
 interface ScheduleCalendarProps {
   grid: CalendarGridCell[];
   days: Record<string, DayMeta>;
-  /** The displayed month's own shift/duty/absence Events only -- never the full read model. */
-  monthEvents: PersonalEventView[];
+  /** The displayed month's own shift/duty/absence Events only -- never the full read model. Each shift carries its own already-resolved "מי איתי במשמרת" roster (see `SelectedDayPanel`); nothing here is ever re-derived client-side. */
+  monthEvents: PersonalCalendarEventView[];
   defaultSelectedDate: string | null;
   /** Event dates (not necessarily today) of every currently-running personal shift -- see CalendarGrid. */
   activeShiftDates: string[];
@@ -63,7 +63,7 @@ export function ScheduleCalendar({
   }
 
   const eventsByDate = useMemo(() => {
-    const map: Record<string, PersonalEventView[]> = {};
+    const map: Record<string, PersonalCalendarEventView[]> = {};
     for (const event of monthEvents) {
       (map[event.date] ??= []).push(event);
     }
