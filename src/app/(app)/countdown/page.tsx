@@ -51,9 +51,9 @@ export default async function CountdownPage() {
 /** No discharge date on record for this person -- a clean, non-blocking empty state, never a guessed/default date. */
 function renderEmptyState() {
   return (
-    <div className="relative flex min-h-[calc(100dvh-10rem)] flex-col items-center justify-center gap-4 overflow-hidden rounded-3xl bg-[#05070a] px-4 py-16 text-center text-white sm:px-8">
+    <div className="relative flex min-h-[calc(100dvh-10rem)] flex-col items-center justify-center gap-4 overflow-hidden px-4 py-16 text-center text-foreground sm:px-8">
       <h1 className="text-4xl font-black tracking-tight sm:text-6xl">עד מתי???</h1>
-      <p className="max-w-sm text-base text-white/60">
+      <p className="max-w-sm text-base text-muted">
         לא נמצא תאריך שחרור עבורך במערכת. פנה/י למנהל המערכת אם לדעתך זו טעות.
       </p>
     </div>

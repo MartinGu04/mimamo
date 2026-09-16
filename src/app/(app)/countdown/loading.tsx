@@ -1,8 +1,9 @@
-/** Skeleton shaped like the real dark cinematic countdown panel -- never fake numbers. */
+/** Skeleton shaped like the real countdown content -- never fake numbers. No
+ *  panel of its own: the countdown sits directly on the SATCOM page canvas. */
 export default function CountdownLoading() {
   return (
     <div
-      className="flex min-h-[calc(100dvh-10rem)] flex-col items-center justify-center gap-6 rounded-3xl bg-[#05070a] px-4 py-16"
+      className="flex min-h-[calc(100dvh-10rem)] flex-col items-center justify-center gap-6 px-4 py-16"
       aria-busy="true"
       aria-label="טוען את עד מתי"
     >
