@@ -104,20 +104,41 @@ describe("AccessibilityStatementPage — no arrow-key or global keyboard overcla
     const { container } = render(<AccessibilityStatementPage />);
     expect(container.textContent).not.toMatch(/מקש(י)? חצים|arrow key/i);
   });
+
+  it('softens the keyboard-navigation feature bullet to "תמיכה בניווט", not a blanket "ניווט מלא" claim, pending final verification', () => {
+    render(<AccessibilityStatementPage />);
+    expect(screen.getByText("תמיכה בניווט באמצעות מקלדת")).toBeInTheDocument();
+    expect(screen.queryByText("ניווט מלא באמצעות מקלדת")).toBeNull();
+  });
 });
 
-describe("AccessibilityStatementPage — real contact status, no invented details", () => {
-  it("never renders an email address, phone number, or coordinator name", () => {
-    const { container } = render(<AccessibilityStatementPage />);
-    const text = container.textContent ?? "";
-    expect(text).not.toContain("@");
-    expect(text).not.toMatch(/05\d[-\s]?\d{7}|\+972/);
-    expect(text).not.toMatch(/רכז(ת)? נגישות/);
+describe("AccessibilityStatementPage — real contact email, no invented title/phone", () => {
+  it("renders the real accessibility contact as a mailto: link, visible text = full address", () => {
+    render(<AccessibilityStatementPage />);
+    const link = screen.getByRole("link", { name: "martin.gusin0205@gmail.com" });
+    expect(link).toHaveAttribute("href", "mailto:martin.gusin0205@gmail.com");
+    expect(link).toHaveTextContent("martin.gusin0205@gmail.com");
   });
 
-  it("honestly states no dedicated accessibility contact channel is published yet", () => {
+  it("keeps visible keyboard focus styling on the contact link", () => {
     render(<AccessibilityStatementPage />);
-    expect(screen.getByText(/טרם הוקם ופורסם ערוץ פנייה ייעודי/)).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "martin.gusin0205@gmail.com" });
+    expect(link.className).toMatch(/focus-visible:outline/);
+  });
+
+  it('never labels the contact a "רכז/ת נגישות" or any other invented formal role', () => {
+    const { container } = render(<AccessibilityStatementPage />);
+    expect(container.textContent).not.toMatch(/רכז(ת)? נגישות/);
+  });
+
+  it("never renders a phone number -- email only, per the owner's instruction", () => {
+    const { container } = render(<AccessibilityStatementPage />);
+    expect(container.textContent).not.toMatch(/05\d[-\s]?\d{7}|\+972/);
+  });
+
+  it('no longer claims that no accessibility contact channel is published', () => {
+    render(<AccessibilityStatementPage />);
+    expect(screen.queryByText(/טרם הוקם ופורסם ערוץ פנייה ייעודי/)).toBeNull();
   });
 });
 

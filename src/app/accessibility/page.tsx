@@ -18,6 +18,15 @@ export const metadata: Metadata = {
   description: `הצהרת הנגישות של ${APP_NAME}: התקנים שבבסיס העבודה, ההתאמות שבוצעו עד כה ודרכי פנייה בנושאי נגישות.`,
 };
 
+/**
+ * The one real, published accessibility contact -- supplied directly by
+ * the project owner (Phase 7 follow-up) after a repo-wide search turned up
+ * no existing public contact. Deliberately just an email, with no title
+ * ("רכז/ת נגישות" or similar) attached -- the owner explicitly asked not
+ * to invent a formal role.
+ */
+const ACCESSIBILITY_CONTACT_EMAIL = "martin.gusin0205@gmail.com";
+
 const H2_CLASS = "text-lg font-semibold text-foreground";
 const P_CLASS = "mt-2 text-sm leading-relaxed text-muted";
 const UL_CLASS = "mt-2 list-disc space-y-1.5 ps-5 text-sm leading-relaxed text-muted";
@@ -30,7 +39,7 @@ const UL_CLASS = "mt-2 list-disc space-y-1.5 ps-5 text-sm leading-relaxed text-m
  */
 const IMPLEMENTED_FEATURES = [
   "כיוון וקריאה מימין לשמאל (RTL) ומבנה סמנטי בעברית בכל האפליקציה",
-  "ניווט מלא באמצעות מקלדת",
+  "תמיכה בניווט באמצעות מקלדת",
   "אינדיקציית פוקוס גלויה בעת ניווט במקלדת",
   'קישור "דלג לתוכן הראשי" לדילוג על ניווט חוזר',
   "כותרות ואזורי דף (landmarks) סמנטיים",
@@ -64,11 +73,11 @@ const IMPLEMENTED_FEATURES = [
  * technology verification is still pending. It must never be edited to
  * claim full/100% compliance before that final verification phase.
  *
- * Section 7 (פנייה בנושא נגישות) intentionally contains no contact
- * details -- a repo-wide search turned up no real, published accessibility
- * or support contact (only placeholder example values in `.env.example`),
- * and this project's engineering rules forbid inventing one. See the PR
- * description for what's needed to complete that section.
+ * Section 7 (פנייה בנושא נגישות) links a real accessibility contact email
+ * (`ACCESSIBILITY_CONTACT_EMAIL`, below), supplied directly by the project
+ * owner -- a repo-wide search found no existing public contact anywhere,
+ * so this was deliberately left unpublished until the owner gave a real
+ * one, rather than inventing a placeholder.
  */
 export default function AccessibilityStatementPage() {
   const localNow = getJerusalemLocalNow();
@@ -150,9 +159,16 @@ export default function AccessibilityStatementPage() {
             <section className="mt-6">
               <h2 className={H2_CLASS}>פנייה בנושא נגישות</h2>
               <p className={P_CLASS}>
-                נשמח לקבל פניות בנושא נגישות באפליקציה. נכון למועד עדכון הצהרה זו, טרם הוקם ופורסם ערוץ פנייה ייעודי
-                לדיווח על בעיות נגישות או לבקשת סיוע נגישות. אנו פועלים להשלים ולפרסם כאן פרטי קשר מלאים בהקדם
-                האפשרי.
+                אם נתקלתם בבעיית נגישות באפליקציה, או אם אתם זקוקים לסיוע בנושא נגישות, ניתן לפנות אלינו בדוא״ל:
+              </p>
+              <p className={P_CLASS}>
+                <a
+                  href={`mailto:${ACCESSIBILITY_CONTACT_EMAIL}`}
+                  dir="ltr"
+                  className="inline-block rounded text-primary underline decoration-primary/40 underline-offset-2 transition-colors duration-150 hover:text-primary-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  {ACCESSIBILITY_CONTACT_EMAIL}
+                </a>
               </p>
             </section>
 
