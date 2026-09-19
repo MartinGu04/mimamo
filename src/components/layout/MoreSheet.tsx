@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { BellRing, Hourglass, Target, UserCog, X } from "lucide-react";
 import { useFocusTrap } from "@/components/ui/useFocusTrap";
+import { EXPAND_HIT_AREA_CLASS } from "@/components/ui/hitArea";
 
 interface MoreSheetProps {
   open: boolean;
@@ -64,7 +65,7 @@ export function MoreSheet({ open, onClose, isManager }: MoreSheetProps) {
             type="button"
             onClick={onClose}
             aria-label="סגירה"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors duration-150 hover:bg-overlay-soft hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className={`relative flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors duration-150 hover:bg-overlay-soft hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${EXPAND_HIT_AREA_CLASS}`}
           >
             <X className="h-4 w-4" aria-hidden="true" strokeWidth={1.75} />
           </button>

@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { EXPAND_HIT_AREA_CLASS } from "@/components/ui/hitArea";
 
 interface MonthNavProps {
   prevHref: string;
@@ -10,8 +11,15 @@ interface MonthNavProps {
   monthLabel: string;
 }
 
+/**
+ * `relative` + `EXPAND_HIT_AREA_CLASS` (Phase 6): the pill's own `p-1`
+ * padding plus the `gap-1.5`/`gap-2` to the neighboring "היום" pill leaves
+ * comfortable clearance, so the invisible expansion never overlaps another
+ * control -- only the non-interactive month label sits directly next to
+ * these arrows, at 2-4px, and that label never captures a tap.
+ */
 const ARROW_BUTTON_CLASSES =
-  "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-foreground transition-colors duration-200 hover:bg-surface-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:h-8 sm:w-8";
+  `relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-foreground transition-colors duration-200 hover:bg-surface-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:h-8 sm:w-8 ${EXPAND_HIT_AREA_CLASS}`;
 
 /**
  * Server-rendered month navigation, redesigned (PR #38 shell-unification

@@ -6,6 +6,7 @@ import { ArrowRight, Bell, BellOff, BellRing, ChevronDown, ChevronUp, Download, 
 import type { NotificationInboxItem } from "@/lib/readModels/notificationInboxTypes";
 import { formatRecentChangeRelativeTime } from "@/lib/presentation/relativeChangeTime";
 import { APP_NAME } from "@/lib/config/productName";
+import { EXPAND_HIT_AREA_CLASS, EXPAND_HIT_AREA_VERTICAL_CLASS } from "@/components/ui/hitArea";
 import { usePushSubscription } from "./usePushSubscription";
 import { useNotificationInbox } from "./useNotificationInbox";
 import { type InstallPromptOutcome, usePwaInstall } from "./PwaInstallProvider";
@@ -240,7 +241,13 @@ export function NotificationBell({ variant, userId }: NotificationBellProps) {
         aria-controls={open ? panelId : undefined}
         aria-label={unreadCount > 0 ? `התראות, ${unreadCount} שלא נקראו` : "התראות"}
         onClick={() => setOpen((prev) => !prev)}
-        className={`relative ${TRIGGER_CLASSES[variant]}`}
+        // Vertical-only expansion (Phase 6): this trigger always sits in a
+        // tight horizontal icon cluster (`MobileIdentityBar`'s
+        // Search/Theme/Bell/Avatar row, `ShellUtilityBar`'s top bar,
+        // `Sidebar`'s top row) with only a few px between neighbors --
+        // expanding sideways too would make adjacent controls' hit areas
+        // overlap, so only the (always free) vertical space is reclaimed.
+        className={`relative ${TRIGGER_CLASSES[variant]} ${EXPAND_HIT_AREA_VERTICAL_CLASS}`}
       >
         <TriggerIcon className={ICON_SIZE_CLASSES[variant]} aria-hidden="true" strokeWidth={1.75} />
         {unreadCount > 0 ? (
@@ -338,7 +345,7 @@ function InboxView({
           type="button"
           onClick={onOpenSettings}
           aria-label="הגדרות התראות"
-          className="flex h-7 w-7 items-center justify-center rounded-full text-muted transition-colors duration-150 hover:bg-overlay-soft hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className={`relative flex h-7 w-7 items-center justify-center rounded-full text-muted transition-colors duration-150 hover:bg-overlay-soft hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${EXPAND_HIT_AREA_CLASS}`}
         >
           <Settings className="h-4 w-4" aria-hidden="true" strokeWidth={1.75} />
         </button>
@@ -471,7 +478,7 @@ function SettingsView({
           type="button"
           onClick={onBack}
           aria-label="חזרה להתראות"
-          className="flex h-7 w-7 items-center justify-center rounded-full text-muted transition-colors duration-150 hover:bg-overlay-soft hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className={`relative flex h-7 w-7 items-center justify-center rounded-full text-muted transition-colors duration-150 hover:bg-overlay-soft hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${EXPAND_HIT_AREA_CLASS}`}
         >
           <ArrowRight className="h-4 w-4" aria-hidden="true" strokeWidth={1.75} />
         </button>

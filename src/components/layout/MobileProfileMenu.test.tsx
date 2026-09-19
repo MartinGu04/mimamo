@@ -45,6 +45,14 @@ describe("MobileProfileMenu — trigger", () => {
     expect(screen.queryByRole("group", { name: "תפריט פרופיל" })).toBeNull();
   });
 
+  it("gets a vertical-only expanded hit area, never sideways (Phase 6) -- it sits in a tight top-bar icon row", () => {
+    renderWithTheme(<MobileProfileMenu name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    const trigger = screen.getByRole("button", { name: "תפריט פרופיל של דני בדיקה" });
+    expect(trigger.className).toContain("after:-top-2");
+    expect(trigger.className).toContain("after:-bottom-2");
+    expect(trigger.className).not.toMatch(/after:-(start|end|left|right|inset-x)-/);
+  });
+
   it("never claims menu popup semantics -- this popover implements no real menu keyboard behavior", () => {
     renderWithTheme(<MobileProfileMenu name="דני בדיקה" isManager={false} avatarUrl={null} />);
     const trigger = screen.getByRole("button", { name: "תפריט פרופיל של דני בדיקה" });

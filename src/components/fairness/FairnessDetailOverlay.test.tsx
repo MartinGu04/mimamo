@@ -33,6 +33,13 @@ describe("FairnessDetailOverlay — accessible dialog semantics", () => {
     expect(close).toHaveAttribute("href", "/fairness?month=2026-06");
   });
 
+  it("the close button keeps its visible 32px size and gets a fully expanded invisible hit area (Phase 6)", () => {
+    renderOverlay();
+    const close = screen.getByRole("link", { name: "סגירה" });
+    expect(close.className).toContain("h-8 w-8");
+    expect(close.className).toContain("after:-inset-1.5");
+  });
+
   it("Escape navigates to closeHref via the router", () => {
     renderOverlay("/fairness?mode=duties&period=h1");
     fireEvent.keyDown(document, { key: "Escape" });

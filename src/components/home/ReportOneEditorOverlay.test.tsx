@@ -92,6 +92,13 @@ describe("ReportOneEditorOverlay", () => {
     expect(screen.queryByText(/קיימים שינויים ידניים/)).toBeNull();
   });
 
+  it("the close button keeps its visible 32px size and gets a fully expanded invisible hit area (Phase 6)", () => {
+    render(<ReportOneEditorOverlay draft={draft()} onClose={() => {}} />);
+    const close = screen.getByRole("button", { name: "סגירה" });
+    expect(close.className).toContain("h-8 w-8");
+    expect(close.className).toContain("after:-inset-1.5");
+  });
+
   it("copying writes the formatted report (including any manual edits) to the clipboard and shows feedback", async () => {
     render(<ReportOneEditorOverlay draft={draft()} onClose={() => {}} />);
     const input = screen.getByLabelText("סטטוס עבור עמנואל צגה");

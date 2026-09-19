@@ -116,6 +116,14 @@ describe("Command palette — focus and dialog semantics", () => {
     expect(dialog()).toHaveAttribute("aria-modal", "true");
   });
 
+  it("the close button keeps its visible 28px size and gets a fully expanded invisible hit area (Phase 6)", () => {
+    renderPalette();
+    fireEvent.click(screen.getByRole("button", { name: "חיפוש" }));
+    const close = screen.getByRole("button", { name: "סגירת חיפוש" });
+    expect(close.className).toContain("h-7 w-7");
+    expect(close.className).toContain("after:-inset-1.5");
+  });
+
   it("the search input renders at >=16px on mobile (text-base) so iOS Safari never auto-zooms on focus", () => {
     renderPalette();
     fireEvent.click(screen.getByRole("button", { name: "חיפוש" }));

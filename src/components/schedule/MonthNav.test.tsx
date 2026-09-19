@@ -63,4 +63,16 @@ describe("MonthNav", () => {
       expect(nav.contains(todayLink)).toBe(false);
     });
   });
+
+  describe("touch-target hardening (Phase 6)", () => {
+    it("prev/next arrows carry an invisible expanded hit area without changing their visible size", () => {
+      render(<MonthNav {...BASE_PROPS} isOnCurrentMonth={false} />);
+      const prevArrow = screen.getByRole("link", { name: "חודש קודם" });
+      const nextArrow = screen.getByRole("link", { name: "חודש הבא" });
+      for (const arrow of [prevArrow, nextArrow]) {
+        expect(arrow.className).toContain("h-7 w-7");
+        expect(arrow.className).toContain("after:content-['']");
+      }
+    });
+  });
 });

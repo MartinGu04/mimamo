@@ -8,6 +8,7 @@ import { signOutAction } from "@/lib/auth/actions";
 import { Avatar } from "@/components/ui/Avatar";
 import { PushEndpointHiddenField } from "@/components/pwa/PushEndpointHiddenField";
 import { unsubscribeCurrentPushSubscription } from "@/lib/push/browserSubscription";
+import { EXPAND_HIT_AREA_VERTICAL_CLASS } from "@/components/ui/hitArea";
 
 interface MobileProfileMenuProps {
   name: string;
@@ -118,7 +119,10 @@ export function MobileProfileMenu({ name, isManager, avatarUrl }: MobileProfileM
         aria-controls={open ? menuId : undefined}
         aria-label={`תפריט פרופיל של ${name}`}
         onClick={() => setOpen((prev) => !prev)}
-        className="rounded-full transition-transform duration-150 hover:opacity-90 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        // Vertical-only expansion (Phase 6): sits in `MobileIdentityBar`'s
+        // tight Search/Theme/Bell/Avatar cluster, only a few px from its
+        // left neighbor -- see `EXPAND_HIT_AREA_VERTICAL_CLASS`'s own docs.
+        className={`relative rounded-full transition-transform duration-150 hover:opacity-90 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${EXPAND_HIT_AREA_VERTICAL_CLASS}`}
       >
         <Avatar name={name} size="sm" avatarUrl={avatarUrl} />
       </button>

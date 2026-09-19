@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { Info } from "lucide-react";
+import { EXPAND_HIT_AREA_CLASS } from "@/components/ui/hitArea";
 
 const METRIC_EXPLANATIONS: readonly { term: string; meaning: string }[] = [
   { term: "משמרות שביצעת", meaning: "מספר המשמרות שביצעת בפועל בתקופה שנבחרה." },
@@ -95,7 +96,7 @@ export function ShiftFairnessCardInfo() {
           event.stopPropagation();
           setOpen((prev) => !prev);
         }}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-2 transition-colors duration-150 hover:bg-overlay-soft hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className={`relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-2 transition-colors duration-150 hover:bg-overlay-soft hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${EXPAND_HIT_AREA_CLASS}`}
       >
         <Info className="h-3.5 w-3.5" aria-hidden="true" strokeWidth={2} />
       </button>
