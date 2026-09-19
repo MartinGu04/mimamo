@@ -57,10 +57,25 @@ function setupRuleConfigDefaults() {
 afterEach(() => {
   vi.clearAllMocks();
   vi.resetModules();
+  vi.useRealTimers();
 });
 
 describe("runScheduledBroadcastWorkerTick -- zero due/recoverable work", () => {
   it("fails closed before due-job delivery while the incident baseline still needs recovery", async () => {
+    // This test models the fixed 2026-09-13 notification-flood incident
+    // (see NOTIFICATION_FLOOD_INCIDENT in ./notificationFloodRecovery) --
+    // the guard under test only fires while the REAL current operational
+    // week (getJerusalemLocalNow() -> getOperationalWeek()) is that exact
+    // incident week, so the system clock must be frozen inside it or this
+    // guard silently stops triggering once the real calendar moves past
+    // 2026-09-19 and the test falls through into the (deliberately
+    // unmocked, in this test) fetchFreshPersonnelRead() stage instead.
+    // 2026-09-15T08:00:00Z is 11:00 in Asia/Jerusalem (UTC+3, DST) on
+    // 2026-09-15 -- a Tuesday inside the Sunday-based incident week
+    // ("2026-09-13" .. "2026-09-19"), comfortably clear of either edge.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-15T08:00:00.000Z"));
+
     setupRuleConfigDefaults();
     peekBaselineState.mockResolvedValue({
       initialized: true,
@@ -75,6 +90,7 @@ describe("runScheduledBroadcastWorkerTick -- zero due/recoverable work", () => {
     expect(peekAnyManagerScheduledBroadcastWorkDue).not.toHaveBeenCalled();
     expect(peekDueJobsCount).not.toHaveBeenCalled();
     expect(runDelivery).not.toHaveBeenCalled();
+    expect(fetchFreshPersonnelRead).not.toHaveBeenCalled();
   });
 
   it("performs NO personnel read, NO dispatch, and NO delivery when ALL THREE pre-checks find nothing (true no-op)", async () => {
