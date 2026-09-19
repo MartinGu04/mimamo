@@ -39,6 +39,29 @@ interface CalendarGridProps {
  */
 const MAX_INDICATORS_PER_DAY = 2;
 
+/** Spoken when a day has no personal shift/duty/absence at all -- the screen-reader equivalent of the cell's own visually-empty content area. */
+const NO_SHIFTS_LABEL = "אין משמרות";
+
+/**
+ * The full accessible name for one day cell: date, holiday (if any), then
+ * every personal-event indicator for that day (never just the up-to-2
+ * VISIBLE ones -- a screen reader user gets the complete list, the same one
+ * `SelectedDayPanel` would show), each flagged "(משוער)" when tentative, or
+ * `NO_SHIFTS_LABEL` when the day has none. Built from the SAME `indicators`
+ * array the cell's own `IndicatorChips` renders, so the two can never
+ * disagree about what a day contains.
+ */
+function dayAccessibleLabel(meta: DayMeta, indicators: CalendarDayIndicator[]): string {
+  const segments = [meta.dateLabel];
+  if (meta.holiday) segments.push(meta.holiday.label);
+  segments.push(
+    indicators.length > 0
+      ? indicators.map((indicator) => (indicator.tentative ? `${indicator.label} (משוער)` : indicator.label)).join(", ")
+      : NO_SHIFTS_LABEL,
+  );
+  return segments.join(", ");
+}
+
 function IndicatorChips({ indicators }: { indicators: CalendarDayIndicator[] }) {
   const visibleIndicators = indicators.slice(0, MAX_INDICATORS_PER_DAY);
   const mobileOverflow = Math.max(indicators.length - 1, 0);
@@ -152,6 +175,7 @@ export function CalendarGrid({
                     isFirstRow={isFirstRow}
                     isSelected={isSelected}
                     onSelect={onSelectDate}
+                    accessibleLabel={dayAccessibleLabel(meta, indicators)}
                     dayNumberActive={activeShiftDateSet.has(date)}
                     headerExtra={
                       <>

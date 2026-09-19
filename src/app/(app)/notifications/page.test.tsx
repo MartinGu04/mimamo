@@ -135,8 +135,8 @@ describe("NotificationCenterPage — section routing", () => {
     getRequestNotificationCenterContext.mockResolvedValue(okResult());
     await renderPage({ section: "history" });
     expect(screen.getByRole("heading", { name: "מרכז התראות", level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "היסטוריה" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tab", { name: "עכשיו" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "היסטוריה" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "עכשיו" })).toBeInTheDocument();
   });
 });
 

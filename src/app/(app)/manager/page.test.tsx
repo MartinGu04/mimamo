@@ -270,11 +270,11 @@ describe("ManagerPage — category navigation", () => {
   it("renders all five category tabs, Overview active by default", async () => {
     getRequestManagerOverview.mockResolvedValue(okResult(model()));
     await renderPage();
-    expect(screen.getByRole("tab", { name: "סקירה" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tab", { name: "משמרות" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "כוח אדם" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "תורנויות והיעדרויות" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "התחברויות" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "סקירה" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "משמרות" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "כוח אדם" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "תורנויות והיעדרויות" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "התחברויות" })).toBeInTheDocument();
   });
 
   it("Overview (default): shows דורש טיפול, never the other categories' sections", async () => {
@@ -379,7 +379,7 @@ describe("ManagerPage — category navigation", () => {
   it("switching category preserves the current range", async () => {
     getRequestManagerOverview.mockResolvedValue(okResult(model({ range: { key: "30d", startDate: "2026-08-01", endDate: "2026-08-30", month: null } })));
     await renderPage({ range: "30d" });
-    expect(screen.getByRole("tab", { name: "משמרות" })).toHaveAttribute("href", "/manager?range=30d&category=shifts");
+    expect(screen.getByRole("link", { name: "משמרות" })).toHaveAttribute("href", "/manager?range=30d&category=shifts");
   });
 
   it("no problems-only toggle exists anywhere -- Overview owns that job now", async () => {

@@ -1375,4 +1375,107 @@ describe("CalendarGrid", () => {
       }
     });
   });
+
+  describe("REGRESSION: day-cell accessible name carries the full visible content, not just the date", () => {
+    it("a day with no events at all announces an explicit 'no shifts' state, never just the bare date", () => {
+      render(
+        <CalendarGrid
+          grid={WEEK_GRID}
+          days={weekDays()}
+          eventsByDate={{}}
+          selectedDate={null}
+          onSelectDate={noop}
+          activeShiftDates={[]}
+        />,
+      );
+      const cell = screen.getByRole("button", { name: /11 באוגוסט/ });
+      expect(cell).toHaveAccessibleName(/אין משמרות/);
+    });
+
+    it("announces every shift/duty indicator for the day, not only the up-to-2 visually shown", () => {
+      render(
+        <CalendarGrid
+          grid={WEEK_GRID}
+          days={weekDays()}
+          eventsByDate={{
+            "2026-08-12": [
+              shiftEvent({ date: "2026-08-12", period: "day" }),
+              shiftEvent({ date: "2026-08-12", period: "night" }),
+              dutyEvent({ date: "2026-08-12" }),
+            ],
+          }}
+          selectedDate={null}
+          onSelectDate={noop}
+          activeShiftDates={[]}
+        />,
+      );
+      const cell = screen.getByRole("button", { name: /12 באוגוסט/ });
+      const name = cell.getAttribute("aria-label") ?? "";
+      // All three -- including the 3rd, which only shows visually as a "+1"
+      // overflow chip -- must reach a screen reader.
+      expect(name).toContain("יום");
+      expect(name).toContain("לילה");
+      expect(name).toContain("שמירה");
+    });
+
+    it("flags a tentative shift with '(משוער)' in the accessible name", () => {
+      render(
+        <CalendarGrid
+          grid={WEEK_GRID}
+          days={weekDays()}
+          eventsByDate={{ "2026-08-12": [shiftEvent({ date: "2026-08-12", certainty: "tentative" })] }}
+          selectedDate={null}
+          onSelectDate={noop}
+          activeShiftDates={[]}
+        />,
+      );
+      const cell = screen.getByRole("button", { name: /12 באוגוסט/ });
+      expect(cell).toHaveAccessibleName(/משוער/);
+    });
+
+    it("never adds the tentative flag to a confirmed event's own name", () => {
+      render(
+        <CalendarGrid
+          grid={WEEK_GRID}
+          days={weekDays()}
+          eventsByDate={{ "2026-08-12": [shiftEvent({ date: "2026-08-12", certainty: "confirmed" })] }}
+          selectedDate={null}
+          onSelectDate={noop}
+          activeShiftDates={[]}
+        />,
+      );
+      const cell = screen.getByRole("button", { name: /12 באוגוסט/ });
+      expect(cell).not.toHaveAccessibleName(/משוער/);
+    });
+
+    it("includes the holiday's full label in the accessible name -- even though the cell only shows the emoji visually", () => {
+      render(
+        <CalendarGrid
+          grid={WEEK_GRID}
+          days={weekDays({ "2026-08-12": { holiday: HOLIDAY } })}
+          eventsByDate={{}}
+          selectedDate={null}
+          onSelectDate={noop}
+          activeShiftDates={[]}
+        />,
+      );
+      const cell = screen.getByRole("button", { name: /12 באוגוסט/ });
+      expect(cell).toHaveAccessibleName(/ראש השנה/);
+    });
+
+    it("the accessible name still starts with the date, so existing name-based lookups by date keep working", () => {
+      render(
+        <CalendarGrid
+          grid={WEEK_GRID}
+          days={weekDays({ "2026-08-12": { holiday: HOLIDAY } })}
+          eventsByDate={{ "2026-08-12": [shiftEvent({ date: "2026-08-12", period: "day" })] }}
+          selectedDate={null}
+          onSelectDate={noop}
+          activeShiftDates={[]}
+        />,
+      );
+      const cell = screen.getByRole("button", { name: /12 באוגוסט/ });
+      expect(cell.getAttribute("aria-label")).toMatch(/^יום · 12 באוגוסט/);
+    });
+  });
 });

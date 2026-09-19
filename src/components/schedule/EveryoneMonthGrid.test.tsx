@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import type { CalendarGridCell } from "@/lib/domain/calendarMonth";
 import type { CoverageStatus } from "@/lib/domain/shiftCoverage";
+import { coverageStatusLabel } from "@/lib/presentation/labels";
 import { CALENDAR_CELL_HEIGHT_CLASSES } from "./CalendarSurface";
 import type { ScheduleEveryoneDayView } from "@/lib/presentation/scheduleEveryone";
 import { EveryoneMonthGrid } from "./EveryoneMonthGrid";
@@ -674,6 +675,117 @@ describe("EveryoneMonthGrid", () => {
       // unaffected behavior, not something the generic supervisor should
       // paper over.
       expect(cell.textContent).toContain("חסר טכנאי");
+    });
+  });
+
+  describe("REGRESSION: day-cell accessible name carries the full staffing content, not just the date", () => {
+    function dayView(overrides: Partial<ScheduleEveryoneDayView> = {}): ScheduleEveryoneDayView {
+      return { date: "2026-08-12", day: null, night: null, genericSupervisorNames: [], genericTechnicianNames: [], duties: [], absences: [], ...overrides };
+    }
+
+    it("a day with no staffing data at all announces 'אין נתונים' for both periods, never just the bare date", () => {
+      render(
+        <EveryoneMonthGrid grid={WEEK_GRID} days={weekDays()} dayViews={{}} selectedDate={null} onSelectDate={noop} />,
+      );
+      const cell = screen.getByRole("button", { name: /12 באוגוסט/ });
+      const name = cell.getAttribute("aria-label") ?? "";
+      expect(name).toContain("יום: אין נתונים");
+      expect(name).toContain("לילה: אין נתונים");
+    });
+
+    it("announces each period's real coverage status by name, e.g. 'יום: מלא' / 'לילה: חסר'", () => {
+      render(
+        <EveryoneMonthGrid
+          grid={WEEK_GRID}
+          days={weekDays()}
+          dayViews={{
+            "2026-08-12": dayView({
+              day: {
+                period: "day",
+                label: "יום",
+                emoji: "☀️",
+                technicians: { people: [{ key: "p1", name: "דניאל כהן", tentative: false }], status: "full", message: null },
+                supervisors: { people: [], status: "not_evaluable", message: null },
+                shadowTechnicianNames: [],
+                shadowSupervisorNames: [],
+                coverageStatus: "full",
+              },
+              night: {
+                period: "night",
+                label: "לילה",
+                emoji: "🌙",
+                technicians: { people: [], status: "missing", message: "חסר טכנאי" },
+                supervisors: { people: [], status: "missing", message: null },
+                shadowTechnicianNames: [],
+                shadowSupervisorNames: [],
+                coverageStatus: "missing",
+              },
+            }),
+          }}
+          selectedDate={null}
+          onSelectDate={noop}
+        />,
+      );
+      const cell = screen.getByRole("button", { name: /12 באוגוסט/ });
+      const name = cell.getAttribute("aria-label") ?? "";
+      expect(name).toContain(`יום: ${coverageStatusLabel("full")}`);
+      expect(name).toContain(`לילה: ${coverageStatusLabel("missing")}`);
+    });
+
+    it("includes a duties/absences count in the accessible name when present", () => {
+      render(
+        <EveryoneMonthGrid
+          grid={WEEK_GRID}
+          days={weekDays()}
+          dayViews={{
+            "2026-08-12": dayView({
+              duties: [{ key: "d1", personName: "איתן דוגמה", title: "שומר", emoji: "🛡️" }],
+              absences: [{ key: "a1", personName: "מאיה לוי", label: "חופש", emoji: "🏖️" }],
+            }),
+          }}
+          selectedDate={null}
+          onSelectDate={noop}
+        />,
+      );
+      const cell = screen.getByRole("button", { name: /12 באוגוסט/ });
+      expect(cell).toHaveAccessibleName(/2 תורנויות והיעדרויות נוספות/);
+    });
+
+    it("includes the holiday's full label in the accessible name", () => {
+      const HOLIDAY = { emoji: "🍎", label: "ראש השנה", kind: "holiday" as const, shortLabel: "חג" };
+      render(
+        <EveryoneMonthGrid
+          grid={WEEK_GRID}
+          days={weekDays({ "2026-08-12": { holiday: HOLIDAY } })}
+          dayViews={{}}
+          selectedDate={null}
+          onSelectDate={noop}
+        />,
+      );
+      const cell = screen.getByRole("button", { name: /12 באוגוסט/ });
+      expect(cell).toHaveAccessibleName(/ראש השנה/);
+    });
+
+    it("includes a generic (period-unspecified) assignment's names in the accessible name", () => {
+      render(
+        <EveryoneMonthGrid
+          grid={WEEK_GRID}
+          days={weekDays()}
+          dayViews={{ "2026-08-12": dayView({ genericSupervisorNames: ["עילאי שפירא"] }) }}
+          selectedDate={null}
+          onSelectDate={noop}
+        />,
+      );
+      const cell = screen.getByRole("button", { name: /12 באוגוסט/ });
+      expect(cell).toHaveAccessibleName(/עילאי שפירא/);
+    });
+
+    it("the accessible name still starts with the date, so existing name-based lookups by date keep working", () => {
+      render(
+        <EveryoneMonthGrid grid={WEEK_GRID} days={weekDays()} dayViews={{}} selectedDate={null} onSelectDate={noop} />,
+      );
+      const cell = screen.getByRole("button", { name: /12 באוגוסט/ });
+      expect(cell.getAttribute("aria-label")).toMatch(/^יום · 12 באוגוסט/);
     });
   });
 });

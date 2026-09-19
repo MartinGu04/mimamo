@@ -28,10 +28,14 @@ const TAB_BASE =
  * meaning across modes either, so it's dropped too (same reasoning
  * `ManagerFairnessPeriodSelector` already applies to a period switch).
  *
- * `role="tablist"`/`aria-selected` gives the selected state an accessible
- * name beyond color alone; `flex-1` on mobile keeps both pills equal width
- * and full-bleed (compact, no dead space), `sm:flex-initial` lets them
- * settle to their natural width on larger screens instead of stretching.
+ * A real `<nav aria-label>` landmark (the same native-navigation pattern
+ * `DutyViewToggle` uses), with `aria-current="page"` on each `TabLink` for
+ * the active mode -- never `role="tablist"`/`role="tab"`, which would
+ * promise assistive tech an ARIA-tabs keyboard model (arrow-key roving
+ * between tabs) this control, a plain set of URL-backed links, doesn't
+ * implement. `flex-1` on mobile keeps both pills equal width and full-bleed
+ * (compact, no dead space), `sm:flex-initial` lets them settle to their
+ * natural width on larger screens instead of stretching.
  *
  * Each tab is a `TabLink` (`components/ui/`) -- real per-tab pending-
  * navigation feedback (instant spinner + `aria-busy` on click, a second
@@ -42,7 +46,7 @@ const TAB_BASE =
  */
 export function FairnessModeToggle({ active, emergencyAvailable = false }: FairnessModeToggleProps) {
   return (
-    <div role="tablist" aria-label="מצב תצוגה" className="flex items-stretch gap-1 rounded-full bg-overlay-soft p-1">
+    <nav aria-label="מצב תצוגה" className="flex items-stretch gap-1 rounded-full bg-overlay-soft p-1">
       <TabLink
         href={fairnessShiftsHref()}
         isActive={active === "shifts"}
@@ -66,6 +70,6 @@ export function FairnessModeToggle({ active, emergencyAvailable = false }: Fairn
           חירום
         </TabLink>
       ) : null}
-    </div>
+    </nav>
   );
 }

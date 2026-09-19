@@ -92,6 +92,27 @@ function statusAccessibleLabel(periodLabel: string, status: CoverageStatus | nul
   return `${periodLabel}: ${status === null ? "אין נתונים" : coverageStatusLabel(status)}`;
 }
 
+/**
+ * The full accessible name for one day cell: date, holiday (if any), the
+ * date's generic (period-unspecified) assignment if any, then the day and
+ * night coverage status (the SAME `statusAccessibleLabel` text the mobile-
+ * only labeled dots already use), then a count of any additional
+ * duties/absences. Built from the SAME `dayView` the cell's own
+ * `StaffingIndicators` renders, so a screen reader user hears everything a
+ * sighted user sees in the cell -- not only which date it is.
+ */
+function dayAccessibleLabel(meta: DayMeta, dayView: ScheduleEveryoneDayView | undefined): string {
+  const segments = [meta.dateLabel];
+  if (meta.holiday) segments.push(meta.holiday.label);
+  const generic = summarizeGeneric(dayView);
+  if (generic) segments.push(generic.text);
+  segments.push(statusAccessibleLabel("יום", dayView?.day?.coverageStatus ?? null));
+  segments.push(statusAccessibleLabel("לילה", dayView?.night?.coverageStatus ?? null));
+  const extraCount = (dayView?.duties.length ?? 0) + (dayView?.absences.length ?? 0);
+  if (extraCount > 0) segments.push(`${extraCount} תורנויות והיעדרויות נוספות`);
+  return segments.join(", ");
+}
+
 /** One coverage-status dot with a screen-reader-only label -- color alone never carries the status. */
 function StatusDot({ label, colorClassName }: { label: string; colorClassName: string }) {
   return (
@@ -230,6 +251,7 @@ export function EveryoneMonthGrid({ grid, days, dayViews, selectedDate, onSelect
                     isFirstRow={isFirstRow}
                     isSelected={isSelected}
                     onSelect={onSelectDate}
+                    accessibleLabel={dayAccessibleLabel(meta, dayViews[date])}
                     headerExtra={
                       meta.holiday ? (
                         <span aria-hidden="true" className="text-[10px] sm:text-xs">

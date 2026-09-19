@@ -17,12 +17,14 @@ const TAB_BASE =
 
 /**
  * מרכז התראות's own top-level section switch -- the SAME `TabLink`-based,
- * URL-backed tab idiom `ManagerCategoryNav`/`FairnessModeToggle` already
- * establish (real, server-rendered `Link`s, never client-only tab state, so
- * every section stays directly linkable/shareable/back-button-safe;
- * `role="tablist"` gives the selected state an accessible name beyond color
- * alone), reused rather than a third bespoke tab implementation. Fixed
- * product order -- עכשיו / תזמון / היסטוריה / קבועות -- never re-sorted.
+ * URL-backed navigation idiom `ManagerCategoryNav`/`FairnessModeToggle`
+ * already establish (real, server-rendered `Link`s, never client-only tab
+ * state, so every section stays directly linkable/shareable/back-button-safe;
+ * each `TabLink` carries `aria-current="page"` for the active section, never
+ * `role="tablist"`/`role="tab"`, which would promise an ARIA-tabs keyboard
+ * model this plain set of links doesn't implement), reused rather than a
+ * third bespoke implementation. Fixed product order -- עכשיו / תזמון /
+ * היסטוריה / קבועות -- never re-sorted.
  *
  * Same overflow handling as `ManagerCategoryNav`: `whitespace-nowrap` +
  * `shrink-0` on each tab keeps every label at its full natural width, so
@@ -34,7 +36,7 @@ const TAB_BASE =
 export function NotificationCenterNav({ active }: NotificationCenterNavProps) {
   return (
     <nav aria-label="מקטעי מרכז התראות" className="-mx-1 overflow-x-auto px-1">
-      <div role="tablist" className="inline-flex items-center gap-1 rounded-full bg-overlay-soft p-1">
+      <div className="inline-flex items-center gap-1 rounded-full bg-overlay-soft p-1">
         {SECTION_OPTIONS.map((option) => {
           const isActive = active === option.key;
           return (

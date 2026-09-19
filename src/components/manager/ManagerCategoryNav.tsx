@@ -28,8 +28,12 @@ const TAB_BASE =
  * "מרכז התראות" product area, `/notifications`, never rendered here). Real,
  * server-rendered `Link`s (same idiom `FairnessModeToggle`/`DutyViewToggle`
  * already use), never client-only tab state, so every category stays
- * directly linkable/shareable/back-button-safe. `role="tablist"` gives the
- * selected state an accessible name beyond color alone.
+ * directly linkable/shareable/back-button-safe. Each `TabLink` carries
+ * `aria-current="page"` for the active category, the same native-navigation
+ * pattern `DutyViewToggle` uses -- never `role="tablist"`/`role="tab"`, which
+ * would promise assistive tech an ARIA-tabs keyboard model (arrow-key roving
+ * between tabs) this control, a plain set of URL-backed links, doesn't
+ * implement.
  *
  * All five tabs stay on ONE row, always -- `whitespace-nowrap` on each tab
  * (a two-word Hebrew label like "תורנויות והיעדרויות" would otherwise be
@@ -56,7 +60,7 @@ const TAB_BASE =
 export function ManagerCategoryNav({ active, current }: ManagerCategoryNavProps) {
   return (
     <nav aria-label="קטגוריות אזור מנהל" className="-mx-1 overflow-x-auto px-1">
-      <div role="tablist" className="inline-flex items-center gap-1 rounded-full bg-overlay-soft p-1">
+      <div className="inline-flex items-center gap-1 rounded-full bg-overlay-soft p-1">
         {CATEGORY_OPTIONS.map((option) => {
           const isActive = active === option.key;
           return (

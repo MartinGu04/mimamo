@@ -227,6 +227,15 @@ interface CalendarDayCellProps {
   isFirstRow: boolean;
   isSelected: boolean;
   onSelect: (date: string) => void;
+  /**
+   * The full accessible name for this day's button -- date, holiday, and
+   * every shift/duty/absence/staffing indicator the cell visually shows,
+   * composed by the caller (`CalendarGrid`/`EveryoneMonthGrid`) from the
+   * SAME data the cell's visible content renders, never just `meta.dateLabel`
+   * alone. A screen reader user must hear everything a sighted user sees in
+   * the cell, not only which date it is.
+   */
+  accessibleLabel: string;
   /** Rendered next to the day-number badge (e.g. holiday emoji, a tentative-shift dot). */
   headerExtra?: ReactNode;
   /** The day-number badge's own tone override (e.g. Personal's "active shift now" accent). Defaults to today/plain. */
@@ -250,6 +259,7 @@ export function CalendarDayCell({
   isFirstRow,
   isSelected,
   onSelect,
+  accessibleLabel,
   headerExtra,
   dayNumberActive = false,
   children,
@@ -262,7 +272,7 @@ export function CalendarDayCell({
       type="button"
       onClick={() => onSelect(date)}
       aria-pressed={isSelected}
-      aria-label={meta.dateLabel}
+      aria-label={accessibleLabel}
       className={`flex ${CALENDAR_CELL_HEIGHT_CLASSES} flex-col items-stretch p-1 text-start transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:-outline-offset-2 focus-visible:outline-primary sm:p-1.5 ${cellBorderClasses(columnIndex, isFirstRow)} ${
         isSelected
           ? "bg-overlay-strong ring-2 ring-inset ring-primary/40"
