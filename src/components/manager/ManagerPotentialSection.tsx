@@ -26,7 +26,7 @@ export function ManagerPotentialSection({ rows }: ManagerPotentialSectionProps) 
   }
 
   return (
-    <Panel variant="panel">
+    <Panel variant="panel" glass="subtle">
       <details>
         <summary className="cursor-pointer text-sm font-semibold text-foreground">
           הצלבה מלאה מול Potential <span className="font-normal text-muted-2">· {rows.length}</span>

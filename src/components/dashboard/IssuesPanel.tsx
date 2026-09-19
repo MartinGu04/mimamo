@@ -29,7 +29,7 @@ export function IssuesPanel({ issues }: IssuesPanelProps) {
   }
 
   return (
-    <Panel variant="panel" className="space-y-3">
+    <Panel variant="panel" glass="subtle" className="space-y-3">
       <h3 className="text-sm font-semibold text-foreground">לתשומת לבך</h3>
       <ul className="space-y-2">
         {issues.map((issue, index) => {

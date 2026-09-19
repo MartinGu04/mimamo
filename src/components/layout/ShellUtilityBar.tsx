@@ -112,7 +112,11 @@ export function ShellUtilityBar({ initialClockTime, dateLabel, userId }: ShellUt
         <div className="flex items-center justify-center gap-4 sm:gap-6">
           <OrgLogoImage logo={ORG_LOGO_TAKSHAL} heightClassName="h-[90px]" />
 
-          <div className="flex flex-col items-center gap-1 rounded-xl bg-surface-1 px-5 py-2">
+          {/* Strong glass: a small, text-light widget floating in the shell's
+              own empty top band, with the SATCOM canvas running right up
+              behind it -- the clearest case in the app for the material at
+              full strength. */}
+          <div className="glass-strong flex flex-col items-center gap-1 rounded-xl bg-surface-1 px-5 py-2">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-primary" aria-hidden="true" strokeWidth={1.75} />
               <LiveClock initialTime={initialClockTime} size="md" />

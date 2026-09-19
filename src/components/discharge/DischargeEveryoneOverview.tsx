@@ -69,7 +69,7 @@ function PersonCard({ person, nowMs }: { person: DischargeCountdownPersonSummary
   return (
     <Link
       href={countdownPersonHref(person.personId)}
-      className="flex h-full items-center gap-3 rounded-2xl border border-border bg-card p-4 transition-colors duration-200 hover:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      className="glass-subtle glass-ring-none flex h-full items-center gap-3 rounded-2xl border border-border bg-card p-4 transition-colors duration-200 hover:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       {/* No avatarUrl: כ"א carries no photos, and a profile photo only exists
           for the signed-in user's own Supabase identity -- so Avatar's

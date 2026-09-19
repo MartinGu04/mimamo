@@ -147,7 +147,7 @@ export function UpcomingSection({
   );
 
   return (
-    <Panel variant="panel">
+    <Panel variant="panel" glass="subtle">
       <h3 className="text-sm font-semibold text-foreground">הקרובים שלי</h3>
 
       {rows.length === 0 ? (

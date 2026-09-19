@@ -152,7 +152,7 @@ export function DutyFairnessCard({ view }: { view: DutyFairnessCardView }) {
   );
 
   const className =
-    "block rounded-xl bg-surface-1 p-3 ring-1 ring-border transition-colors duration-200" +
+    "glass-subtle block rounded-xl bg-surface-1 p-3 ring-1 ring-border transition-colors duration-200" +
     (view.href ? " hover:bg-overlay-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" : "");
 
   if (view.href) {

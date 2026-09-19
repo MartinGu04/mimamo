@@ -229,7 +229,7 @@ export function ReportOneEditorOverlay({ draft, reserveInclusionByPersonId = {},
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center lg:items-center">
-      <div role="presentation" aria-hidden="true" className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div role="presentation" aria-hidden="true" className="glass-scrim absolute inset-0 bg-black/40" onClick={onClose} />
 
       <div
         ref={dialogRef}

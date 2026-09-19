@@ -24,7 +24,7 @@ const STATUS_TEXT_CLASS: Record<ManagerPotentialRowView["status"], string> = {
 
 const ROOT_CLASS = {
   row: "flex items-start gap-3 py-3",
-  card: "flex items-start gap-3 rounded-xl bg-surface-1 ring-1 ring-border p-4",
+  card: "glass-subtle flex items-start gap-3 rounded-xl bg-surface-1 ring-1 ring-border p-4",
 } as const;
 
 /**

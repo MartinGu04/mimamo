@@ -142,6 +142,41 @@
   --satcom-horizon-glow: rgba(47, 100, 142, 0.14);
   --satcom-earth-fill: rgba(47, 100, 142, 0.035);
   --satcom-star: rgba(47, 100, 142, 0.05);
+
+  /* ------------------------------------------------------------------ */
+  /* Glass materials -- see the `.glass-*` utilities near the end of     */
+  /* this file for how these are assembled and which surfaces use them.  */
+  /*                                                                     */
+  /* PALETTE half (here and in the two dark blocks): the tint the        */
+  /* surface itself contributes on top of whatever the SATCOM canvas is  */
+  /* painting behind it. Light mode is a near-opaque milky white -- the  */
+  /* light canvas is already pale, so real transparency there reads as   */
+  /* washed out rather than as glass; dark mode is where this system     */
+  /* actually lives.                                                     */
+  /* ------------------------------------------------------------------ */
+  --glass-base: 255 255 255;
+
+  --glass-alpha-strong: 0.72;
+  --glass-alpha-medium: 0.8;
+  --glass-alpha-subtle: 0.87;
+  /* The one background every nested glass surface falls back to (see the
+     glass-in-glass guard). Deliberately more opaque than any top-level
+     level: a nested surface has no blur of its own to separate it from
+     what it sits on, so opacity is the only thing left to make it read as
+     its own surface. */
+  --glass-nested-bg: rgba(255, 255, 255, 0.92);
+
+  --glass-line-strong: rgba(24, 33, 43, 0.13);
+  --glass-line-medium: rgba(24, 33, 43, 0.12);
+  --glass-line-subtle: rgba(24, 33, 43, 0.11);
+
+  --glass-highlight-strong: rgba(255, 255, 255, 0.75);
+  --glass-highlight-medium: rgba(255, 255, 255, 0.55);
+  --glass-highlight-subtle: rgba(255, 255, 255, 0.4);
+
+  --glass-depth-strong: 0 14px 34px -18px rgba(24, 33, 43, 0.22);
+  --glass-depth-medium: 0 10px 26px -16px rgba(24, 33, 43, 0.16);
+  --glass-depth-subtle: 0 6px 18px -14px rgba(24, 33, 43, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -225,6 +260,44 @@
     --satcom-horizon-glow: rgba(79, 195, 232, 0.28);
     --satcom-earth-fill: rgba(30, 84, 140, 0.16);
     --satcom-star: rgba(226, 236, 248, 0.55);
+
+    /* Dark glass -- the real target of this system. A cool, slightly
+       blue-shifted near-black so a surface reads as tinted dark glass over
+       the SATCOM canvas rather than as a flat gray card with a hole in it.
+       Deliberately NOT `--surface-1` itself: that token stays the opaque
+       fallback (and the no-backdrop-filter rendering), so the two can be
+       tuned independently. */
+    --glass-base: 18 25 34;
+
+    /* Evenly spaced on purpose: 0.52 -> 0.64 -> 0.76, then a deliberately
+       larger jump to fully opaque for `none`. Over a dark canvas the alpha
+       is what the eye actually reads as "how much material is this", so
+       even steps here are what make each level tell itself apart from its
+       neighbours. `subtle` in particular has to let enough canvas through
+       to be recognisable AS glass -- at 0.86 it was indistinguishable from
+       the opaque surface it replaced. */
+    --glass-alpha-strong: 0.52;
+    --glass-alpha-medium: 0.64;
+    --glass-alpha-subtle: 0.76;
+    /* More opaque than any top-level level, and no blur -- a nested strip
+       should read as its own solid block sitting ON the card's material,
+       which is what keeps the card's own identity legible through it. */
+    --glass-nested-bg: rgba(22, 29, 36, 0.86);
+
+    --glass-line-strong: rgba(255, 255, 255, 0.115);
+    --glass-line-medium: rgba(255, 255, 255, 0.095);
+    --glass-line-subtle: rgba(255, 255, 255, 0.08);
+
+    /* The restrained top-edge catch of light. Kept well under the 0.08
+       ceiling the design direction allows -- anything brighter turns into
+       the glowing-border look this system is explicitly not. */
+    --glass-highlight-strong: rgba(255, 255, 255, 0.075);
+    --glass-highlight-medium: rgba(255, 255, 255, 0.055);
+    --glass-highlight-subtle: rgba(255, 255, 255, 0.04);
+
+    --glass-depth-strong: 0 18px 40px -18px rgba(0, 0, 0, 0.55);
+    --glass-depth-medium: 0 12px 30px -16px rgba(0, 0, 0, 0.45);
+    --glass-depth-subtle: 0 8px 22px -14px rgba(0, 0, 0, 0.35);
   }
 }
 
@@ -292,6 +365,28 @@
   --satcom-horizon-glow: rgba(79, 195, 232, 0.28);
   --satcom-earth-fill: rgba(30, 84, 140, 0.16);
   --satcom-star: rgba(226, 236, 248, 0.55);
+
+  /* Dark glass -- identical to the `prefers-color-scheme: dark` block
+     above (same reason every other token here is duplicated: an explicit
+     `data-theme="dark"` choice must not depend on the system preference). */
+  --glass-base: 18 25 34;
+
+  --glass-alpha-strong: 0.52;
+  --glass-alpha-medium: 0.64;
+  --glass-alpha-subtle: 0.76;
+  --glass-nested-bg: rgba(22, 29, 36, 0.86);
+
+  --glass-line-strong: rgba(255, 255, 255, 0.115);
+  --glass-line-medium: rgba(255, 255, 255, 0.095);
+  --glass-line-subtle: rgba(255, 255, 255, 0.08);
+
+  --glass-highlight-strong: rgba(255, 255, 255, 0.075);
+  --glass-highlight-medium: rgba(255, 255, 255, 0.055);
+  --glass-highlight-subtle: rgba(255, 255, 255, 0.04);
+
+  --glass-depth-strong: 0 18px 40px -18px rgba(0, 0, 0, 0.55);
+  --glass-depth-medium: 0 12px 30px -16px rgba(0, 0, 0, 0.45);
+  --glass-depth-subtle: 0 8px 22px -14px rgba(0, 0, 0, 0.35);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -385,6 +480,49 @@
   --event-shift-morning-soft: color-mix(in srgb, var(--event-shift-morning) 14%, var(--surface-1));
   --event-medical-rest-soft: color-mix(in srgb, var(--event-medical-rest) 14%, var(--surface-1));
   --event-reserve-soft: color-mix(in srgb, var(--event-reserve) 14%, var(--surface-1));
+
+  /* ------------------------------------------------------------------ */
+  /* Glass materials, SHAPE half -- how much the material bends the      */
+  /* light behind it. Defined once (never per theme, unlike the palette  */
+  /* half): blur radius and saturation are physical properties of the    */
+  /* material, not of the palette, and keeping them out of the per-theme */
+  /* blocks is what lets the viewport/accessibility overrides at the end */
+  /* of this file re-tune them from ONE place at matching specificity.   */
+  /* ------------------------------------------------------------------ */
+  --glass-blur-strong: 26px;
+  --glass-blur-medium: 18px;
+  --glass-blur-subtle: 12px;
+
+  /* The saturation boost is what makes the SATCOM canvas actually read
+     THROUGH a surface -- the blurred backdrop keeps its blue/cyan life
+     instead of averaging out to gray. This is the "environmental tint",
+     sampled from the real background rather than painted on as a
+     decorative gradient that would ignore what is actually behind. */
+  --glass-saturate-strong: 145%;
+  --glass-saturate-medium: 133%;
+  --glass-saturate-subtle: 122%;
+
+  /* Added to every level's alpha. 0 on desktop; the viewport and
+     accessibility blocks at the end of this file raise it to make every
+     surface correspondingly more opaque in one move. */
+  --glass-alpha-bump: 0;
+
+  /* The dialog scrim's own blur -- see `.glass-scrim`. Its own token rather
+     than a reuse of a level's, since it answers a different question
+     ("how separated is this dialog from the page") than the surface
+     levels do. */
+  --glass-scrim-blur: 10px;
+
+  /* The environmental cue: a barely-there wash of the app's own cyan
+     accent across the top edge, where the SATCOM canvas is brightest.
+     Derived from `--accent` (never a hand-picked hex), so it tracks
+     whichever theme is active, and scaled per level so the tint steps down
+     with the rest of the material instead of appearing all at once.
+     This is a TINT, not a glow -- it sits inside the surface, never on its
+     border. */
+  --glass-env-tint-strong: color-mix(in srgb, var(--accent) 5%, transparent);
+  --glass-env-tint-medium: color-mix(in srgb, var(--accent) 3.5%, transparent);
+  --glass-env-tint-subtle: color-mix(in srgb, var(--accent) 2%, transparent);
 }
 
 @theme inline {
@@ -481,6 +619,168 @@ body {
 ::selection {
   background: color-mix(in srgb, var(--primary) 40%, transparent);
   color: var(--foreground);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Glass materials                                                        */
+/*                                                                        */
+/* Three levels of ONE material, not three materials. Every surface below */
+/* keeps its existing `bg-surface-*` / `ring-1 ring-border` classes -- the */
+/* whole system is wrapped in `@supports`, so a browser without            */
+/* backdrop-filter renders exactly the opaque app that shipped before it,  */
+/* with no separate fallback styling to maintain.                         */
+/*                                                                        */
+/* These rules are deliberately UNLAYERED. Tailwind's utilities live in    */
+/* `@layer utilities`, and unlayered declarations beat layered ones no     */
+/* matter the source order -- so `.glass-medium` reliably overrides the    */
+/* `bg-surface-1` sitting next to it in the same class list, without       */
+/* `!important` and without removing the fallback class.                   */
+/*                                                                        */
+/* WHICH LEVEL GOES WHERE is a component-layer decision, not a CSS one --  */
+/* see `components/ui/glass.ts` and `components/ui/Panel.tsx`, which hold  */
+/* the per-variant defaults and the reasoning behind each override.        */
+/* ---------------------------------------------------------------------- */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-strong,
+  .glass-medium,
+  .glass-subtle {
+    background-color: rgb(var(--glass-base) / calc(var(--glass-alpha) + var(--glass-alpha-bump)));
+    background-image: linear-gradient(160deg, var(--glass-env-tint), transparent 62%);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    /* One declaration carries all three of the material's edges: the inner
+       top highlight, the hairline border (as a ring, so it costs no layout
+       -- the same trick the `ring-1` it replaces uses), and the depth
+       shadow. Writing them together is what lets a level be retuned by
+       swapping variables rather than by restating shadows. */
+    box-shadow:
+      inset 0 1px 0 0 var(--glass-highlight),
+      0 0 0 var(--glass-ring-width, 1px) var(--glass-ring-color, var(--glass-line)),
+      var(--glass-depth);
+  }
+
+  /* A glass surface that also carries a SELECTION/accent ring.
+     The levels above set `box-shadow` wholesale (that is how the hairline
+     costs no layout), which would otherwise silently erase a Tailwind
+     `ring-2 ring-primary` sitting in the same class list -- a selected day
+     or "today" card would lose the only thing marking it. Parameterising
+     the ring keeps that state visible THROUGH the material rather than
+     forcing such surfaces to opt out of it. */
+  .glass-ring-primary {
+    --glass-ring-width: 2px;
+    --glass-ring-color: var(--primary);
+  }
+
+  /* For a surface that already draws its own real `border` (rather than the
+     ring every `Panel` variant uses): the material contributes no edge of
+     its own, so the two never stack into the doubled hairline this system
+     is specifically trying not to produce. */
+  .glass-ring-none {
+    --glass-ring-width: 0px;
+  }
+
+  .glass-strong {
+    --glass-alpha: var(--glass-alpha-strong);
+    --glass-blur: var(--glass-blur-strong);
+    --glass-saturate: var(--glass-saturate-strong);
+    --glass-line: var(--glass-line-strong);
+    --glass-highlight: var(--glass-highlight-strong);
+    --glass-depth: var(--glass-depth-strong);
+    --glass-env-tint: var(--glass-env-tint-strong);
+  }
+
+  .glass-medium {
+    --glass-alpha: var(--glass-alpha-medium);
+    --glass-blur: var(--glass-blur-medium);
+    --glass-saturate: var(--glass-saturate-medium);
+    --glass-line: var(--glass-line-medium);
+    --glass-highlight: var(--glass-highlight-medium);
+    --glass-depth: var(--glass-depth-medium);
+    --glass-env-tint: var(--glass-env-tint-medium);
+  }
+
+  .glass-subtle {
+    --glass-alpha: var(--glass-alpha-subtle);
+    --glass-blur: var(--glass-blur-subtle);
+    --glass-saturate: var(--glass-saturate-subtle);
+    --glass-line: var(--glass-line-subtle);
+    --glass-highlight: var(--glass-highlight-subtle);
+    --glass-depth: var(--glass-depth-subtle);
+    --glass-env-tint: var(--glass-env-tint-subtle);
+  }
+
+  /* The dimming layer behind a dialog/sheet/palette, which is the ONE
+     place the app blurs a full viewport.
+     This is deliberately where a modal's separation comes from, instead of
+     glassing the modal's own panel: the panel sits directly on top of this
+     layer, so its backdrop would be an already-blurred, already-dimmed
+     surface -- a second full-screen backdrop pass that buys no visual
+     difference. The panels above it stay solid, which is also what their
+     contents want (a form, a dense result list, a menu). */
+  .glass-scrim {
+    -webkit-backdrop-filter: blur(var(--glass-scrim-blur)) saturate(105%);
+    backdrop-filter: blur(var(--glass-scrim-blur)) saturate(105%);
+  }
+
+  /* Glass inside glass, structurally prevented rather than left to every
+     call site to remember. A nested surface keeps its own edges and its own
+     background but drops the blur: stacking backdrop-filters means the
+     inner one samples an already-composited layer (doubling the softness
+     until the hierarchy reads as mush) and pays for a second full-surface
+     GPU pass to do it.
+     `:is()` rather than `:where()` on purpose -- this has to OUT-SPECIFY
+     the single-class rules above (0,2,0 vs 0,1,0), which zero-specificity
+     `:where()` could not do. */
+  :is(.glass-strong, .glass-medium, .glass-subtle) :is(.glass-strong, .glass-medium, .glass-subtle) {
+    background-color: var(--glass-nested-bg);
+    background-image: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow:
+      inset 0 1px 0 0 var(--glass-highlight-subtle),
+      0 0 0 var(--glass-ring-width, 1px) var(--glass-ring-color, var(--glass-line-subtle));
+  }
+
+  /* Small viewports: the canvas behind a surface is mostly covered by the
+     surface itself, so there is little left to refract -- what reads as
+     depth on a 1440px desktop reads as haze on a phone. Less blur, more
+     opacity, and no blur at all on the densest level. Also the cheapest
+     place to stop paying for full-width backdrop passes, which is exactly
+     where a PWA on an older phone feels it.
+     These override plain `:root` declarations at MATCHING specificity, so
+     they apply in every theme -- which is why the shape half of the token
+     set is deliberately never redefined inside the per-theme blocks. */
+  @media (max-width: 640px) {
+    :root {
+      --glass-blur-strong: 14px;
+      --glass-blur-medium: 10px;
+      --glass-scrim-blur: 6px;
+      --glass-alpha-bump: 0.08;
+    }
+
+    .glass-subtle {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /* A real accessibility preference, not a guess: when someone asks for
+     reduced transparency, every level collapses to a plain opaque surface
+     with its border intact. One variable does it for the whole system. */
+  @media (prefers-reduced-transparency: reduce) {
+    :root {
+      --glass-alpha-bump: 1;
+    }
+
+    .glass-strong,
+    .glass-medium,
+    .glass-subtle,
+    .glass-scrim {
+      background-image: none;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------- */

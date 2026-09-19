@@ -26,7 +26,7 @@ export function ReportOneQuickAction({ draft, reserveInclusionByPersonId }: Repo
 
   return (
     <>
-      <Panel variant="compact" className="flex items-center justify-between gap-3">
+      <Panel variant="compact" glass="medium" className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-foreground">🛰️ דוח 1 למחר</p>
           {targetDateLabel ? <p className="mt-0.5 text-xs text-muted">מוכן עבור {targetDateLabel}</p> : null}

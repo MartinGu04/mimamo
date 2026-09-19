@@ -302,7 +302,7 @@ export function ManagerBroadcastComposer({
   }
 
   return (
-    <Panel variant="panel" data-testid="manager-broadcast-composer">
+    <Panel variant="panel" glass="subtle" data-testid="manager-broadcast-composer">
       <div className="flex flex-col gap-4">
         <div>
           <h3 className="text-sm font-semibold text-foreground">

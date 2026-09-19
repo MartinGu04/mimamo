@@ -235,7 +235,7 @@ export function NotificationBell({ variant, userId }: NotificationBellProps) {
           id={panelId}
           role="dialog"
           aria-label={view === "settings" ? "הגדרות התראות" : "התראות"}
-          className={`absolute ${PANEL_POSITION_CLASSES[variant]} top-full z-50 mt-2 w-80 max-w-[calc(100vw-2.5rem)] rounded-xl bg-surface-1 p-3 text-foreground shadow-[var(--shadow-elevated)] ring-1 ring-border-strong`}
+          className={`glass-medium absolute ${PANEL_POSITION_CLASSES[variant]} top-full z-50 mt-2 w-80 max-w-[calc(100vw-2.5rem)] rounded-xl bg-surface-1 p-3 text-foreground shadow-[var(--shadow-elevated)] ring-1 ring-border-strong`}
         >
           {view === "inbox" ? (
             <>

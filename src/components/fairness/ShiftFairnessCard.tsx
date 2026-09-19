@@ -48,7 +48,7 @@ import { ShiftFairnessCardInfo } from "./ShiftFairnessCardInfo";
 export function ShiftFairnessCard({ view }: { view: ShiftFairnessCardView }) {
   return (
     <li className="relative">
-      <div className="rounded-xl bg-surface-1 p-4 ring-1 ring-border">
+      <div className="glass-subtle rounded-xl bg-surface-1 p-4 ring-1 ring-border">
         <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
           <div className="flex min-w-0 items-center gap-2">
             <Avatar name={view.personName} size="xs" avatarUrl={view.avatarUrl} />

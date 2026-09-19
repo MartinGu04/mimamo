@@ -122,7 +122,7 @@ export function MobileProfileMenu({ name, isManager, avatarUrl }: MobileProfileM
           // start-anchored popup would expand further left and run off the
           // viewport. Anchoring to `end-0` instead makes it expand
           // rightward, into the visible content area.
-          className="absolute end-0 top-full z-50 mt-2 w-56 rounded-xl bg-surface-1 p-1.5 shadow-[var(--shadow-elevated)] ring-1 ring-border-strong"
+          className="glass-medium absolute end-0 top-full z-50 mt-2 w-56 rounded-xl bg-surface-1 p-1.5 shadow-[var(--shadow-elevated)] ring-1 ring-border-strong"
         >
           <div className="flex items-center gap-2.5 px-2.5 py-2">
             <Avatar name={name} size="sm" avatarUrl={avatarUrl} />
