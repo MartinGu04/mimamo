@@ -1,12 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ManagerShootingRangeRow, ManagerShootingRangeSummary } from "@/lib/readModels/buildShootingRangeManagerReadModel";
 
+const approveSelfReportShootingRangeAction = vi.fn();
+const confirmPlannedShootingRangeAction = vi.fn();
+const createPlannedShootingRangeAction = vi.fn();
+const rejectSelfReportShootingRangeAction = vi.fn();
+
 vi.mock("@/lib/shootingRanges/actions", () => ({
-  approveSelfReportShootingRangeAction: vi.fn(),
-  confirmPlannedShootingRangeAction: vi.fn(),
-  createPlannedShootingRangeAction: vi.fn(),
-  rejectSelfReportShootingRangeAction: vi.fn(),
+  approveSelfReportShootingRangeAction: (...args: unknown[]) => approveSelfReportShootingRangeAction(...args),
+  confirmPlannedShootingRangeAction: (...args: unknown[]) => confirmPlannedShootingRangeAction(...args),
+  createPlannedShootingRangeAction: (...args: unknown[]) => createPlannedShootingRangeAction(...args),
+  rejectSelfReportShootingRangeAction: (...args: unknown[]) => rejectSelfReportShootingRangeAction(...args),
 }));
 
 const { ShootingRangeManagerPanel } = await import("./ShootingRangeManagerPanel");
@@ -114,5 +119,62 @@ describe("ShootingRangeManagerPanel -- personnel grouping", () => {
 
     expect(screen.queryByRole("heading", { name: "קבע" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "טכנאים" })).toBeInTheDocument();
+  });
+});
+
+describe("ShootingRangeManagerPanel -- accessible status announcements", () => {
+  afterEach(() => {
+    confirmPlannedShootingRangeAction.mockReset();
+    createPlannedShootingRangeAction.mockReset();
+  });
+
+  it("confirming a pending planned range's outcome exposes role=status", async () => {
+    confirmPlannedShootingRangeAction.mockResolvedValue(undefined);
+    const rows = [
+      row({
+        personId: "p1",
+        personName: "בדיקה",
+        plannedRange: { rangeDate: "2026-09-01", status: "pending_confirmation" },
+      }),
+    ];
+
+    render(
+      <ShootingRangeManagerPanel
+        summary={{ ...SUMMARY, totalCount: 1 }}
+        rows={rows}
+        pendingSelfReports={[]}
+        roster={[]}
+        unresolvedSheetRowCount={0}
+        unresolvedSheetRowNames={[]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /אשר ביצוע ל-/ }));
+
+    await waitFor(() => expect(screen.getByRole("status")).toBeInTheDocument());
+    expect(screen.getByRole("status")).toHaveTextContent("אושר עבור 1 אנשים.");
+  });
+
+  it("scheduling a new planned range's outcome exposes role=status", async () => {
+    createPlannedShootingRangeAction.mockResolvedValue({ ok: true, scheduledCount: 1 });
+
+    render(
+      <ShootingRangeManagerPanel
+        summary={SUMMARY}
+        rows={[]}
+        pendingSelfReports={[]}
+        roster={[{ id: "p1", name: "בדיקה" }]}
+        unresolvedSheetRowCount={0}
+        unresolvedSheetRowNames={[]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "שיבוץ מטווח חדש" }));
+    fireEvent.change(screen.getByLabelText("תאריך מטווח"), { target: { value: "2026-09-01" } });
+    fireEvent.click(screen.getByText("בדיקה"));
+    fireEvent.click(screen.getByRole("button", { name: /^שבץ/ }));
+
+    await waitFor(() => expect(screen.getByRole("status")).toBeInTheDocument());
+    expect(screen.getByRole("status")).toHaveTextContent("שובצו 1 אנשים.");
   });
 });

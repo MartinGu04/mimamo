@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { Panel } from "@/components/ui/Panel";
+import { StatusMessage } from "@/components/ui/StatusMessage";
 import { submitSelfReportShootingRangeAction } from "@/lib/shootingRanges/actions";
 
 const ERROR_LABELS: Record<string, string> = {
@@ -18,6 +19,9 @@ function errorLabel(error: string): string {
   return ERROR_LABELS[error] ?? "השליחה נכשלה. נסה/י שוב.";
 }
 
+/** Server errors that are specifically about the "תאריך ביצוע" field -- everything else (auth/identity errors) isn't tied to any one input here. */
+const DATE_FIELD_ERRORS = new Set(["invalid_date", "date_in_future"]);
+
 /** "ביצעתי מטווח" -- the user's own self-report. Always lands as pending; only a manager's approval renews the qualification baseline (see `submitSelfReportShootingRangeAction`'s own docs). */
 export function SelfReportForm() {
   const [open, setOpen] = useState(false);
@@ -26,11 +30,15 @@ export function SelfReportForm() {
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const errorId = useId();
+  const dateInvalid = error !== null && DATE_FIELD_ERRORS.has(error);
 
   if (submitted) {
     return (
-      <Panel variant="inline" className="text-center text-sm text-success">
-        🟡 הדיווח נשלח וממתין לאישור מנהל.
+      <Panel variant="inline">
+        <StatusMessage tone="success" className="text-center text-sm text-success">
+          🟡 הדיווח נשלח וממתין לאישור מנהל.
+        </StatusMessage>
       </Panel>
     );
   }
@@ -57,6 +65,8 @@ export function SelfReportForm() {
           type="date"
           value={performedOn}
           onChange={(event) => setPerformedOn(event.target.value)}
+          aria-invalid={dateInvalid || undefined}
+          aria-describedby={dateInvalid ? errorId : undefined}
           className="rounded-md border border-border bg-surface-1 px-2 py-1.5 text-sm text-foreground"
         />
       </label>
@@ -72,7 +82,11 @@ export function SelfReportForm() {
         />
       </label>
 
-      {error ? <p className="text-xs text-critical">{errorLabel(error)}</p> : null}
+      {error ? (
+        <StatusMessage tone="error" id={errorId} className="text-xs text-critical">
+          {errorLabel(error)}
+        </StatusMessage>
+      ) : null}
 
       <div className="flex items-center gap-2">
         <button

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useId, useMemo, useState, useTransition } from "react";
 import { Panel } from "@/components/ui/Panel";
+import { StatusMessage } from "@/components/ui/StatusMessage";
 import { RosterPersonPicker } from "./RosterPersonPicker";
 import { AudienceGroupPicker } from "./AudienceGroupPicker";
 import {
@@ -101,6 +102,7 @@ export function ManagerRecurringRuleComposer({ roster, adoptionPeople, editingRu
   const [excludeQuery, setExcludeQuery] = useState("");
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<CustomWeeklyRuleActionResult | null>(null);
+  const outcomeId = useId();
 
   const adoptionByPersonId = useMemo(() => new Map(adoptionPeople.map((person) => [person.personId, person])), [adoptionPeople]);
   const groupMatchIds = useMemo(() => resolveAudienceGroupMembers(roster, groupKeys).map((person) => person.id), [roster, groupKeys]);
@@ -121,6 +123,15 @@ export function ManagerRecurringRuleComposer({ roster, adoptionPeople, editingRu
     trimmedBody.length <= BROADCAST_BODY_MAX_LENGTH &&
     parsedTime !== null &&
     effectiveSelectedIds.length > 0;
+
+  // Which specific field the latest server-reported error (if any) is
+  // about -- lets that field carry `aria-invalid`/`aria-describedby`
+  // pointing at the outcome message below, instead of relying only on the
+  // page-level alert.
+  const currentError = result && !result.ok ? result.error : null;
+  const titleInvalid = currentError === "invalid_title";
+  const bodyInvalid = currentError === "invalid_body";
+  const scheduleInvalid = currentError === "invalid_schedule";
 
   function toggleAudience(next: AudienceKind) {
     setAudienceKind(next);
@@ -185,6 +196,8 @@ export function ManagerRecurringRuleComposer({ roster, adoptionPeople, editingRu
               onChange={(event) => setTitle(event.target.value)}
               maxLength={BROADCAST_TITLE_MAX_LENGTH}
               placeholder="לדוגמה: 📌 תזכורת לאילוצים"
+              aria-invalid={titleInvalid || undefined}
+              aria-describedby={titleInvalid ? outcomeId : undefined}
               className="rounded-lg bg-overlay-soft px-3 py-1.5 text-sm text-foreground placeholder:text-muted-2 ring-1 ring-border focus:outline-none"
             />
           </label>
@@ -196,6 +209,8 @@ export function ManagerRecurringRuleComposer({ roster, adoptionPeople, editingRu
               maxLength={BROADCAST_BODY_MAX_LENGTH}
               rows={2}
               placeholder="תוכן ההתראה שיוצג לאנשי הצוות"
+              aria-invalid={bodyInvalid || undefined}
+              aria-describedby={bodyInvalid ? outcomeId : undefined}
               className="resize-none rounded-lg bg-overlay-soft px-3 py-1.5 text-sm text-foreground placeholder:text-muted-2 ring-1 ring-border focus:outline-none"
             />
           </label>
@@ -223,6 +238,8 @@ export function ManagerRecurringRuleComposer({ roster, adoptionPeople, editingRu
               value={timeValue}
               onChange={(event) => setTimeValue(event.target.value)}
               aria-label="שעת שליחה"
+              aria-invalid={scheduleInvalid || undefined}
+              aria-describedby={scheduleInvalid ? outcomeId : undefined}
               className="rounded-lg bg-overlay-soft px-3 py-1.5 text-sm text-foreground ring-1 ring-border focus:outline-none"
             />
           </label>
@@ -301,7 +318,11 @@ export function ManagerRecurringRuleComposer({ roster, adoptionPeople, editingRu
           </button>
         </div>
 
-        {result && !result.ok ? <p className="text-xs text-critical">{errorLabel(result.error)}</p> : null}
+        {result && !result.ok ? (
+          <StatusMessage tone="error" id={outcomeId} className="text-xs text-critical">
+            {errorLabel(result.error)}
+          </StatusMessage>
+        ) : null}
       </div>
     </Panel>
   );

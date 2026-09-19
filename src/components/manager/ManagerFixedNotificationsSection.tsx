@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Panel } from "@/components/ui/Panel";
+import { StatusMessage } from "@/components/ui/StatusMessage";
 import {
   archiveCustomWeeklyRuleAction,
   listNotificationRulesAction,
@@ -137,7 +138,11 @@ function SystemRuleRow({
         </div>
       )}
 
-      {error ? <p className="mt-1.5 text-xs text-critical">{error}</p> : null}
+      {error ? (
+        <StatusMessage tone="error" className="mt-1.5 text-xs text-critical">
+          {error}
+        </StatusMessage>
+      ) : null}
     </li>
   );
 }
@@ -265,7 +270,11 @@ function CustomWeeklyRuleRow({
         </div>
       )}
 
-      {error ? <p className="mt-1.5 text-xs text-critical">{error}</p> : null}
+      {error ? (
+        <StatusMessage tone="error" className="mt-1.5 text-xs text-critical">
+          {error}
+        </StatusMessage>
+      ) : null}
     </li>
   );
 }
@@ -346,7 +355,9 @@ export function ManagerFixedNotificationsSection({ roster, adoptionPeople }: Man
       </div>
 
       {loadError ? (
-        <p className="mt-3 text-sm text-muted">לא ניתן לטעון את ההתראות הקבועות כרגע.</p>
+        <StatusMessage tone="error" className="mt-3 text-sm text-muted">
+          לא ניתן לטעון את ההתראות הקבועות כרגע.
+        </StatusMessage>
       ) : (
         <div className="mt-4 flex flex-col gap-5">
           <div>

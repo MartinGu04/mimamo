@@ -141,6 +141,14 @@ describe("ManagerFixedNotificationsSection -- loading + display", () => {
 
     await waitFor(() => expect(screen.getByText(/לא ניתן לטעון/)).toBeTruthy());
   });
+
+  it("the load failure exposes role=alert", async () => {
+    listNotificationRulesAction.mockResolvedValue({ ok: false, error: "forbidden" });
+
+    render(<ManagerFixedNotificationsSection roster={ROSTER} adoptionPeople={ADOPTION} />);
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+  });
 });
 
 describe("ManagerFixedNotificationsSection -- system rule row actions", () => {

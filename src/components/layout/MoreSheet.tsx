@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { BellRing, Hourglass, Target, UserCog, X } from "lucide-react";
+import { useFocusTrap } from "@/components/ui/useFocusTrap";
 
 interface MoreSheetProps {
   open: boolean;
@@ -30,36 +31,19 @@ function useMounted(): boolean {
  * `managerOnly` flag), never a duplicated/looser check. Deliberately never
  * renders סנכרון יומן/theme/logout -- those stay exclusively in the profile
  * menu so "עוד" reads as ordinary app navigation, not a second account menu.
+ *
+ * It declares real dialog semantics (role="dialog", aria-modal="true") and
+ * now behaves like one too: the shared `useFocusTrap` hook (`components/ui/`,
+ * extracted from `CommandPalette`) moves focus inside on open (defaulting to
+ * the close button, its first focusable element), traps Tab/Shift+Tab within
+ * the sheet, closes on Escape, and restores focus to whatever triggered it
+ * on close.
  */
 export function MoreSheet({ open, onClose, isManager }: MoreSheetProps) {
   const mounted = useMounted();
   const sheetRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    previousFocusRef.current = document.activeElement as HTMLElement | null;
-  }, [open]);
-
-  useEffect(() => {
-    if (open) return;
-    previousFocusRef.current?.focus();
-    previousFocusRef.current = null;
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
+  useFocusTrap({ open, onClose, containerRef: sheetRef });
 
   if (!mounted || !open) return null;
 

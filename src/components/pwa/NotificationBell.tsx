@@ -15,6 +15,7 @@ import {
   markInstallPromptDismissed,
   readInstallPromptDismissedAt,
 } from "@/lib/pwa/installPromptPreference";
+import { useRevealFocus } from "@/components/ui/useRevealFocus";
 
 interface NotificationBellProps {
   /** Only affects the trigger button's own visual treatment -- the popover panel's CONTENT looks identical in every context; only its anchor side (see `PANEL_POSITION_CLASSES`) varies by variant. */
@@ -108,13 +109,32 @@ function formatBadgeCount(count: number): string {
  * instance later moved into `ShellUtilityBar` (`variant="shell"`).
  * Same click-outside/Escape-to-dismiss pattern `MobileProfileMenu`
  * already uses.
+ *
+ * Explicitly a non-modal popover (`aria-modal="false"`, never a Tab trap):
+ * the shared `useRevealFocus` hook (`components/ui/`) moves focus into the
+ * panel on open and restores it to the bell trigger on close -- Escape,
+ * outside click, or picking an inbox item all go through the same
+ * `closePopover()` path, so all three restore focus the same way. The
+ * panel's accessible name comes from `aria-labelledby`, pointing at
+ * whichever view's own real visible heading (`InboxView`'s "התראות" /
+ * `SettingsView`'s "הגדרות התראות") is currently rendered.
  */
 export function NotificationBell({ variant, userId }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<BellView>("inbox");
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
+  const panelHeadingId = useId();
+
+  // Non-modal popover: moves focus into the panel on open (its own
+  // container, since which control should get initial focus varies by
+  // view/state) and restores it to the bell on close -- whether that close
+  // came from Escape, an outside click, or picking an inbox item -- without
+  // trapping Tab (unlike `MoreSheet`/`CommandPalette`, this never claims
+  // `aria-modal="true"`).
+  useRevealFocus({ revealed: open, onRevealFocusRef: panelRef, fallbackFocusRef: triggerRef });
 
   const { state, errorMessage, testStatus, enable, disable, sendTest } = usePushSubscription(userId);
   const { status: inboxStatus, items, unreadCount, refresh, markRead, markAllRead, clear } = useNotificationInbox();
@@ -186,8 +206,11 @@ export function NotificationBell({ variant, userId }: NotificationBellProps) {
     }
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
+        // Focus restore is `useRevealFocus`'s job (fires once `open` flips
+        // to false below) -- same single mechanism for every close path
+        // (Escape, outside click, picking an inbox item), not a one-off
+        // here.
         closePopover();
-        triggerRef.current?.focus();
       }
     }
 
@@ -232,10 +255,13 @@ export function NotificationBell({ variant, userId }: NotificationBellProps) {
 
       {open ? (
         <div
+          ref={panelRef}
           id={panelId}
           role="dialog"
-          aria-label={view === "settings" ? "הגדרות התראות" : "התראות"}
-          className={`glass-medium absolute ${PANEL_POSITION_CLASSES[variant]} top-full z-50 mt-2 w-80 max-w-[calc(100vw-2.5rem)] rounded-xl bg-surface-1 p-3 text-foreground shadow-[var(--shadow-elevated)] ring-1 ring-border-strong`}
+          aria-modal="false"
+          aria-labelledby={panelHeadingId}
+          tabIndex={-1}
+          className={`glass-medium absolute ${PANEL_POSITION_CLASSES[variant]} top-full z-50 mt-2 w-80 max-w-[calc(100vw-2.5rem)] rounded-xl bg-surface-1 p-3 text-foreground shadow-[var(--shadow-elevated)] ring-1 ring-border-strong outline-none`}
         >
           {view === "inbox" ? (
             <>
@@ -247,6 +273,7 @@ export function NotificationBell({ variant, userId }: NotificationBellProps) {
                 onDismissInstall={dismissInstallCard}
               />
               <InboxView
+                headingId={panelHeadingId}
                 status={inboxStatus}
                 items={items}
                 unreadCount={unreadCount}
@@ -258,6 +285,7 @@ export function NotificationBell({ variant, userId }: NotificationBellProps) {
             </>
           ) : (
             <SettingsView
+              headingId={panelHeadingId}
               onBack={() => setView("inbox")}
               state={state}
               errorMessage={errorMessage}
@@ -284,6 +312,7 @@ export function NotificationBell({ variant, userId }: NotificationBellProps) {
 // ---------------------------------------------------------------------------
 
 function InboxView({
+  headingId,
   status,
   items,
   unreadCount,
@@ -292,6 +321,7 @@ function InboxView({
   onMarkAllRead,
   onClear,
 }: {
+  headingId: string;
   status: "loading" | "ready" | "error";
   items: NotificationInboxItem[];
   unreadCount: number;
@@ -303,7 +333,7 @@ function InboxView({
   return (
     <div>
       <div className="flex items-center justify-between gap-2 px-1">
-        <p className="text-sm font-semibold text-foreground">התראות</p>
+        <p id={headingId} className="text-sm font-semibold text-foreground">התראות</p>
         <button
           type="button"
           onClick={onOpenSettings}
@@ -387,6 +417,7 @@ function InboxItemRow({ item, onClick }: { item: NotificationInboxItem; onClick:
 // ---------------------------------------------------------------------------
 
 function SettingsView({
+  headingId,
   onBack,
   state,
   errorMessage,
@@ -401,6 +432,7 @@ function SettingsView({
   installCompleted,
   onPromptInstall,
 }: {
+  headingId: string;
   onBack: () => void;
   state: ReturnType<typeof usePushSubscription>["state"];
   errorMessage: string | null;
@@ -443,7 +475,7 @@ function SettingsView({
         >
           <ArrowRight className="h-4 w-4" aria-hidden="true" strokeWidth={1.75} />
         </button>
-        <p className="text-sm font-semibold text-foreground">הגדרות התראות</p>
+        <p id={headingId} className="text-sm font-semibold text-foreground">הגדרות התראות</p>
       </div>
 
       <div className="mt-2 px-1">

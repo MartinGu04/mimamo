@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Panel } from "@/components/ui/Panel";
+import { StatusMessage } from "@/components/ui/StatusMessage";
 import {
   cancelScheduledBroadcastAction,
   listActiveScheduledBroadcastsAction,
@@ -184,7 +185,9 @@ export function ManagerScheduledBroadcastsSection({
   if (loadError) {
     return (
       <Panel variant="compact" data-testid="manager-scheduled-broadcasts">
-        <p className="text-sm text-muted">לא ניתן לטעון את ההתראות המתוזמנות כרגע.</p>
+        <StatusMessage tone="error" className="text-sm text-muted">
+          לא ניתן לטעון את ההתראות המתוזמנות כרגע.
+        </StatusMessage>
       </Panel>
     );
   }
@@ -279,7 +282,9 @@ export function ManagerScheduledBroadcastsSection({
               ) : null}
 
               {actionError?.id === item.id ? (
-                <p className="mt-1.5 text-xs text-critical">{actionError.message}</p>
+                <StatusMessage tone="error" className="mt-1.5 text-xs text-critical">
+                  {actionError.message}
+                </StatusMessage>
               ) : null}
             </li>
           );

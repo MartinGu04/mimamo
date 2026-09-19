@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useId, useMemo, useState, useTransition } from "react";
 import { Panel } from "@/components/ui/Panel";
+import { StatusMessage } from "@/components/ui/StatusMessage";
 import { RosterPersonPicker } from "./RosterPersonPicker";
 import { AudienceGroupPicker } from "./AudienceGroupPicker";
 import {
@@ -154,6 +155,8 @@ export function ManagerBroadcastComposer({
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<SendManagerBroadcastActionResult | null>(null);
   const [scheduleResult, setScheduleResult] = useState<ScheduledBroadcastActionResult | null>(null);
+  const resultOutcomeId = useId();
+  const scheduleOutcomeId = useId();
 
   const adoptionByPersonId = useMemo(
     () => new Map(adoptionPeople.map((person) => [person.personId, person])),
@@ -189,6 +192,17 @@ export function ManagerBroadcastComposer({
     trimmedBody.length <= BROADCAST_BODY_MAX_LENGTH &&
     effectiveSelectedIds.length > 0 &&
     (mode === "now" || (scheduledDate.length > 0 && parsedTime !== null));
+
+  // Which specific field the latest server-reported error (if any) is
+  // about -- lets that field carry `aria-invalid`/`aria-describedby`
+  // pointing at the SAME outcome message already shown below, instead of a
+  // screen-reader user having to rely only on the page-level alert to
+  // figure out which input needs fixing.
+  const currentError = mode === "now" ? (result && !result.ok ? result.error : null) : scheduleResult && !scheduleResult.ok ? scheduleResult.error : null;
+  const currentErrorId = mode === "now" ? resultOutcomeId : scheduleOutcomeId;
+  const titleInvalid = currentError === "invalid_title";
+  const bodyInvalid = currentError === "invalid_body";
+  const scheduleInvalid = currentError === "invalid_schedule";
 
   /**
    * After a successful send/schedule-save: clears only title/body (and
@@ -384,6 +398,8 @@ export function ManagerBroadcastComposer({
               onChange={(event) => setTitle(event.target.value)}
               maxLength={BROADCAST_TITLE_MAX_LENGTH}
               placeholder="לדוגמה: עדכון חשוב"
+              aria-invalid={titleInvalid || undefined}
+              aria-describedby={titleInvalid ? currentErrorId : undefined}
               className="rounded-lg bg-overlay-soft px-3 py-1.5 text-sm text-foreground placeholder:text-muted-2 ring-1 ring-border focus:outline-none"
             />
             <span className="text-[11px] text-muted-2">
@@ -399,6 +415,8 @@ export function ManagerBroadcastComposer({
               maxLength={BROADCAST_BODY_MAX_LENGTH}
               rows={3}
               placeholder="תוכן ההתראה שיוצג לאנשי הצוות"
+              aria-invalid={bodyInvalid || undefined}
+              aria-describedby={bodyInvalid ? currentErrorId : undefined}
               className="resize-none rounded-lg bg-overlay-soft px-3 py-1.5 text-sm text-foreground placeholder:text-muted-2 ring-1 ring-border focus:outline-none"
             />
             <span className="text-[11px] text-muted-2">
@@ -416,6 +434,8 @@ export function ManagerBroadcastComposer({
                 value={scheduledDate}
                 onChange={(event) => setScheduledDate(event.target.value)}
                 aria-label="תאריך השליחה"
+                aria-invalid={scheduleInvalid || undefined}
+                aria-describedby={scheduleInvalid ? currentErrorId : undefined}
                 className="rounded-lg bg-overlay-soft px-3 py-1.5 text-sm text-foreground ring-1 ring-border focus:outline-none"
               />
             </label>
@@ -426,6 +446,8 @@ export function ManagerBroadcastComposer({
                 value={scheduledTime}
                 onChange={(event) => setScheduledTime(event.target.value)}
                 aria-label="שעת השליחה"
+                aria-invalid={scheduleInvalid || undefined}
+                aria-describedby={scheduleInvalid ? currentErrorId : undefined}
                 className="rounded-lg bg-overlay-soft px-3 py-1.5 text-sm text-foreground ring-1 ring-border focus:outline-none"
               />
             </label>
@@ -489,7 +511,7 @@ export function ManagerBroadcastComposer({
 
         {result ? (
           result.ok ? (
-            <div className="rounded-xl bg-success/10 p-3 text-sm text-success ring-1 ring-success/25">
+            <StatusMessage tone="success" id={resultOutcomeId} className="rounded-xl bg-success/10 p-3 text-sm text-success ring-1 ring-success/25">
               <p className="font-semibold">
                 ✅ נוצרה התראה ל־{result.resolvedRecipientCount} משתמשים
               </p>
@@ -498,17 +520,17 @@ export function ManagerBroadcastComposer({
                 <li>{result.inboxOnlyCount} יקבלו במרכז ההתראות בלבד</li>
                 {result.unresolvedCount > 0 ? <li>{result.unresolvedCount} מהבחירה לא ניתנים לשליחה</li> : null}
               </ul>
-            </div>
+            </StatusMessage>
           ) : (
-            <div className="rounded-xl bg-critical/10 p-3 text-sm text-critical ring-1 ring-critical/25">
+            <StatusMessage tone="error" id={resultOutcomeId} className="rounded-xl bg-critical/10 p-3 text-sm text-critical ring-1 ring-critical/25">
               {errorLabel(result.error)}
-            </div>
+            </StatusMessage>
           )
         ) : null}
 
         {scheduleResult ? (
           scheduleResult.ok ? (
-            <div className="rounded-xl bg-success/10 p-3 text-sm text-success ring-1 ring-success/25">
+            <StatusMessage tone="success" id={scheduleOutcomeId} className="rounded-xl bg-success/10 p-3 text-sm text-success ring-1 ring-success/25">
               <p className="font-semibold">
                 ✅ ההתראה תוזמנה
                 {formatScheduledBroadcastMoment(
@@ -521,11 +543,11 @@ export function ManagerBroadcastComposer({
                     )}`
                   : ""}
               </p>
-            </div>
+            </StatusMessage>
           ) : (
-            <div className="rounded-xl bg-critical/10 p-3 text-sm text-critical ring-1 ring-critical/25">
+            <StatusMessage tone="error" id={scheduleOutcomeId} className="rounded-xl bg-critical/10 p-3 text-sm text-critical ring-1 ring-critical/25">
               {errorLabel(scheduleResult.error)}
-            </div>
+            </StatusMessage>
           )
         ) : null}
       </div>

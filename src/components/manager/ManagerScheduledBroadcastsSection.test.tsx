@@ -125,6 +125,17 @@ describe("ManagerScheduledBroadcastsSection", () => {
     expect(await screen.findByText("השליחה כבר התחילה, ולא ניתן עוד לפעול על התזמון הזה.")).toBeInTheDocument();
   });
 
+  it("the inline send-now error exposes role=alert", async () => {
+    listActiveScheduledBroadcastsAction.mockResolvedValue({ ok: true, items: [item()] });
+    sendScheduledBroadcastNowAction.mockResolvedValue({ ok: false, error: "already_started" });
+    render(<ManagerScheduledBroadcastsSection reloadToken={0} editingId={null} onEdit={vi.fn()} onChanged={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "שלח עכשיו" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "שלח עכשיו" }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+  });
+
   it("'ביטול' requires an explicit confirmation before cancelling", async () => {
     listActiveScheduledBroadcastsAction.mockResolvedValue({ ok: true, items: [item()] });
     cancelScheduledBroadcastAction.mockResolvedValue({ ok: true });

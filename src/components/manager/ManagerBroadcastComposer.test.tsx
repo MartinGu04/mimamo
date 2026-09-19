@@ -173,6 +173,68 @@ describe("ManagerBroadcastComposer", () => {
   });
 });
 
+describe("ManagerBroadcastComposer -- accessible status announcements and field validation", () => {
+  it("a successful send exposes the outcome via role=status", async () => {
+    sendManagerBroadcastAction.mockResolvedValue({
+      ok: true,
+      batchId: "batch_1",
+      resolvedRecipientCount: 1,
+      pushCapableCount: 1,
+      inboxOnlyCount: 0,
+      unresolved: [],
+    });
+    renderComposer();
+    fireEvent.click(screen.getByText("דנה"));
+    fireEvent.change(screen.getByPlaceholderText("לדוגמה: עדכון חשוב"), { target: { value: "כותרת" } });
+    fireEvent.change(screen.getByPlaceholderText("תוכן ההתראה שיוצג לאנשי הצוות"), { target: { value: "תוכן" } });
+    fireEvent.click(screen.getByRole("button", { name: "שלח התראה" }));
+
+    await waitFor(() => expect(screen.getByRole("status")).toBeInTheDocument());
+  });
+
+  it("a send failure exposes the outcome via role=alert", async () => {
+    sendManagerBroadcastAction.mockResolvedValue({ ok: false, error: "no_targets" });
+    renderComposer();
+    fireEvent.click(screen.getByText("דנה"));
+    fireEvent.change(screen.getByPlaceholderText("לדוגמה: עדכון חשוב"), { target: { value: "כותרת" } });
+    fireEvent.change(screen.getByPlaceholderText("תוכן ההתראה שיוצג לאנשי הצוות"), { target: { value: "תוכן" } });
+    fireEvent.click(screen.getByRole("button", { name: "שלח התראה" }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+  });
+
+  it("an invalid_title server error marks the title field invalid and associates it with the alert", async () => {
+    sendManagerBroadcastAction.mockResolvedValue({ ok: false, error: "invalid_title" });
+    renderComposer();
+    fireEvent.click(screen.getByText("דנה"));
+    const titleInput = screen.getByPlaceholderText("לדוגמה: עדכון חשוב");
+    fireEvent.change(titleInput, { target: { value: "כותרת" } });
+    fireEvent.change(screen.getByPlaceholderText("תוכן ההתראה שיוצג לאנשי הצוות"), { target: { value: "תוכן" } });
+    fireEvent.click(screen.getByRole("button", { name: "שלח התראה" }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+    expect(titleInput).toHaveAttribute("aria-invalid", "true");
+    expect(titleInput).toHaveAttribute("aria-describedby", screen.getByRole("alert").id);
+
+    const bodyInput = screen.getByPlaceholderText("תוכן ההתראה שיוצג לאנשי הצוות");
+    expect(bodyInput).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("an invalid_body server error marks the body field invalid, not the title field", async () => {
+    sendManagerBroadcastAction.mockResolvedValue({ ok: false, error: "invalid_body" });
+    renderComposer();
+    fireEvent.click(screen.getByText("דנה"));
+    fireEvent.change(screen.getByPlaceholderText("לדוגמה: עדכון חשוב"), { target: { value: "כותרת" } });
+    const bodyInput = screen.getByPlaceholderText("תוכן ההתראה שיוצג לאנשי הצוות");
+    fireEvent.change(bodyInput, { target: { value: "תוכן" } });
+    fireEvent.click(screen.getByRole("button", { name: "שלח התראה" }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+    expect(bodyInput).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByPlaceholderText("לדוגמה: עדכון חשוב")).not.toHaveAttribute("aria-invalid");
+  });
+});
+
 describe("ManagerBroadcastComposer -- 'לא לשלוח ל' expand/collapse toggle", () => {
   // Selects "כולם" first so the audience picker itself is hidden -- keeps
   // "דנה"/checkbox queries unambiguous while only the exclusions picker is

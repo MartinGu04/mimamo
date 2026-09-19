@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useId, useMemo, useState, useTransition } from "react";
 import { Panel } from "@/components/ui/Panel";
+import { StatusMessage } from "@/components/ui/StatusMessage";
 import { RosterPersonPicker } from "./RosterPersonPicker";
 import { AudienceGroupPicker } from "./AudienceGroupPicker";
 import { updateSystemRuleAction, type SystemRuleView, type UpdateSystemRuleActionResult } from "@/lib/notifications/ruleActions";
@@ -86,6 +87,8 @@ export function ManagerSystemRuleEditor({ rule, roster, adoptionPeople, onSaved,
   const [excludeQuery, setExcludeQuery] = useState("");
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<UpdateSystemRuleActionResult | null>(null);
+  const outcomeId = useId();
+  const bodyErrorId = useId();
 
   const adoptionByPersonId = useMemo(() => new Map(adoptionPeople.map((person) => [person.personId, person])), [adoptionPeople]);
 
@@ -118,6 +121,16 @@ export function ManagerSystemRuleEditor({ rule, roster, adoptionPeople, onSaved,
     !bodyPlaceholderInvalid &&
     parsedTime !== null &&
     (audienceMode === "all_eligible" || (audienceMode === "selected" && selectedIds.length > 0) || (audienceMode === "groups" && groupKeys.length > 0));
+
+  // Which specific field the latest server-reported error (if any) is
+  // about -- lets that field carry `aria-invalid`/`aria-describedby`
+  // pointing at the outcome message below. `bodyInvalid` also covers the
+  // client-side `{details}`-placeholder check, which already rings the
+  // textarea red visually -- this just wires the same fact into ARIA.
+  const currentError = result && !result.ok ? result.error : null;
+  const titleInvalid = currentError === "invalid_title";
+  const bodyInvalid = bodyPlaceholderInvalid || currentError === "invalid_body";
+  const scheduleInvalid = currentError === "invalid_schedule";
 
   function togglePerson(personId: string) {
     setSelectedIds((current) => (current.includes(personId) ? current.filter((id) => id !== personId) : [...current, personId]));
@@ -180,6 +193,8 @@ export function ManagerSystemRuleEditor({ rule, roster, adoptionPeople, onSaved,
             value={timeValue}
             onChange={(event) => setTimeValue(event.target.value)}
             aria-label={`שעת שליחה עבור ${rule.name}`}
+            aria-invalid={scheduleInvalid || undefined}
+            aria-describedby={scheduleInvalid ? outcomeId : undefined}
             className="rounded-lg bg-overlay-soft px-3 py-1.5 text-sm text-foreground ring-1 ring-border focus:outline-none"
           />
         </label>
@@ -193,6 +208,8 @@ export function ManagerSystemRuleEditor({ rule, roster, adoptionPeople, onSaved,
               onChange={(event) => setTitle(event.target.value)}
               maxLength={BROADCAST_TITLE_MAX_LENGTH}
               placeholder={rule.defaultTitle}
+              aria-invalid={titleInvalid || undefined}
+              aria-describedby={titleInvalid ? outcomeId : undefined}
               className="rounded-lg bg-overlay-soft px-3 py-1.5 text-sm text-foreground placeholder:text-muted-2 ring-1 ring-border focus:outline-none"
             />
             <span className="text-[11px] text-muted-2">ברירת מחדל: {rule.defaultTitle}</span>
@@ -205,6 +222,8 @@ export function ManagerSystemRuleEditor({ rule, roster, adoptionPeople, onSaved,
               maxLength={BROADCAST_BODY_MAX_LENGTH}
               rows={2}
               placeholder={rule.defaultBody ?? SYSTEM_RULE_DETAILS_PLACEHOLDER}
+              aria-invalid={bodyInvalid || undefined}
+              aria-describedby={bodyInvalid ? (bodyPlaceholderInvalid ? bodyErrorId : outcomeId) : undefined}
               className={`resize-none rounded-lg bg-overlay-soft px-3 py-1.5 text-sm text-foreground placeholder:text-muted-2 ring-1 focus:outline-none ${
                 bodyPlaceholderInvalid ? "ring-critical/50" : "ring-border"
               }`}
@@ -217,9 +236,9 @@ export function ManagerSystemRuleEditor({ rule, roster, adoptionPeople, onSaved,
               <span className="text-[11px] text-muted-2">ברירת מחדל: {rule.defaultBody}</span>
             )}
             {bodyPlaceholderInvalid ? (
-              <span className="text-[11px] text-critical">
+              <StatusMessage tone="error" id={bodyErrorId} className="text-[11px] text-critical">
                 התוכן חייב להכיל את &ldquo;{SYSTEM_RULE_DETAILS_PLACEHOLDER}&rdquo; פעם אחת בדיוק.
-              </span>
+              </StatusMessage>
             ) : null}
           </label>
         </div>
@@ -309,7 +328,11 @@ export function ManagerSystemRuleEditor({ rule, roster, adoptionPeople, onSaved,
           </button>
         </div>
 
-        {result && !result.ok ? <p className="text-xs text-critical">{errorLabel(result.error)}</p> : null}
+        {result && !result.ok ? (
+          <StatusMessage tone="error" id={outcomeId} className="text-xs text-critical">
+            {errorLabel(result.error)}
+          </StatusMessage>
+        ) : null}
       </div>
     </Panel>
   );

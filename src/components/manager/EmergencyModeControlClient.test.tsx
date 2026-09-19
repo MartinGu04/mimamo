@@ -104,3 +104,77 @@ describe("EmergencyModeControlClient -- active emergency mode", () => {
     await waitFor(() => expect(deactivateEmergencyModeAction).toHaveBeenCalledTimes(1));
   });
 });
+
+describe("EmergencyModeControlClient -- accessible error announcements", () => {
+  it("an activation failure exposes role=alert", async () => {
+    activateEmergencyModeAction.mockResolvedValue({ ok: false, error: "forbidden" });
+    render(<EmergencyModeControlClient mode={{ kind: "regular" }} />);
+    fireEvent.click(screen.getByText("הפעל מצב חירום"));
+
+    fireEvent.click(screen.getByText("כן, הפעל מצב חירום"));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+  });
+
+  it("a deactivation failure exposes role=alert", async () => {
+    deactivateEmergencyModeAction.mockResolvedValue({ ok: false, error: "forbidden" });
+    const ACTIVE_MODE = { kind: "emergency" as const, activatedAtDisplay: "26/08/2026, 14:00", activatedByPersonName: "מנהל בדיקה" };
+    render(<EmergencyModeControlClient mode={ACTIVE_MODE} />);
+    fireEvent.click(screen.getByText("סיים מצב חירום"));
+
+    fireEvent.click(screen.getByText("כן, סיים מצב חירום"));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+  });
+});
+
+describe("EmergencyModeControlClient -- confirm-reveal focus management", () => {
+  it("moves focus to the confirmation heading when the activate confirmation is revealed", () => {
+    render(<EmergencyModeControlClient mode={{ kind: "regular" }} />);
+    fireEvent.click(screen.getByText("הפעל מצב חירום"));
+
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "להפעיל מצב חירום?" }));
+  });
+
+  it("canceling the activate confirmation returns focus to the trigger that opened it", () => {
+    render(<EmergencyModeControlClient mode={{ kind: "regular" }} />);
+    const trigger = screen.getByText("הפעל מצב חירום");
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    fireEvent.click(screen.getByText("ביטול"));
+
+    expect(document.activeElement).toBe(screen.getByText("הפעל מצב חירום"));
+  });
+
+  it("a successful activation collapses the confirmation and never leaves focus on <body>", async () => {
+    activateEmergencyModeAction.mockResolvedValue({ ok: true, status: "activated" });
+    render(<EmergencyModeControlClient mode={{ kind: "regular" }} />);
+    fireEvent.click(screen.getByText("הפעל מצב חירום"));
+
+    fireEvent.click(screen.getByText("כן, הפעל מצב חירום"));
+
+    await waitFor(() => expect(screen.queryByText("להפעיל מצב חירום?")).toBeNull());
+    expect(document.activeElement).not.toBe(document.body);
+  });
+
+  it("moves focus to the confirmation heading when the deactivate confirmation is revealed", () => {
+    const ACTIVE_MODE = { kind: "emergency" as const, activatedAtDisplay: "26/08/2026, 14:00", activatedByPersonName: "מנהל בדיקה" };
+    render(<EmergencyModeControlClient mode={ACTIVE_MODE} />);
+    fireEvent.click(screen.getByText("סיים מצב חירום"));
+
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "לסיים מצב חירום?" }));
+  });
+
+  it("canceling the deactivate confirmation returns focus to the trigger that opened it", () => {
+    const ACTIVE_MODE = { kind: "emergency" as const, activatedAtDisplay: "26/08/2026, 14:00", activatedByPersonName: "מנהל בדיקה" };
+    render(<EmergencyModeControlClient mode={ACTIVE_MODE} />);
+    const trigger = screen.getByText("סיים מצב חירום");
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    fireEvent.click(screen.getByText("ביטול"));
+
+    expect(document.activeElement).toBe(screen.getByText("סיים מצב חירום"));
+  });
+});

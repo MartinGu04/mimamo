@@ -215,6 +215,39 @@ describe("ManagerSystemRuleEditor -- fields + submission", () => {
   });
 });
 
+describe("ManagerSystemRuleEditor -- accessible status announcements and field validation", () => {
+  it("a server-side rejection exposes role=alert", async () => {
+    updateSystemRuleAction.mockResolvedValue({ ok: false, error: "conflict" });
+
+    render(<ManagerSystemRuleEditor rule={dynamicRule()} roster={ROSTER} adoptionPeople={ADOPTION} onSaved={vi.fn()} onCancel={vi.fn()} />);
+    fireEvent.click(screen.getByText("שמירת שינויים"));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+  });
+
+  it("the client-side {details}-placeholder violation exposes role=alert and marks the body field invalid", () => {
+    render(<ManagerSystemRuleEditor rule={dynamicRule()} roster={ROSTER} adoptionPeople={ADOPTION} onSaved={vi.fn()} onCancel={vi.fn()} />);
+
+    const bodyInput = screen.getAllByRole("textbox").find((el) => el.tagName === "TEXTAREA")!;
+    fireEvent.change(bodyInput, { target: { value: "תוכן בלי הפרטים" } });
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toBeInTheDocument();
+    expect(bodyInput).toHaveAttribute("aria-invalid", "true");
+    expect(bodyInput).toHaveAttribute("aria-describedby", alert.id);
+  });
+
+  it("an invalid_title server error marks the title field invalid", async () => {
+    updateSystemRuleAction.mockResolvedValue({ ok: false, error: "invalid_title" });
+
+    render(<ManagerSystemRuleEditor rule={dynamicRule()} roster={ROSTER} adoptionPeople={ADOPTION} onSaved={vi.fn()} onCancel={vi.fn()} />);
+    fireEvent.click(screen.getByText("שמירת שינויים"));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+    expect(screen.getByPlaceholderText("⏰ המשמרת שלך מחר")).toHaveAttribute("aria-invalid", "true");
+  });
+});
+
 describe("ManagerSystemRuleEditor -- 'לא לשלוח ל' expand/collapse toggle", () => {
   // `dynamicRule()`'s default audienceMode is "all_eligible", so no audience
   // RosterPersonPicker is on screen -- "דנה"/checkbox queries stay
