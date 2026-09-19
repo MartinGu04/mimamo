@@ -302,14 +302,14 @@ export function ReportOneEditorOverlay({ draft, reserveInclusionByPersonId = {},
                               <button
                                 type="button"
                                 onClick={cancelRemoval}
-                                className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted transition-colors duration-150 hover:bg-overlay-soft"
+                                className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted transition-colors duration-150 hover:bg-overlay-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                               >
                                 ביטול
                               </button>
                               <button
                                 type="button"
                                 onClick={() => confirmRemoval(person.personId)}
-                                className="rounded-lg bg-critical px-3 py-1.5 text-sm font-medium text-critical-foreground transition-colors duration-150 hover:opacity-90"
+                                className="rounded-lg bg-critical px-3 py-1.5 text-sm font-medium text-critical-foreground transition-colors duration-150 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-critical"
                               >
                                 הסר בכל זאת
                               </button>
@@ -342,14 +342,14 @@ export function ReportOneEditorOverlay({ draft, reserveInclusionByPersonId = {},
               <button
                 type="button"
                 onClick={confirmReset}
-                className="rounded-lg bg-critical px-3 py-1.5 text-sm font-medium text-critical-foreground transition-colors duration-150 hover:opacity-90"
+                className="rounded-lg bg-critical px-3 py-1.5 text-sm font-medium text-critical-foreground transition-colors duration-150 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-critical"
               >
                 אישור
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmingReset(false)}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted transition-colors duration-150 hover:bg-overlay-soft"
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted transition-colors duration-150 hover:bg-overlay-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 ביטול
               </button>
@@ -358,7 +358,7 @@ export function ReportOneEditorOverlay({ draft, reserveInclusionByPersonId = {},
             <button
               type="button"
               onClick={requestReset}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-muted transition-colors duration-150 hover:bg-overlay-soft"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-muted transition-colors duration-150 hover:bg-overlay-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               <RotateCcw className="h-4 w-4" aria-hidden="true" strokeWidth={1.75} />
               איפוס לטיוטה האוטומטית
@@ -368,7 +368,7 @@ export function ReportOneEditorOverlay({ draft, reserveInclusionByPersonId = {},
           <button
             type="button"
             onClick={copyReport}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors duration-150 hover:opacity-90"
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors duration-150 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {copied ? (
               <Check className="h-4 w-4" aria-hidden="true" strokeWidth={1.75} />

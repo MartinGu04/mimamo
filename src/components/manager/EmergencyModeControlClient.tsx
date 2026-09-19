@@ -94,8 +94,20 @@ export function EmergencyModeControlClient({ mode }: EmergencyModeControlClientP
           <div className="min-w-0">
             <h2 className="text-base font-semibold text-critical">🚨 מצב חירום פעיל</h2>
             <p className="mt-1 text-sm text-critical">המערכת פועלת לפי סידור משמרות החירום. תורנויות מושהות.</p>
-            <p className="mt-2 text-xs text-critical/70">
-              הופעל {mode.activatedAtDisplay}
+            {/* `activatedAtDisplay` is a "DD/MM/YYYY, HH:mm" numeric string --
+                inside this RTL row it has no strong character of its own to
+                anchor its logical order, so the bidi algorithm can visually
+                reorder the date/time groups against each other (same class of
+                risk `TimeRange`/`IssueRow` isolate). `dir="ltr"` isolates just
+                this span, same established pattern. Also `text-muted` rather
+                than `text-critical/70`: the reduced-opacity red measured
+                well under WCAG AA 4.5:1 against `bg-surface-critical` in both
+                themes (light ~2.96:1, dark ~3.42:1) -- this is de-emphasized
+                metadata, not the finding itself (which the heading/message
+                above already convey), so the app's ordinary secondary-text
+                tone reads correctly here and clears AA in both themes. */}
+            <p className="mt-2 text-xs text-muted">
+              הופעל <span dir="ltr">{mode.activatedAtDisplay}</span>
               {mode.activatedByPersonName ? ` על ידי ${mode.activatedByPersonName}` : ""}
             </p>
           </div>

@@ -93,7 +93,11 @@ export function DutyFairnessCard({ view }: { view: DutyFairnessCardView }) {
       {view.liveDutyLabel ? (
         <div className="mt-2 flex flex-col gap-0.5 rounded-lg bg-status-above-soft px-2.5 py-2" data-testid="metric-duty-live">
           <span className="text-xs font-medium text-status-above">● LIVE · {view.liveDutyLabel}</span>
-          <span className="text-[11px] text-muted-2">{view.liveDutySubLabel}</span>
+          {/* `text-muted-2` measured well under WCAG AA 4.5:1 against this
+              tinted `bg-status-above-soft` strip (~4.17:1 light, ~4.21:1
+              dark) -- `text-muted` clears it in both themes (~4.49:1 light,
+              ~5.12:1 dark) while staying the same restrained secondary tone. */}
+          <span className="text-[11px] text-muted">{view.liveDutySubLabel}</span>
         </div>
       ) : null}
 

@@ -34,7 +34,7 @@ export function ReportOneQuickAction({ draft, reserveInclusionByPersonId }: Repo
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="shrink-0 rounded-lg bg-primary px-3.5 py-1.5 text-sm font-medium text-primary-foreground transition-colors duration-150 hover:opacity-90"
+          className="shrink-0 rounded-lg bg-primary px-3.5 py-1.5 text-sm font-medium text-primary-foreground transition-colors duration-150 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           פתיחה
         </button>
