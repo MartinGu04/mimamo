@@ -1,7 +1,7 @@
 import type { RefObject } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { renderHook } from "@testing-library/react";
-import { useModalInertBackground } from "./useModalInertBackground";
+import { holdInert, releaseInert, useModalInertBackground } from "./useModalInertBackground";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -111,5 +111,99 @@ describe("useModalInertBackground", () => {
 
     expect(isMarkedInert(firstDialog)).toBe(false);
     expect(isMarkedInert(background)).toBe(true);
+  });
+});
+
+/**
+ * `holdInert`/`releaseInert` take an explicit `useNativeInert` override
+ * (defaulting to this engine's real, feature-detected capability) so BOTH
+ * the native `inert` path and the `aria-hidden` fallback path can be
+ * proven directly, regardless of which one this test suite's own jsdom
+ * environment happens to support (jsdom has no native `inert` IDL
+ * property, so the public hook alone can only ever exercise the fallback
+ * path here).
+ */
+describe("useModalInertBackground — exact prior-state restoration (fixes a bug where an element already inert/aria-hidden for its own unrelated reason would lose that state once this hook released it)", () => {
+  it("native inert path: an element that ALREADY had `inert` keeps it after the final release", () => {
+    const el = document.body.appendChild(document.createElement("div"));
+    el.setAttribute("inert", "");
+
+    holdInert(el, true);
+    expect(el.hasAttribute("inert")).toBe(true);
+
+    releaseInert(el, true);
+    expect(el.hasAttribute("inert")).toBe(true); // still there -- never this hook's to remove
+  });
+
+  it("native inert path: an element with NO prior `inert` returns to none after release", () => {
+    const el = document.body.appendChild(document.createElement("div"));
+
+    holdInert(el, true);
+    expect(el.hasAttribute("inert")).toBe(true);
+
+    releaseInert(el, true);
+    expect(el.hasAttribute("inert")).toBe(false);
+  });
+
+  it("native inert path: prior state survives nested-modal ref-counting -- restored only once the LAST hold releases", () => {
+    const el = document.body.appendChild(document.createElement("div"));
+    el.setAttribute("inert", "");
+
+    holdInert(el, true); // first modal
+    holdInert(el, true); // second, nested modal
+
+    releaseInert(el, true); // second modal closes -- first modal still holds it
+    expect(el.hasAttribute("inert")).toBe(true);
+
+    releaseInert(el, true); // first modal closes -- final release restores the ORIGINAL state
+    expect(el.hasAttribute("inert")).toBe(true);
+  });
+
+  it('aria-hidden fallback path: an element that already had aria-hidden="true" keeps it after the final release', () => {
+    const el = document.body.appendChild(document.createElement("div"));
+    el.setAttribute("aria-hidden", "true");
+
+    holdInert(el, false);
+    expect(el.getAttribute("aria-hidden")).toBe("true");
+
+    releaseInert(el, false);
+    expect(el.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("aria-hidden fallback path: restores a DIFFERENT prior value exactly, not merely \"still present\"", () => {
+    const el = document.body.appendChild(document.createElement("div"));
+    el.setAttribute("aria-hidden", "false"); // pre-existing, unrelated to this modal
+
+    holdInert(el, false);
+    expect(el.getAttribute("aria-hidden")).toBe("true"); // held
+
+    releaseInert(el, false);
+    expect(el.getAttribute("aria-hidden")).toBe("false"); // restored to its EXACT original value
+  });
+
+  it("aria-hidden fallback path: an element with NO prior aria-hidden returns to none after release", () => {
+    const el = document.body.appendChild(document.createElement("div"));
+
+    holdInert(el, false);
+    expect(el.hasAttribute("aria-hidden")).toBe(true);
+
+    releaseInert(el, false);
+    expect(el.hasAttribute("aria-hidden")).toBe(false);
+  });
+
+  it("prior state is preserved on unmount too, not just when active flips to false -- via the public hook", () => {
+    const background = document.body.appendChild(document.createElement("div"));
+    background.setAttribute("aria-hidden", "false"); // pre-existing, unrelated to this modal
+    const dialogNode = document.body.appendChild(document.createElement("div"));
+
+    const dialogRef: RefObject<HTMLElement | null> = { current: dialogNode };
+    const { unmount } = renderHook(({ active }) => useModalInertBackground(active, dialogRef), {
+      initialProps: { active: true },
+    });
+
+    expect(background.getAttribute("aria-hidden")).toBe("true"); // held
+
+    unmount();
+    expect(background.getAttribute("aria-hidden")).toBe("false"); // restored to its EXACT original value, not stripped
   });
 });
