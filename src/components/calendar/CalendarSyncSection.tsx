@@ -9,6 +9,8 @@ import {
 } from "@/lib/calendar/actions";
 import type { CalendarFeedLinks } from "@/lib/calendar/feedUrl";
 import { Panel } from "@/components/ui/Panel";
+import { StatusMessage } from "@/components/ui/StatusMessage";
+import { useRevealFocus } from "@/components/ui/useRevealFocus";
 import { APP_NAME } from "@/lib/config/productName";
 
 interface CalendarSyncSectionProps {
@@ -44,7 +46,31 @@ export function CalendarSyncSection({ initialEnabled, initialLinks }: CalendarSy
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  /** A screen-reader-only echo of whatever the copy/reset/disable actions just did -- see the `StatusMessage` rendered below for why this needs its own state rather than reusing the (visible) `copied`/`links` state directly. */
+  const [announcement, setAnnouncement] = useState<string | null>(null);
   const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const confirmActionRef = useRef<HTMLButtonElement>(null);
+  const resetTriggerRef = useRef<HTMLButtonElement>(null);
+  const disableTriggerRef = useRef<HTMLButtonElement>(null);
+
+  // Predictable focus for the reset/disable confirm reveal (Phase 2 audit,
+  // focus-management A): moves focus to the confirm panel's own "אישור"
+  // button when it appears, and restores it to whichever trigger opened it
+  // once the panel is gone again -- true for both cancelling AND the action
+  // completing. `restoreFocusRef` points at whichever of the two triggers
+  // opened this confirmation (both are themselves hidden while confirming,
+  // so a plain "whatever was focused before" snapshot would only ever see a
+  // node that's already gone by restore time). A successful "disable"
+  // removes the whole `links` block (including its own trigger button) --
+  // `headingRef` is the fallback for exactly that case, so focus never
+  // falls through to <body>.
+  useRevealFocus({
+    revealed: confirmTarget !== null,
+    onRevealFocusRef: confirmActionRef,
+    restoreFocusRef: confirmTarget === "reset" ? resetTriggerRef : confirmTarget === "disable" ? disableTriggerRef : undefined,
+    fallbackFocusRef: headingRef,
+  });
 
   const enable = useCallback(async () => {
     setError(null);
@@ -60,6 +86,7 @@ export function CalendarSyncSection({ initialEnabled, initialLinks }: CalendarSy
 
   const confirmReset = useCallback(async () => {
     setError(null);
+    setAnnouncement(null);
     setBusy(true);
     setCopied(false);
     const result = await resetCalendarSyncAction();
@@ -70,10 +97,12 @@ export function CalendarSyncSection({ initialEnabled, initialLinks }: CalendarSy
       return;
     }
     setLinks(result.links);
+    setAnnouncement("נוצר קישור חדש.");
   }, []);
 
   const confirmDisable = useCallback(async () => {
     setError(null);
+    setAnnouncement(null);
     setBusy(true);
     const result = await disableCalendarSyncAction();
     setBusy(false);
@@ -84,6 +113,7 @@ export function CalendarSyncSection({ initialEnabled, initialLinks }: CalendarSy
     }
     setLinks(null);
     setCopied(false);
+    setAnnouncement("הסנכרון בוטל.");
   }, []);
 
   const copyLink = useCallback(async () => {
@@ -91,6 +121,7 @@ export function CalendarSyncSection({ initialEnabled, initialLinks }: CalendarSy
     try {
       await navigator.clipboard.writeText(links.url);
       setCopied(true);
+      setAnnouncement("הקישור הועתק.");
       if (copiedTimeoutRef.current) clearTimeout(copiedTimeoutRef.current);
       copiedTimeoutRef.current = setTimeout(() => setCopied(false), COPIED_RESET_MS);
     } catch {
@@ -101,14 +132,28 @@ export function CalendarSyncSection({ initialEnabled, initialLinks }: CalendarSy
   return (
     <Panel variant="panel" className="flex flex-col gap-4">
       <div>
-        <h2 className="text-base font-semibold text-foreground">סנכרון ליומן</h2>
+        {/* `tabIndex={-1}`: the reset/disable focus-restore fallback target
+            (see `useRevealFocus` above) when a successful "disable" removes
+            the trigger button this would otherwise restore focus to. */}
+        <h2 ref={headingRef} tabIndex={-1} className="text-base font-semibold text-foreground outline-none">
+          סנכרון ליומן
+        </h2>
         <p className="mt-1 text-sm text-muted">
           קבלו את המשמרות והתורנויות שלכם אוטומטית ביומן Google, Apple, או כל אפליקציית יומן שתומכת במנוי ICS.
           העדכון חד-כיווני בלבד: {APP_NAME} לעולם לא קורא או משנה את היומן האישי שלכם.
         </p>
       </div>
 
-      {error ? <p className="text-sm text-critical">{error}</p> : null}
+      {error ? (
+        <StatusMessage tone="error" className="text-sm text-critical">
+          {error}
+        </StatusMessage>
+      ) : null}
+      {announcement ? (
+        <StatusMessage tone="success" className="sr-only">
+          {announcement}
+        </StatusMessage>
+      ) : null}
 
       {!links ? (
         <button
@@ -167,6 +212,7 @@ export function CalendarSyncSection({ initialEnabled, initialLinks }: CalendarSy
               <>
                 <span className="text-sm text-muted">הקישור הקיים יפסיק לעבוד. ליצור קישור חדש?</span>
                 <button
+                  ref={confirmActionRef}
                   type="button"
                   onClick={confirmReset}
                   disabled={busy}
@@ -187,6 +233,7 @@ export function CalendarSyncSection({ initialEnabled, initialLinks }: CalendarSy
               <>
                 <span className="text-sm text-muted">הקישור הקיים יפסיק לעבוד לגמרי. לבטל את הסנכרון?</span>
                 <button
+                  ref={confirmActionRef}
                   type="button"
                   onClick={confirmDisable}
                   disabled={busy}
@@ -206,6 +253,7 @@ export function CalendarSyncSection({ initialEnabled, initialLinks }: CalendarSy
             ) : (
               <>
                 <button
+                  ref={resetTriggerRef}
                   type="button"
                   onClick={() => setConfirmTarget("reset")}
                   className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-muted transition-colors duration-150 hover:bg-overlay-soft"
@@ -214,6 +262,7 @@ export function CalendarSyncSection({ initialEnabled, initialLinks }: CalendarSy
                   יצירת קישור חדש
                 </button>
                 <button
+                  ref={disableTriggerRef}
                   type="button"
                   onClick={() => setConfirmTarget("disable")}
                   className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-critical transition-colors duration-150 hover:bg-critical/10"

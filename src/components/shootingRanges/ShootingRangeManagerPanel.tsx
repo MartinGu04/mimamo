@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Panel } from "@/components/ui/Panel";
+import { StatusMessage } from "@/components/ui/StatusMessage";
 import { formatReportOneDateDot, formatReportOneDateSlash } from "@/lib/presentation/reportOneFormat";
 import { presentQualificationStatus } from "@/lib/presentation/shootingRangeStatus";
 import type { ManagerShootingRangeRow, ManagerShootingRangeSummary, ManagerPendingSelfReportRow } from "@/lib/readModels/buildShootingRangeManagerReadModel";
@@ -127,8 +128,10 @@ function PendingConfirmationPanel({ rangeDate, rows }: { rangeDate: string; rows
 
   if (done) {
     return (
-      <Panel variant="panel" className="text-sm text-success">
-        אושר עבור {selected.size} אנשים.
+      <Panel variant="panel">
+        <StatusMessage tone="success" className="text-sm text-success">
+          אושר עבור {selected.size} אנשים.
+        </StatusMessage>
       </Panel>
     );
   }
@@ -291,7 +294,11 @@ function CreatePlannedRangeForm({ roster }: { roster: { id: string; name: string
           </label>
         ))}
       </div>
-      {done !== null ? <p className="text-sm text-success">שובצו {done} אנשים.</p> : null}
+      {done !== null ? (
+        <StatusMessage tone="success" className="text-sm text-success">
+          שובצו {done} אנשים.
+        </StatusMessage>
+      ) : null}
       <div className="flex gap-2">
         <button
           type="button"

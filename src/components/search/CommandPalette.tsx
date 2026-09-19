@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { CalendarDays, Search, UserRound, Users, X } from "lucide-react";
@@ -11,6 +11,7 @@ import type { SearchReadModel } from "@/lib/readModels/searchTypes";
 import { parseSearchIntent } from "@/lib/search/parseSearchIntent";
 import { resolveSearchIntent, type SharedShiftOverrides } from "@/lib/search/resolveSearchIntent";
 import type { GlobalSearchResult, SearchShiftPeriod, SharedShiftSearchResult } from "@/lib/search/types";
+import { useFocusTrap } from "@/components/ui/useFocusTrap";
 
 interface CommandPaletteProps {
   open: boolean;
@@ -30,13 +31,6 @@ function resultHref(result: GlobalSearchResult): string | null {
   return result.href;
 }
 
-/** Every real (non-disabled) focusable element the dialog can contain -- the search input, the close button, and (idle state only) the example-query buttons. `role="option"` result rows are deliberately excluded: they're navigated via `aria-activedescendant`, never real tab stops. */
-const FOCUSABLE_SELECTOR = 'input:not([disabled]), button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
-
-function getFocusableElements(container: HTMLElement): HTMLElement[] {
-  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
-}
-
 /**
  * The global command palette (PR #35) -- a system-level search surface
  * mounted once via `SearchPaletteProvider`. Query parsing/resolution is
@@ -48,12 +42,12 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
  * established by `PersonPicker`: results are `role="option"` rows
  * highlighted via `aria-activedescendant` on the search input, never
  * separately focusable -- ArrowUp/ArrowDown/Enter on the input move
- * between and activate them. A real Tab/Shift+Tab focus trap cycles
- * through the dialog's actual focusable controls (the input, the close
- * button, and the idle-state example buttons when shown) instead of
- * pinning focus to the input, so every real control stays keyboard-
- * reachable. Escape closes from anywhere in the dialog and restores focus
- * to whatever triggered the palette.
+ * between and activate them. The dialog's own Tab/Shift+Tab focus trap,
+ * initial focus, Escape-to-close, and focus-restore-on-close are the
+ * shared `useFocusTrap` hook (`components/ui/`) -- this was the original
+ * implementation (PR #35); it's now extracted so `MoreSheet` and other
+ * modal surfaces reuse the exact same proven behavior instead of a second,
+ * possibly-inconsistent copy.
  */
 export function CommandPalette({ open, onClose, model }: CommandPaletteProps) {
   const router = useRouter();
@@ -68,7 +62,6 @@ export function CommandPalette({ open, onClose, model }: CommandPaletteProps) {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
   const listboxId = useId();
 
   // Resets the query/highlight the moment `open` flips true -- React's own
@@ -88,59 +81,7 @@ export function CommandPalette({ open, onClose, model }: CommandPaletteProps) {
     }
   }
 
-  // Real DOM side effects (focus management) -- these belong in an effect;
-  // neither one calls React state, so nothing here can cascade renders.
-  useEffect(() => {
-    if (!open) return;
-    previousFocusRef.current = document.activeElement as HTMLElement | null;
-    inputRef.current?.focus();
-  }, [open]);
-
-  useEffect(() => {
-    if (open) return;
-    previousFocusRef.current?.focus();
-    previousFocusRef.current = null;
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-        return;
-      }
-      if (event.key !== "Tab") return;
-
-      const dialogNode = dialogRef.current;
-      if (!dialogNode) return;
-
-      const focusable = getFocusableElements(dialogNode);
-      if (focusable.length === 0) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-
-      // Wrap at the edges (or reclaim focus if it somehow left the dialog
-      // entirely) -- everything in between is normal browser Tab order,
-      // so the close button and (while idle) every example-query button
-      // stay reachable, unlike pinning focus to the input unconditionally.
-      if (event.shiftKey) {
-        if (active === first || !dialogNode.contains(active)) {
-          event.preventDefault();
-          last.focus();
-        }
-      } else if (active === last || !dialogNode.contains(active)) {
-        event.preventDefault();
-        first.focus();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
+  useFocusTrap({ open, onClose, containerRef: dialogRef, initialFocusRef: inputRef });
 
   const resolution = useMemo(() => {
     if (!open) return null;

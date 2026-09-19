@@ -104,6 +104,20 @@ describe("ManagerRecurringRuleComposer -- create mode", () => {
 
     await waitFor(() => expect(screen.getByText(/כותרת ההתראה חייבת להיות/)).toBeTruthy());
   });
+
+  it("the error exposes role=alert and marks the title field invalid", async () => {
+    createCustomWeeklyRuleAction.mockResolvedValue({ ok: false, error: "invalid_title" });
+
+    render(<ManagerRecurringRuleComposer roster={ROSTER} adoptionPeople={ADOPTION} editingRule={null} onSaved={vi.fn()} onCancel={vi.fn()} />);
+    const titleInput = screen.getByPlaceholderText("לדוגמה: 📌 תזכורת לאילוצים");
+    fireEvent.change(titleInput, { target: { value: "כותרת" } });
+    fireEvent.change(screen.getByPlaceholderText("תוכן ההתראה שיוצג לאנשי הצוות"), { target: { value: "תוכן" } });
+    fireEvent.click(screen.getByText("יצירת התראה מחזורית"));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+    expect(titleInput).toHaveAttribute("aria-invalid", "true");
+    expect(titleInput).toHaveAttribute("aria-describedby", screen.getByRole("alert").id);
+  });
 });
 
 describe("ManagerRecurringRuleComposer -- edit mode", () => {

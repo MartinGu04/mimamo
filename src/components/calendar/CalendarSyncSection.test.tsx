@@ -112,3 +112,63 @@ describe("CalendarSyncSection — enabled", () => {
     expect(screen.queryByText("סנכרון ליומן פעיל")).toBeNull();
   });
 });
+
+describe("CalendarSyncSection — accessible status announcements", () => {
+  it("an enable failure exposes role=alert", async () => {
+    enableCalendarSyncAction.mockResolvedValue({ ok: false, error: "persist_failed" });
+    render(<CalendarSyncSection initialEnabled={false} initialLinks={null} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /הפעלת סנכרון ליומן/ }));
+
+    await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
+  });
+
+  it("a successful copy announces via role=status, for screen readers as well as the visible confirmation", async () => {
+    render(<CalendarSyncSection initialEnabled={true} initialLinks={LINKS} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /העתקת קישור/ }));
+
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("הקישור הועתק."));
+  });
+});
+
+describe("CalendarSyncSection — confirm-reveal focus management", () => {
+  it("moves focus to the confirm button when opening the reset confirmation", () => {
+    render(<CalendarSyncSection initialEnabled={true} initialLinks={LINKS} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /יצירת קישור חדש/ }));
+
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "אישור" }));
+  });
+
+  it("moves focus to the confirm button when opening the disable confirmation", () => {
+    render(<CalendarSyncSection initialEnabled={true} initialLinks={LINKS} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /ביטול סנכרון/ }));
+
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "אישור" }));
+  });
+
+  it("canceling the reset confirmation returns focus to the trigger that opened it", () => {
+    render(<CalendarSyncSection initialEnabled={true} initialLinks={LINKS} />);
+    const resetTrigger = screen.getByRole("button", { name: /יצירת קישור חדש/ });
+    resetTrigger.focus();
+    fireEvent.click(resetTrigger);
+
+    fireEvent.click(screen.getByRole("button", { name: "ביטול" }));
+
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: /יצירת קישור חדש/ }));
+  });
+
+  it("after a successful disable removes its own trigger button, focus falls back to the section heading, never <body>", async () => {
+    disableCalendarSyncAction.mockResolvedValue({ ok: true });
+    render(<CalendarSyncSection initialEnabled={true} initialLinks={LINKS} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /ביטול סנכרון/ }));
+    fireEvent.click(screen.getByRole("button", { name: "אישור" }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: /הפעלת סנכרון ליומן/ })).toBeInTheDocument());
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "סנכרון ליומן" }));
+    expect(document.activeElement).not.toBe(document.body);
+  });
+});
