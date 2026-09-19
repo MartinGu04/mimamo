@@ -147,9 +147,9 @@ function PendingConfirmationPanel({ rangeDate, rows }: { rangeDate: string; rows
 
   return (
     <Panel variant="critical" className="flex flex-col gap-3">
-      <h3 className="text-sm font-semibold text-foreground">
+      <h2 className="text-sm font-semibold text-foreground">
         🎯 מטווח {formatReportOneDateSlash(rangeDate) ?? rangeDate} -- {rows.length} משובצים
-      </h3>
+      </h2>
       <ul className="flex flex-col gap-1">
         {rows.map((row) => (
           <label key={row.personId} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-sm hover:bg-overlay-soft">

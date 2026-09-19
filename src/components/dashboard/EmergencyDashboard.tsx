@@ -20,7 +20,7 @@ function ShiftCard({
   if (!shift) {
     return (
       <Panel variant="compact" data-testid="emergency-shift-card-empty">
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
         <p className="mt-2 text-sm text-muted">אין שיבוץ ידוע כרגע.</p>
       </Panel>
     );
@@ -28,14 +28,14 @@ function ShiftCard({
 
   return (
     <Panel variant={variant} data-testid="emergency-shift-card">
-      <h3 className="text-sm font-semibold text-muted">{title}</h3>
+      <h2 className="text-sm font-semibold text-muted">{title}</h2>
       <p className="mt-1 text-lg font-semibold text-foreground">
         משמרת {PERIOD_LABEL[shift.period]} · דסק {shift.ownDesks.length > 0 ? shift.ownDesks.join(", ") : "לא ידוע"}
       </p>
       <p className="mt-1 text-xs text-muted">{formatHebrewWeekdayAndDate(shift.date)}</p>
 
       <div className="mt-4">
-        <h4 className="text-sm font-semibold text-foreground">מי איתי</h4>
+        <h3 className="text-sm font-semibold text-foreground">מי איתי</h3>
         {shift.roster.length === 0 ? (
           <p className="mt-1 text-sm text-muted">אין מידע על אנשים נוספים במשמרת זו.</p>
         ) : (
@@ -66,6 +66,7 @@ function ShiftCard({
 export function EmergencyDashboard({ model }: EmergencyDashboardProps) {
   return (
     <div className="flex flex-col gap-4" data-testid="emergency-dashboard">
+      <h1 className="sr-only">המשמרת שלי -- מצב חירום</h1>
       <ShiftCard title="המשמרת שלי עכשיו" shift={model.current} variant="hero" />
       <ShiftCard title="המשמרת הבאה שלי" shift={model.next} variant="compact" />
 

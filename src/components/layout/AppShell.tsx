@@ -5,6 +5,7 @@ import { EmergencyModeBanner } from "./EmergencyModeBanner";
 import { MobileIdentityBar } from "./MobileIdentityBar";
 import { ShellUtilityBar } from "./ShellUtilityBar";
 import { Sidebar } from "./Sidebar";
+import { MAIN_CONTENT_ID, SkipToMainContentLink } from "./SkipToMainContentLink";
 
 interface AppShellProps {
   children: ReactNode;
@@ -84,6 +85,7 @@ export function AppShell({
 }: AppShellProps) {
   return (
     <div className="isolate flex min-h-dvh bg-background text-foreground">
+      <SkipToMainContentLink />
       <Sidebar person={person} />
       <div className="relative flex min-h-dvh w-full flex-1 flex-col">
         <PageBackdrop />
@@ -97,7 +99,7 @@ export function AppShell({
         ) : null}
         <ShellUtilityBar initialClockTime={initialClockTime} dateLabel={dateLabel} userId={person?.userId} />
         {emergencyModeActive ? <EmergencyModeBanner /> : null}
-        <main className="flex-1 px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pb-10">
+        <main id={MAIN_CONTENT_ID} tabIndex={-1} className="flex-1 px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pb-10 focus:outline-none">
           <div className="mx-auto w-full max-w-[1440px]">{children}</div>
         </main>
       </div>

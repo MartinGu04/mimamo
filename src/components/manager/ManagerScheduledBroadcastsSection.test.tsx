@@ -58,6 +58,15 @@ describe("ManagerScheduledBroadcastsSection", () => {
     expect(screen.getByText(/דני מנהל/)).toBeInTheDocument();
   });
 
+  it("renders '🕒 התראות מתוזמנות' as an h3, not an h4 (Phase 3 heading-hierarchy fix: this now nests under the תזמון tab's own h2)", async () => {
+    listActiveScheduledBroadcastsAction.mockResolvedValue({ ok: true, items: [item()] });
+    render(<ManagerScheduledBroadcastsSection reloadToken={0} editingId={null} onEdit={vi.fn()} onChanged={vi.fn()} />);
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 3, name: "🕒 התראות מתוזמנות" })).toBeInTheDocument(),
+    );
+  });
+
   it("hides עריכה/שלח עכשיו/ביטול once the item is no longer editable ('claimed')", async () => {
     listActiveScheduledBroadcastsAction.mockResolvedValue({ ok: true, items: [item({ status: "claimed" })] });
     render(<ManagerScheduledBroadcastsSection reloadToken={0} editingId={null} onEdit={vi.fn()} onChanged={vi.fn()} />);

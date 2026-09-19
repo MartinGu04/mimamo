@@ -385,7 +385,7 @@ export function ManagerRecentBroadcastsSection({ reloadToken, pollWhileActive }:
   return (
     <Panel variant="compact" data-testid="manager-recent-broadcasts">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="text-sm font-semibold text-foreground">נשלחו לאחרונה</h4>
+        <h3 className="text-sm font-semibold text-foreground">נשלחו לאחרונה</h3>
         <button
           type="button"
           onClick={handleClear}

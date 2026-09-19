@@ -7,6 +7,14 @@
  */
 export type NotificationCenterSection = "now" | "schedule" | "history" | "fixed";
 
+/** Each section's own Hebrew label, in the product's fixed order -- the single source both `NotificationCenterNav`'s tab strip and the page's per-section `<h2>` (ahead of that section's own `<h3>`/`<h4>` content) render from, so the two can never drift apart. */
+export const NOTIFICATION_CENTER_SECTION_LABEL: Record<NotificationCenterSection, string> = {
+  now: "עכשיו",
+  schedule: "תזמון",
+  history: "היסטוריה",
+  fixed: "קבועות",
+};
+
 /** Strict parse of `?section=` -- anything else (including missing) falls back to `"now"`, never a guess or a crash. */
 export function parseNotificationCenterSectionParam(raw: string | null | undefined): NotificationCenterSection {
   if (raw === "schedule" || raw === "history" || raw === "fixed") return raw;
