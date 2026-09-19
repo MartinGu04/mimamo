@@ -60,6 +60,10 @@ function SignOutButton() {
  * `MobileTopBarThemeAction` in the mobile top bar itself. This menu must
  * never again grow back into a secondary navigation surface -- it is
  * account controls only, mirroring what `IdentityFooter` is for desktop.
+ * One deliberate exception (Phase 7): a small "הצהרת נגישות" link to the
+ * public `/accessibility` statement, the same footer-style carve-out
+ * `IdentityFooter` gets on desktop -- a legal/compliance link, not app
+ * navigation, so it doesn't reopen this surface to feature creep.
  *
  * Deliberately NOT `role="menu"`/`"menuitem"`/`aria-haspopup="menu"`
  * (Phase 5 remediation) -- this popover implements none of the real ARIA
@@ -157,6 +161,14 @@ export function MobileProfileMenu({ name, isManager, avatarUrl }: MobileProfileM
           >
             <CalendarSync className="h-4 w-4 text-muted" aria-hidden="true" strokeWidth={1.75} />
             סנכרון יומן
+          </Link>
+
+          <Link
+            href="/accessibility"
+            onClick={() => setOpen(false)}
+            className="block rounded-xl px-2.5 py-1.5 text-xs font-medium text-muted transition-colors duration-150 hover:bg-overlay-soft hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            הצהרת נגישות
           </Link>
 
           <div className="my-1 h-px bg-border" />

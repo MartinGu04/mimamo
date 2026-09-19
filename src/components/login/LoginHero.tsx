@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Shield } from "lucide-react";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { LOGIN_AUTH_NOTE, LOGIN_HERO_EYEBROW, LOGIN_HERO_HEADLINE, LOGIN_HERO_SUBTEXT } from "@/lib/config/loginCopy";
@@ -96,6 +97,20 @@ export function LoginHero({ initialClockTime, weekdayLabel, dayNumber, monthLabe
 
       <div className="lg:mt-auto lg:pt-16">
         <LoginFeatureStrip />
+      </div>
+
+      {/* Public, unauthenticated -- the one discoverable link into the
+          accessibility statement for a visitor who hasn't signed in yet
+          (Phase 7). Deliberately a small, secondary footer-style link, not
+          part of LoginFeatureStrip (which is desktop-only and a distinct
+          "value prop" surface) -- this must be reachable at every viewport. */}
+      <div className="mt-6 flex justify-center lg:justify-start">
+        <Link
+          href="/accessibility"
+          className="rounded text-xs text-white/55 underline decoration-white/30 underline-offset-2 transition-colors duration-150 hover:text-white/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          הצהרת נגישות
+        </Link>
       </div>
     </div>
   );

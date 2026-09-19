@@ -182,3 +182,12 @@ describe("LoginPage — feature highlights strip", () => {
     }
   });
 });
+
+describe("LoginPage — accessibility statement link (Phase 7)", () => {
+  it('renders a "הצהרת נגישות" link pointing at /accessibility, reachable before sign-in', async () => {
+    const element = await LoginPage({ searchParams: searchParams() });
+    renderWithTheme(element);
+
+    expect(screen.getByRole("link", { name: "הצהרת נגישות" })).toHaveAttribute("href", "/accessibility");
+  });
+});

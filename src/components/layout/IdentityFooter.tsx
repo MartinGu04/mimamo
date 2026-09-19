@@ -45,6 +45,18 @@ export function IdentityFooter({ name, isManager, avatarUrl }: IdentityFooterPro
           <IdentityFooterThemeAction />
         </div>
       </div>
+      {/* Phase 7: the one discoverable link into the public accessibility
+          statement from the desktop shell -- deliberately grouped with the
+          version/settings/theme utility row above the profile row, NOT
+          appended after it: the account/profile row below must stay the
+          LAST child so it keeps anchoring the very bottom of the rail (see
+          this component's own docstring, PR #38). */}
+      <Link
+        href="/accessibility"
+        className="mt-1.5 block rounded px-1 text-[11px] text-sidebar-muted underline decoration-sidebar-muted/40 underline-offset-2 transition-colors duration-150 hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      >
+        הצהרת נגישות
+      </Link>
       <div className="mt-3.5 flex items-center gap-3 rounded-xl px-1 py-1.5">
         <Avatar name={name} size="md" avatarUrl={avatarUrl} />
         <div className="min-w-0 flex-1">

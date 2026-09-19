@@ -142,6 +142,14 @@ describe("MobileProfileMenu — סנכרון יומן link", () => {
   });
 });
 
+describe("MobileProfileMenu — accessibility statement link (Phase 7)", () => {
+  it('renders a "הצהרת נגישות" link pointing at /accessibility inside the open panel', () => {
+    renderWithTheme(<MobileProfileMenu name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    fireEvent.click(screen.getByRole("button", { name: /תפריט פרופיל/ }));
+    expect(screen.getByRole("link", { name: "הצהרת נגישות" })).toHaveAttribute("href", "/accessibility");
+  });
+});
+
 describe("MobileProfileMenu — logout", () => {
   it("logout remains reachable inside the panel, as a plain button (not a menuitem)", () => {
     renderWithTheme(<MobileProfileMenu name="דני בדיקה" isManager={false} avatarUrl={null} />);
