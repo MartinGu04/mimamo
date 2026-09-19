@@ -332,6 +332,25 @@ describe("DutyFairnessCard — Justice Table redesign: LIVE duty", () => {
     );
     expect(screen.queryByTestId("metric-duty-live")).toBeNull();
   });
+
+  it("uses the AA-contrast-safe light-theme colors for both LIVE strip lines, never the failing shared tokens directly (regression guard for the measured light-theme contrast fix)", () => {
+    render(
+      <ul>
+        <DutyFairnessCard view={view({ liveDutyLabel: "שמירה 2 פעילה כרגע", liveDutySubLabel: "הנקודות יתווספו עם סיום התורנות" })} />
+      </ul>,
+    );
+    const strip = screen.getByTestId("metric-duty-live");
+    const [primaryLine, secondaryLine] = Array.from(strip.children) as HTMLElement[];
+
+    // Plain `text-status-above`/`text-muted` measure under WCAG AA 4.5:1 in
+    // light theme against this strip's `bg-status-above-soft` (~4.14:1 and
+    // ~4.49:1 respectively) -- both lines must use the darkened light-theme
+    // override instead, while the dark-theme half stays the unchanged
+    // shared token (dark was already comfortably above AA).
+    expect(primaryLine.className).toContain("text-[light-dark(#9e4908,var(--status-above))]");
+    expect(secondaryLine.className).toContain("text-[light-dark(#57626e,var(--muted))]");
+    expect(secondaryLine.className).not.toMatch(/\btext-muted\b(?!-)/);
+  });
 });
 
 describe("DutyFairnessCard — weekend and exemptions still show, secondary row", () => {
