@@ -151,6 +151,19 @@ describe("DutyFairnessCard — Justice Table redesign: completed/target progress
     expect(screen.getByTestId("metric-duty-remaining")).toHaveTextContent("מעבר לפוטנציאל");
   });
 
+  it("REGRESSION: an over-target progress bar never reports an invalid ARIA state (aria-valuenow must never exceed aria-valuemax)", () => {
+    render(
+      <ul>
+        <DutyFairnessCard view={view({ progressRatio: 1.16, progressPercentLabel: "116%" })} />
+      </ul>,
+    );
+    const bar = screen.getByRole("progressbar");
+    expect(bar).toHaveAttribute("aria-valuenow", "100");
+    expect(bar).toHaveAttribute("aria-valuemax", "100");
+    expect(bar).toHaveAttribute("aria-valuetext", "116%, מעבר ליעד");
+    expect(bar).toHaveAccessibleName();
+  });
+
   it("shows the duty status badge when known, secondary to the progress figures", () => {
     render(
       <ul>

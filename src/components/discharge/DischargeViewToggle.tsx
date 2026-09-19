@@ -16,7 +16,11 @@ const TAB_BASE =
  * `[ אישי ] [ כולם ]` -- "עד מתי???"'s view switch, deliberately the same
  * pill idiom as `FairnessModeToggle`/`ManagerCategoryNav` rather than a new
  * control: real `Link`s carrying the state in the URL, never client-only tab
- * state, so each view stays linkable, shareable and back-button-safe.
+ * state, so each view stays linkable, shareable and back-button-safe. A real
+ * `<nav aria-label>` landmark with `aria-current="page"` on the active
+ * `TabLink` -- the same native-navigation pattern `DutyViewToggle` uses --
+ * never `role="tablist"`/`role="tab"`, which would promise an ARIA-tabs
+ * keyboard model this plain set of links doesn't implement.
  *
  * Rendered only when the viewer is actually allowed the roster -- the page
  * omits it entirely otherwise (see `DischargeCountdownView.everyone`), never
@@ -27,8 +31,7 @@ const TAB_BASE =
  */
 export function DischargeViewToggle({ active }: DischargeViewToggleProps) {
   return (
-    <div
-      role="tablist"
+    <nav
       aria-label="מצב תצוגה"
       className="mx-auto flex w-full max-w-xs items-stretch gap-1 rounded-full bg-overlay-soft p-1 sm:w-auto"
     >
@@ -46,6 +49,6 @@ export function DischargeViewToggle({ active }: DischargeViewToggleProps) {
       >
         כולם
       </TabLink>
-    </div>
+    </nav>
   );
 }

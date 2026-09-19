@@ -181,7 +181,7 @@ describe("/fairness — C. mode params", () => {
     await renderFairnessPage();
     expect(getRequestShiftFairness).toHaveBeenCalled();
     expect(getRequestDutyFairness).not.toHaveBeenCalled();
-    expect(screen.getByRole("tab", { name: "משמרות" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("link", { name: "משמרות" })).toHaveAttribute("aria-current", "page");
   });
 
   it("?mode=duties resolves to Duty mode, calling ONLY the duty loader", async () => {
@@ -189,7 +189,7 @@ describe("/fairness — C. mode params", () => {
     await renderFairnessPage({ mode: "duties" });
     expect(getRequestDutyFairness).toHaveBeenCalled();
     expect(getRequestShiftFairness).not.toHaveBeenCalled();
-    expect(screen.getByRole("tab", { name: "תורנויות" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("link", { name: "תורנויות" })).toHaveAttribute("aria-current", "page");
   });
 
   it("an invalid ?mode= falls back to the safe default (shifts)", async () => {
@@ -1141,7 +1141,7 @@ describe("FairnessPage — emergency tab visibility follows Emergency Mode's own
 
     await renderFairnessPage();
 
-    expect(screen.queryByRole("tab", { name: "חירום" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "חירום" })).toBeNull();
   });
 
   it("2. shows the חירום tab on the default (shifts) view while Emergency Mode is active", async () => {
@@ -1150,7 +1150,7 @@ describe("FairnessPage — emergency tab visibility follows Emergency Mode's own
 
     await renderFairnessPage();
 
-    expect(screen.getByRole("tab", { name: "חירום" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "חירום" })).toBeInTheDocument();
   });
 
   it("3. a direct visit to the emergency view while Emergency Mode is inactive redirects to the default Shift tab, never rendering an unavailable/empty emergency view", async () => {
@@ -1164,14 +1164,14 @@ describe("FairnessPage — emergency tab visibility follows Emergency Mode's own
     resolveOperationalMode.mockResolvedValue({ kind: "regular" });
     getRequestShiftFairness.mockResolvedValue({ status: "ok", model: shiftModel({ groups: [] }) });
     const { unmount } = await renderFairnessPage();
-    expect(screen.getByRole("tab", { name: "משמרות" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "תורנויות" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "משמרות" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "תורנויות" })).toBeInTheDocument();
     unmount();
 
     resolveOperationalMode.mockResolvedValue({ kind: "emergency" });
     getRequestDutyFairness.mockResolvedValue({ status: "ok", model: dutyModel({ groups: [] }) });
     await renderFairnessPage({ mode: "duties" });
-    expect(screen.getByRole("tab", { name: "משמרות" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "תורנויות" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "משמרות" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "תורנויות" })).toBeInTheDocument();
   });
 });
