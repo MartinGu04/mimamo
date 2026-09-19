@@ -197,7 +197,7 @@ export function ManagerScheduledBroadcastsSection({
 
   return (
     <Panel variant="compact" data-testid="manager-scheduled-broadcasts">
-      <h4 className="text-sm font-semibold text-foreground">🕒 התראות מתוזמנות</h4>
+      <h3 className="text-sm font-semibold text-foreground">🕒 התראות מתוזמנות</h3>
       <ul className="mt-2 flex flex-col gap-2">
         {items.map((item) => {
           const isBusy = busyId === item.id;

@@ -1,4 +1,5 @@
 import { LoginHero } from "@/components/login/LoginHero";
+import { MAIN_CONTENT_ID, SkipToMainContentLink } from "@/components/layout/SkipToMainContentLink";
 import { parseCalendarDate } from "@/lib/domain/dutyBlocks";
 import { formatHebrewMonthName, formatHebrewWeekday } from "@/lib/presentation/hebrewDate";
 import { formatScheduleMinute } from "@/lib/presentation/scheduleTime";
@@ -51,6 +52,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       className="relative isolate flex min-h-dvh flex-col overflow-hidden bg-[#05070d]"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
+      <SkipToMainContentLink />
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
         {/* A quiet, neutral (never brand-colored) vignette for depth --
             replaces the old purple/teal glow blobs. Static, not animated:
@@ -68,13 +70,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         />
       </div>
 
-      <LoginHero
-        initialClockTime={initialClockTime}
-        weekdayLabel={weekdayLabel}
-        dayNumber={dayNumber}
-        monthLabel={monthLabel}
-        hasAuthError={hasAuthError}
-      />
+      <main id={MAIN_CONTENT_ID} tabIndex={-1} className="flex flex-1 flex-col focus:outline-none">
+        <LoginHero
+          initialClockTime={initialClockTime}
+          weekdayLabel={weekdayLabel}
+          dayNumber={dayNumber}
+          monthLabel={monthLabel}
+          hasAuthError={hasAuthError}
+        />
+      </main>
     </div>
   );
 }

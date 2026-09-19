@@ -31,7 +31,7 @@ export function EmergencyFairnessSection({ model }: EmergencyFairnessSectionProp
 
       {model.groups.map((group) => (
         <Panel key={group.label} variant="compact">
-          <h3 className="text-sm font-semibold text-foreground">{group.label}</h3>
+          <h2 className="text-sm font-semibold text-foreground">{group.label}</h2>
           <ul className="mt-2 flex flex-col gap-1.5">
             {group.rows.map((row) => (
               <li

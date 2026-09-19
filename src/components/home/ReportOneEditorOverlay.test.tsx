@@ -255,3 +255,33 @@ describe("ReportOneEditorOverlay — reserve inclusion checkbox", () => {
     await waitFor(() => expect(screen.getByLabelText("כלול בדוח 1: אלמוני מילואים")).toBeChecked());
   });
 });
+
+/** True whether the fallback (`aria-hidden`) or real native `inert` marked this element hidden/non-interactive. */
+function isMarkedInert(element: Element): boolean {
+  return element.hasAttribute("inert") || element.getAttribute("aria-hidden") === "true";
+}
+
+describe("ReportOneEditorOverlay — modal background isolation (Phase 3, useModalInertBackground)", () => {
+  it("makes background app content (RTL's own render container) inert while open", () => {
+    const { container } = render(<ReportOneEditorOverlay draft={draft()} onClose={() => {}} />);
+    expect(isMarkedInert(container)).toBe(true);
+  });
+
+  it("never marks the dialog itself inert", () => {
+    render(<ReportOneEditorOverlay draft={draft()} onClose={() => {}} />);
+    expect(isMarkedInert(screen.getByRole("dialog"))).toBe(false);
+  });
+
+  it("restores the background once unmounted -- no inert state leaks after closing", () => {
+    const { container, unmount } = render(<ReportOneEditorOverlay draft={draft()} onClose={() => {}} />);
+    expect(isMarkedInert(container)).toBe(true);
+    unmount();
+    expect(isMarkedInert(container)).toBe(false);
+  });
+
+  it("existing focus-trap behavior remains intact alongside background isolation", () => {
+    render(<ReportOneEditorOverlay draft={draft()} onClose={() => {}} />);
+    // Focus still moves into the dialog (the close button) on mount.
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "סגירה" }));
+  });
+});

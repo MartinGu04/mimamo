@@ -106,6 +106,32 @@ describe("LoginPage", () => {
   });
 });
 
+describe("LoginPage — skip to main content / main landmark (Phase 3, IS 5568/WCAG 2.4.1 Bypass Blocks)", () => {
+  it("renders a Hebrew skip link as the first focusable element, pointing at a real <main> landmark", async () => {
+    const element = await LoginPage({ searchParams: searchParams() });
+    renderWithTheme(element);
+
+    const skipLink = screen.getByRole("link", { name: "דלג לתוכן הראשי" });
+    const focusable = document.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    );
+    expect(focusable[0]).toBe(skipLink);
+
+    const main = screen.getByRole("main");
+    expect(skipLink).toHaveAttribute("href", "#main-content");
+    expect(main).toHaveAttribute("id", "main-content");
+    expect(main).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("renders exactly one skip link and one main landmark", async () => {
+    const element = await LoginPage({ searchParams: searchParams() });
+    renderWithTheme(element);
+
+    expect(screen.getAllByRole("link", { name: "דלג לתוכן הראשי" })).toHaveLength(1);
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+  });
+});
+
 describe("LoginPage — brand identity", () => {
   it("renders the product name in the header mark", async () => {
     const element = await LoginPage({ searchParams: searchParams() });

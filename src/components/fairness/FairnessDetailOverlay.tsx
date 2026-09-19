@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { X } from "lucide-react";
+import { useModalInertBackground } from "@/components/ui/useModalInertBackground";
 
 /** No real external store to watch -- `subscribe` never actually fires. Existing purely so `getSnapshot` (`true`, client) differs from `getServerSnapshot` (`false`, server/first hydration pass), which is what makes `useSyncExternalStore` schedule exactly one re-render right after hydration -- the standard SSR-safe "has this component mounted on the client yet" primitive, and (unlike `useEffect(() => setState(true), [])`) not a lint-flagged setState-in-effect. */
 function useMounted(): boolean {
@@ -71,6 +72,14 @@ export function FairnessDetailOverlay({ closeHref, title, children }: FairnessDe
   const closeButtonRef = useRef<HTMLAnchorElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const mounted = useMounted();
+  const portalRootRef = useRef<HTMLDivElement>(null);
+
+  // Background app content (everything else under `document.body`) must be
+  // inert for AT browse mode/Tab order while this true modal is open --
+  // `mounted` is exactly "this modal is currently open" here, since the
+  // parent only ever mounts this component while a person is selected (see
+  // this component's own docstring).
+  useModalInertBackground(mounted, portalRootRef);
 
   // Depends on `mounted`, not `[]`: the dialog (and `closeButtonRef`'s real
   // DOM node) only exists in the tree from the render AFTER `mounted` flips
@@ -123,7 +132,7 @@ export function FairnessDetailOverlay({ closeHref, title, children }: FairnessDe
   if (!mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center lg:items-stretch lg:justify-end">
+    <div ref={portalRootRef} className="fixed inset-0 z-50 flex items-end justify-center lg:items-stretch lg:justify-end">
       <div
         role="presentation"
         aria-hidden="true"

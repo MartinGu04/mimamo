@@ -6,6 +6,7 @@ import { NotificationCenterNav } from "@/components/notifications/NotificationCe
 import { NotificationHistorySection } from "@/components/notifications/NotificationHistorySection";
 import { NotificationScheduleSection } from "@/components/notifications/NotificationScheduleSection";
 import {
+  NOTIFICATION_CENTER_SECTION_LABEL,
   notificationCenterSectionNeedsRosterAndAdoption,
   parseNotificationCenterSectionParam,
 } from "@/lib/presentation/notificationCenterUrl";
@@ -88,6 +89,18 @@ export default async function NotificationCenterPage({ searchParams }: Notificat
     <div className="flex flex-col gap-6">
       <NotificationCenterHeader />
       <NotificationCenterNav active={section} />
+
+      {/*
+       * "מרכז התראות"'s own `<h1>` (NotificationCenterHeader) stays put --
+       * each section/tab below still needs its OWN `<h2>` ahead of its own
+       * `<h3>`/`<h4>` content (the composer's "📣 שליחת התראה", "📌 התראות
+       * קבועות" and its two `<h4>` subgroups, etc.), or those would skip
+       * straight from the page's h1 to an h3/h4. `sr-only`: the tab strip
+       * right above already shows this section's name visibly, so this is
+       * a heading for the accessibility tree only, not a second visible
+       * title -- current appearance is unaffected.
+       */}
+      <h2 className="sr-only">{NOTIFICATION_CENTER_SECTION_LABEL[section]}</h2>
 
       {section === "now" ? <ManagerBroadcastComposer mode="now" roster={roster} adoptionPeople={adoptionPeople} /> : null}
 
