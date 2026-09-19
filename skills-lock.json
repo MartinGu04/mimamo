@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "israeli-accessibility-compliance": {
+      "source": "skills-il/localization",
+      "sourceType": "github",
+      "computedHash": "d27bf947995ecff9d978951b12b3f983a064c3d0a28771687755b16bdaab9d20"
+    }
+  }
+}
