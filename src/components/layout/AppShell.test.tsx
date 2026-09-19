@@ -289,6 +289,47 @@ describe("AppShell — theme control", () => {
   });
 });
 
+describe("AppShell — skip to main content (Phase 3, IS 5568/WCAG 2.4.1 Bypass Blocks)", () => {
+  it("renders a Hebrew skip link, hidden until focused, as the very first focusable element", () => {
+    renderWithTheme(
+      <AppShell person={{ name: "דני בדיקה", isManager: false, avatarUrl: null, userId: "user-test-1" }}>
+        <div>content</div>
+      </AppShell>,
+    );
+    const skipLink = screen.getByRole("link", { name: "דלג לתוכן הראשי" });
+    expect(skipLink).toBeInTheDocument();
+    expect(skipLink.className).toMatch(/sr-only/);
+
+    const focusable = document.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    );
+    expect(focusable[0]).toBe(skipLink);
+  });
+
+  it("points at the real main landmark, which carries a stable id and is programmatically focusable", () => {
+    renderWithTheme(
+      <AppShell person={{ name: "דני בדיקה", isManager: false, avatarUrl: null, userId: "user-test-1" }}>
+        <div>content</div>
+      </AppShell>,
+    );
+    const skipLink = screen.getByRole("link", { name: "דלג לתוכן הראשי" });
+    const main = document.getElementById("main-content");
+    expect(main).not.toBeNull();
+    expect(main?.tagName).toBe("MAIN");
+    expect(skipLink).toHaveAttribute("href", "#main-content");
+    expect(main).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("never renders a second skip link -- pages inside the shell must not duplicate it", () => {
+    renderWithTheme(
+      <AppShell person={{ name: "דני בדיקה", isManager: false, avatarUrl: null, userId: "user-test-1" }}>
+        <div>content</div>
+      </AppShell>,
+    );
+    expect(screen.getAllByRole("link", { name: "דלג לתוכן הראשי" })).toHaveLength(1);
+  });
+});
+
 describe("AppShell — avatarUrl (presentation-only Google account photo)", () => {
   it("passes the same avatarUrl to both the desktop IdentityFooter and the mobile profile menu's Avatar", () => {
     const { container } = renderWithTheme(

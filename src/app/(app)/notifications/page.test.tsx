@@ -175,3 +175,18 @@ describe("NotificationCenterPage — data threading", () => {
     expect(getRequestNotificationCenterContext).toHaveBeenCalledWith(false);
   });
 });
+
+describe("NotificationCenterPage — heading hierarchy (Phase 3 fix: h1 -> h3/h4 per section)", () => {
+  it.each([
+    ["now" as const, "עכשיו"],
+    ["schedule" as const, "תזמון"],
+    ["history" as const, "היסטוריה"],
+    ["fixed" as const, "קבועות"],
+  ])("section=%s exposes an h2 matching the active tab, under the page's own h1", async (section, label) => {
+    getRequestNotificationCenterContext.mockResolvedValue(okResult());
+    await renderPage(section === "now" ? {} : { section });
+
+    expect(screen.getByRole("heading", { level: 1, name: "מרכז התראות" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: label })).toBeInTheDocument();
+  });
+});

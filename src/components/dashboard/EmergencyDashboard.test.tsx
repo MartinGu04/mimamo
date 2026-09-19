@@ -89,3 +89,20 @@ describe("EmergencyDashboard", () => {
     expect(screen.getByText(/בעיות בנתוני סידור החירום/)).toBeInTheDocument();
   });
 });
+
+describe("EmergencyDashboard — heading hierarchy (Phase 3 fix)", () => {
+  it("exposes exactly one real page-level h1, with shift-card titles as h2 and 'מי איתי' as h3 -- no skipped level", () => {
+    render(
+      <EmergencyDashboard
+        model={model({
+          current: { date: "2026-08-26", period: "day", ownDesks: ["הוגוורט"], startMinute: 480, endMinute: 1200, roster: [] },
+        })}
+      />,
+    );
+
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole("heading", { level: 2, name: "המשמרת שלי עכשיו" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "המשמרת הבאה שלי" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "מי איתי" })).toBeInTheDocument();
+  });
+});

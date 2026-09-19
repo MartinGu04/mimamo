@@ -58,6 +58,31 @@ describe("ManagerRecentBroadcastsSection", () => {
     expect(screen.getByText(/דני מנהל/)).toBeInTheDocument();
   });
 
+  it("renders 'נשלחו לאחרונה' as an h3, not an h4 (Phase 3 heading-hierarchy fix: this now nests under the היסטוריה tab's own h2)", async () => {
+    getRecentManagerBroadcastsAction.mockResolvedValue({
+      ok: true,
+      items: [
+        {
+          id: "batch_1",
+          title: "עדכון",
+          body: "תוכן",
+          audienceKind: "everyone",
+          createdByPersonName: "דני מנהל",
+          createdAt: "2026-08-21T08:00:00.000Z",
+          resolvedRecipientCount: 5,
+          pushCapableCount: 4,
+          inboxOnlyCount: 1,
+          unresolvedCount: 0,
+        },
+      ],
+    });
+    render(<ManagerRecentBroadcastsSection reloadToken={0} pollWhileActive={false} />);
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { level: 3, name: "נשלחו לאחרונה" })).toBeInTheDocument(),
+    );
+  });
+
   it("re-fetches when reloadToken changes (e.g. a scheduled broadcast just dispatched via 'שלח עכשיו')", async () => {
     getRecentManagerBroadcastsAction.mockResolvedValue({ ok: true, items: [] });
     const { rerender } = render(<ManagerRecentBroadcastsSection reloadToken={0} pollWhileActive={false} />);

@@ -178,3 +178,35 @@ describe("ShootingRangeManagerPanel -- accessible status announcements", () => {
     expect(screen.getByRole("status")).toHaveTextContent("שובצו 1 אנשים.");
   });
 });
+
+describe("ShootingRangeManagerPanel — heading hierarchy (Phase 3 fix: pending-confirmation panel was h1 -> h3)", () => {
+  it("renders the pending-confirmation panel's title as an h2, alongside the other top-level h2 sections", () => {
+    const rows = [
+      row({
+        personId: "p1",
+        personName: "בדיקה",
+        plannedRange: { rangeDate: "2026-09-01", status: "pending_confirmation" },
+      }),
+    ];
+
+    render(
+      <ShootingRangeManagerPanel
+        summary={{ ...SUMMARY, totalCount: 1 }}
+        rows={rows}
+        pendingSelfReports={[
+          { id: "sr1", personId: "p1", personName: "בדיקה", performedOn: "2026-08-01", notes: null, createdAt: "2026-08-01T00:00:00.000Z" },
+        ]}
+        roster={[]}
+        unresolvedSheetRowCount={0}
+        unresolvedSheetRowNames={[]}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { level: 2, name: /🎯 מטווח/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "דיווחים ממתינים לאישור" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "אנשי צוות" })).toBeInTheDocument();
+    // "קבע"/"אחמ״שים"/"טכנאים" role-group subheadings stay h3, correctly
+    // nested under "אנשי צוות" -- never promoted alongside the h2s above.
+    expect(screen.getByRole("heading", { level: 3, name: "טכנאים" })).toBeInTheDocument();
+  });
+});

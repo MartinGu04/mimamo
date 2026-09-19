@@ -6,6 +6,7 @@ import { Check, Copy, RotateCcw, X } from "lucide-react";
 import { reportOnePersonHasMeaningfulTomorrowEvent, type ReportOneDraft, type ReportOnePerson } from "@/lib/domain/reportOne";
 import { formatReportOneText, formatReportOneTitle } from "@/lib/presentation/reportOneFormat";
 import { setReserveInclusionPreferenceAction } from "@/lib/reportOne/actions";
+import { useModalInertBackground } from "@/components/ui/useModalInertBackground";
 
 interface ReportOneEditorOverlayProps {
   draft: ReportOneDraft;
@@ -85,6 +86,13 @@ export function ReportOneEditorOverlay({ draft, reserveInclusionByPersonId = {},
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const portalRootRef = useRef<HTMLDivElement>(null);
+
+  // Same "background app content must be inert while this true modal is
+  // open" contract as `FairnessDetailOverlay` -- `mounted` is exactly "this
+  // modal is currently open" here too, since the parent only ever mounts
+  // this component while it's meant to be shown.
+  useModalInertBackground(mounted, portalRootRef);
 
   const generatedStatusById = useMemo(() => buildGeneratedStatusMap(draft), [draft]);
   const [edits, setEdits] = useState<Record<string, string>>(generatedStatusById);
@@ -228,7 +236,7 @@ export function ReportOneEditorOverlay({ draft, reserveInclusionByPersonId = {},
   if (!mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center lg:items-center">
+    <div ref={portalRootRef} className="fixed inset-0 z-50 flex items-end justify-center lg:items-center">
       <div role="presentation" aria-hidden="true" className="glass-scrim absolute inset-0 bg-black/40" onClick={onClose} />
 
       <div

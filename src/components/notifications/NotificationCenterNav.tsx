@@ -1,16 +1,17 @@
 import { TabLink } from "@/components/ui/TabLink";
-import { buildNotificationCenterHref, type NotificationCenterSection } from "@/lib/presentation/notificationCenterUrl";
+import {
+  NOTIFICATION_CENTER_SECTION_LABEL,
+  buildNotificationCenterHref,
+  type NotificationCenterSection,
+} from "@/lib/presentation/notificationCenterUrl";
 
 interface NotificationCenterNavProps {
   active: NotificationCenterSection;
 }
 
-const SECTION_OPTIONS: { key: NotificationCenterSection; label: string }[] = [
-  { key: "now", label: "עכשיו" },
-  { key: "schedule", label: "תזמון" },
-  { key: "history", label: "היסטוריה" },
-  { key: "fixed", label: "קבועות" },
-];
+const SECTION_OPTIONS: { key: NotificationCenterSection; label: string }[] = (
+  ["now", "schedule", "history", "fixed"] as const
+).map((key) => ({ key, label: NOTIFICATION_CENTER_SECTION_LABEL[key] }));
 
 const TAB_BASE =
   "shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";

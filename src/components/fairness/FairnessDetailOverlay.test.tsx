@@ -73,3 +73,32 @@ describe("FairnessDetailOverlay — accessible dialog semantics", () => {
     expect(document.activeElement).toBe(innerButton);
   });
 });
+
+/** True whether the fallback (`aria-hidden`) or real native `inert` marked this element hidden/non-interactive. */
+function isMarkedInert(element: Element): boolean {
+  return element.hasAttribute("inert") || element.getAttribute("aria-hidden") === "true";
+}
+
+describe("FairnessDetailOverlay — modal background isolation (Phase 3, useModalInertBackground)", () => {
+  it("makes background app content (RTL's own render container) inert while open", () => {
+    const { container } = renderOverlay();
+    expect(isMarkedInert(container)).toBe(true);
+  });
+
+  it("never marks the dialog itself inert", () => {
+    renderOverlay();
+    expect(isMarkedInert(screen.getByRole("dialog"))).toBe(false);
+  });
+
+  it("restores the background once unmounted -- no inert state leaks after closing", () => {
+    const { container, unmount } = renderOverlay();
+    expect(isMarkedInert(container)).toBe(true);
+    unmount();
+    expect(isMarkedInert(container)).toBe(false);
+  });
+
+  it("existing focus-trap behavior remains intact alongside background isolation", () => {
+    renderOverlay();
+    expect(document.activeElement).toBe(screen.getByRole("link", { name: "סגירה" }));
+  });
+});
