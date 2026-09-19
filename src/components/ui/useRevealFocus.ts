@@ -13,9 +13,9 @@ interface UseRevealFocusOptions {
    * rendered -- hidden for as long as `revealed` is true, as with
    * `CalendarSyncSection`'s reset/disable buttons and
    * `EmergencyModeControlClient`'s activate/deactivate buttons. A snapshot
-   * of this REF OBJECT (not its `.current` node) is taken the moment
-   * `revealed` becomes true, so a caller with more than one possible
-   * trigger can point at the right one per reveal; its `.current` is then
+   * of this REF OBJECT (not its `.current` node) is taken once `revealed`
+   * becomes true, so a caller with more than one possible trigger can
+   * point at the right one per reveal; its `.current` is then
    * read fresh at restore time, after the trigger has been re-mounted as a
    * brand-new DOM node in the very same commit that hid the confirmation --
    * never the stale node that was there before, which by then has already
@@ -63,30 +63,21 @@ function isFocusable(el: HTMLElement): boolean {
 export function useRevealFocus({ revealed, onRevealFocusRef, restoreFocusRef, fallbackFocusRef }: UseRevealFocusOptions): void {
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const capturedRestoreRef = useRef<RefObject<HTMLElement | null> | undefined>(undefined);
-  const wasRevealedRef = useRef(false);
-
-  // Captured synchronously during render, the instant `revealed` flips to
-  // true -- NOT in an effect. Both `CalendarSyncSection` and
-  // `EmergencyModeControlClient` hide their own trigger button the moment a
-  // confirmation appears, so by the time any `useEffect` could run (after
-  // commit), that trigger has already been unmounted and the browser has
-  // already reset `document.activeElement` to `<body>` as a side effect of
-  // the removal -- capturing it there would silently remember `<body>`
-  // instead of the real trigger. Render runs before commit, while the
-  // previous DOM (trigger still mounted and focused) is still what's on
-  // screen, so this is the only point that still sees the real answer.
-  // `restoreFocusRef` itself (the ref OBJECT, not its node) is snapshotted
-  // here too, for the same reason `previousFocusRef`'s node capture must
-  // happen now: by restore time the caller's own JSX may already reflect a
-  // different (or no) trigger.
-  if (revealed && !wasRevealedRef.current) {
-    previousFocusRef.current = document.activeElement as HTMLElement | null;
-    capturedRestoreRef.current = restoreFocusRef;
-  }
-  wasRevealedRef.current = revealed;
 
   useEffect(() => {
     if (revealed) {
+      // `document.activeElement` is read here, in the effect that runs
+      // once this reveal has committed -- for a caller whose trigger stays
+      // mounted throughout (e.g. `NotificationBell`'s bell button), that's
+      // still genuinely the trigger. For `CalendarSyncSection`/
+      // `EmergencyModeControlClient`, whose own trigger is hidden the
+      // moment a confirmation appears, this may already read `<body>` (the
+      // trigger's removal blurs it before this effect can run) -- that's
+      // fine, since those callers pass `restoreFocusRef` instead, which
+      // this snapshots as a REF OBJECT (not its `.current` node) rather
+      // than relying on `document.activeElement` timing at all.
+      previousFocusRef.current = document.activeElement as HTMLElement | null;
+      capturedRestoreRef.current = restoreFocusRef;
       onRevealFocusRef.current?.focus();
       return;
     }
@@ -117,10 +108,9 @@ export function useRevealFocus({ revealed, onRevealFocusRef, restoreFocusRef, fa
     } else {
       fallbackFocusRef?.current?.focus();
     }
-    // `onRevealFocusRef`/`fallbackFocusRef` are stable ref objects passed by
-    // the caller (always from `useRef()`) -- included for exhaustive-deps
-    // correctness, never causing an extra run since their identity never
-    // changes across renders. `restoreFocusRef` is read via the render-phase
-    // snapshot above instead, deliberately not a dependency here.
-  }, [revealed, onRevealFocusRef, fallbackFocusRef]);
+    // `onRevealFocusRef`/`restoreFocusRef`/`fallbackFocusRef` are stable ref
+    // objects passed by the caller (always from `useRef()`) -- included for
+    // exhaustive-deps correctness, never causing an extra run since their
+    // identity never changes across renders.
+  }, [revealed, onRevealFocusRef, restoreFocusRef, fallbackFocusRef]);
 }
