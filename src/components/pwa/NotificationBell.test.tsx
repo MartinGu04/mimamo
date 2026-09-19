@@ -340,6 +340,31 @@ describe("NotificationBell — סמן הכל כנקרא / נקה התראות", 
   });
 });
 
+describe("NotificationBell — touch-target hardening (Phase 6)", () => {
+  it.each(["sidebar", "mobile", "shell"] as const)("the %s trigger keeps its visible size and gets a vertical-only expanded hit area", async (variant) => {
+    render(<NotificationBell variant={variant} userId={TEST_USER_ID} />);
+    await act(async () => {});
+    const trigger = screen.getByRole("button", { name: /התראות/ });
+    // Never expanded sideways -- this trigger always sits in a tight
+    // horizontal icon row (mobile top bar / shell utility bar / sidebar top
+    // row), so a sideways expansion would overlap its neighbors.
+    expect(trigger.className).not.toMatch(/after:-(start|end|left|right|inset-x)-/);
+    expect(trigger.className).toContain("after:-top-2");
+    expect(trigger.className).toContain("after:-bottom-2");
+  });
+
+  it("the settings gear and back-to-inbox buttons get a fully expanded invisible hit area", async () => {
+    removeBrowserPushEnvironment();
+    await openPanel();
+    const gear = await screen.findByRole("button", { name: "הגדרות התראות" });
+    expect(gear.className).toContain("after:-inset-1.5");
+
+    fireEvent.click(gear);
+    const back = await screen.findByRole("button", { name: "חזרה להתראות" });
+    expect(back.className).toContain("after:-inset-1.5");
+  });
+});
+
 describe("NotificationBell — gear opens push settings", () => {
   it("clicking the gear switches to the settings view", async () => {
     removeBrowserPushEnvironment();

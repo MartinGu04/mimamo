@@ -120,6 +120,13 @@ describe("ShiftFairnessCardInfo", () => {
     expect(ancestorClick).not.toHaveBeenCalled();
   });
 
+  it("keeps its visible 28px size and gets a fully expanded invisible hit area (Phase 6)", () => {
+    render(<ShiftFairnessCardInfo />);
+    const trigger = screen.getByRole("button", { name: "הסבר על מדדי הכרטיס" });
+    expect(trigger.className).toContain("h-7 w-7");
+    expect(trigger.className).toContain("after:-inset-1.5");
+  });
+
   it("clicking inside the open panel also never bubbles to an ancestor click handler", () => {
     const ancestorClick = vi.fn();
     render(

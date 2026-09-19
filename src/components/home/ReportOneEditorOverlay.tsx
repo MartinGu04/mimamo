@@ -7,6 +7,7 @@ import { reportOnePersonHasMeaningfulTomorrowEvent, type ReportOneDraft, type Re
 import { formatReportOneText, formatReportOneTitle } from "@/lib/presentation/reportOneFormat";
 import { setReserveInclusionPreferenceAction } from "@/lib/reportOne/actions";
 import { useModalInertBackground } from "@/components/ui/useModalInertBackground";
+import { EXPAND_HIT_AREA_CLASS } from "@/components/ui/hitArea";
 
 interface ReportOneEditorOverlayProps {
   draft: ReportOneDraft;
@@ -254,7 +255,7 @@ export function ReportOneEditorOverlay({ draft, reserveInclusionByPersonId = {},
             type="button"
             onClick={onClose}
             aria-label="סגירה"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors duration-150 hover:bg-overlay-soft hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors duration-150 hover:bg-overlay-soft hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${EXPAND_HIT_AREA_CLASS}`}
           >
             <X className="h-4 w-4" aria-hidden="true" strokeWidth={1.75} />
           </button>

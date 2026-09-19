@@ -12,6 +12,7 @@ import { parseSearchIntent } from "@/lib/search/parseSearchIntent";
 import { resolveSearchIntent, type SharedShiftOverrides } from "@/lib/search/resolveSearchIntent";
 import type { GlobalSearchResult, SearchShiftPeriod, SharedShiftSearchResult } from "@/lib/search/types";
 import { useFocusTrap } from "@/components/ui/useFocusTrap";
+import { EXPAND_HIT_AREA_CLASS } from "@/components/ui/hitArea";
 
 interface CommandPaletteProps {
   open: boolean;
@@ -183,7 +184,7 @@ export function CommandPalette({ open, onClose, model }: CommandPaletteProps) {
             type="button"
             onClick={onClose}
             aria-label="סגירת חיפוש"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted transition-colors duration-150 hover:bg-overlay-soft hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className={`relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted transition-colors duration-150 hover:bg-overlay-soft hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${EXPAND_HIT_AREA_CLASS}`}
           >
             <X className="h-4 w-4" aria-hidden="true" strokeWidth={1.75} />
           </button>

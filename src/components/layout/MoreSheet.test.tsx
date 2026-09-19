@@ -40,6 +40,13 @@ describe("MoreSheet -- modal focus behavior", () => {
     expect(document.activeElement).toBe(closeButton());
   });
 
+  it("the close button keeps its visible 32px size and gets a fully expanded invisible hit area (Phase 6)", () => {
+    render(<Harness />);
+    fireEvent.click(trigger());
+    expect(closeButton().className).toContain("h-8 w-8");
+    expect(closeButton().className).toContain("after:-inset-1.5");
+  });
+
   it("Escape closes the sheet", () => {
     render(<Harness />);
     fireEvent.click(trigger());

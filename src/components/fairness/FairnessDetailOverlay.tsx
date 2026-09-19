@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { useModalInertBackground } from "@/components/ui/useModalInertBackground";
+import { EXPAND_HIT_AREA_CLASS } from "@/components/ui/hitArea";
 
 /** No real external store to watch -- `subscribe` never actually fires. Existing purely so `getSnapshot` (`true`, client) differs from `getServerSnapshot` (`false`, server/first hydration pass), which is what makes `useSyncExternalStore` schedule exactly one re-render right after hydration -- the standard SSR-safe "has this component mounted on the client yet" primitive, and (unlike `useEffect(() => setState(true), [])`) not a lint-flagged setState-in-effect. */
 function useMounted(): boolean {
@@ -154,7 +155,7 @@ export function FairnessDetailOverlay({ closeHref, title, children }: FairnessDe
             ref={closeButtonRef}
             href={closeHref}
             aria-label="סגירה"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors duration-150 hover:bg-overlay-soft hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors duration-150 hover:bg-overlay-soft hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${EXPAND_HIT_AREA_CLASS}`}
           >
             <X className="h-4 w-4" aria-hidden="true" strokeWidth={1.75} />
           </Link>
