@@ -53,7 +53,14 @@ export function GoogleSignInButton({ className = "" }: GoogleSignInButtonProps) 
         ) : (
           <>
             <GoogleGlyph className="h-5 w-5 xl:h-6 xl:w-6" />
-            <span>המשך עם Google</span>
+            {/* "Google" marked `lang="en"` so Hebrew screen reader TTS
+                switches pronunciation for this one English word instead of
+                reading it with Hebrew letter-name phonetics -- the rest of
+                the label stays plain Hebrew. */}
+            <span>
+              {"המשך עם "}
+              <span lang="en">Google</span>
+            </span>
           </>
         )}
       </button>

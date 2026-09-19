@@ -11,6 +11,23 @@ const { ManagerRecentBroadcastsSection } = await import("./ManagerRecentBroadcas
 
 const CLEARED_BEFORE_STORAGE_KEY = "mi-ma-mo:manager-recent-broadcasts:cleared-before";
 
+/**
+ * The timing row's date/time chunks each render inside their own
+ * `dir="ltr"` span (bidi isolation, Phase 4), so the row's full text is
+ * split across several elements -- a plain `getByText(exactString)` no
+ * longer matches (it only matches a single element's own text node). This
+ * recipe (straight from testing-library's own docs for text broken up by
+ * markup) matches the element whose OWN full `textContent` equals `text`
+ * while none of its children do, so it still finds exactly the one `<p>`
+ * that renders the whole row.
+ */
+function getByFullText(text: string) {
+  return screen.getByText((_content, element) => {
+    if (!element || element.textContent !== text) return false;
+    return Array.from(element.children).every((child) => child.textContent !== text);
+  });
+}
+
 afterEach(() => {
   cleanup();
   getRecentManagerBroadcastsAction.mockReset();
@@ -572,7 +589,7 @@ describe("ManagerRecentBroadcastsSection -- compact timing row", () => {
     });
     render(<ManagerRecentBroadcastsSection reloadToken={0} pollWhileActive={false} />);
 
-    await waitFor(() => expect(screen.getByText("נוצר 22/08 21:45 · נשלח 22/08 21:45 · 2 שנ׳")).toBeInTheDocument());
+    await waitFor(() => expect(getByFullText("נוצר 22/08 21:45 · נשלח 22/08 21:45 · 2 שנ׳")).toBeInTheDocument());
   });
 
   it("normally scheduled broadcast: 'נוצר DD/MM HH:mm · תוכנן ל־DD/MM HH:mm · נשלח DD/MM HH:mm · Ns', latency measured from scheduled_for", async () => {
@@ -594,7 +611,7 @@ describe("ManagerRecentBroadcastsSection -- compact timing row", () => {
     render(<ManagerRecentBroadcastsSection reloadToken={0} pollWhileActive={false} />);
 
     await waitFor(() =>
-      expect(screen.getByText("נוצר 22/08 20:10 · תוכנן ל־22/08 21:46 · נשלח 22/08 21:46 · 4 שנ׳")).toBeInTheDocument(),
+      expect(getByFullText("נוצר 22/08 20:10 · תוכנן ל־22/08 21:46 · נשלח 22/08 21:46 · 4 שנ׳")).toBeInTheDocument(),
     );
   });
 
@@ -617,7 +634,7 @@ describe("ManagerRecentBroadcastsSection -- compact timing row", () => {
     render(<ManagerRecentBroadcastsSection reloadToken={0} pollWhileActive={false} />);
 
     await waitFor(() =>
-      expect(screen.getByText("נוצר 22/08 20:10 · תוכנן ל־22/08 22:30 · נשלח 22/08 21:46 · 3 שנ׳")).toBeInTheDocument(),
+      expect(getByFullText("נוצר 22/08 20:10 · תוכנן ל־22/08 22:30 · נשלח 22/08 21:46 · 3 שנ׳")).toBeInTheDocument(),
     );
   });
 
@@ -640,7 +657,7 @@ describe("ManagerRecentBroadcastsSection -- compact timing row", () => {
     render(<ManagerRecentBroadcastsSection reloadToken={0} pollWhileActive={false} />);
 
     await waitFor(() =>
-      expect(screen.getByText("נוצר 22/08 23:58 · תוכנן ל־23/08 00:10 · נשלח 23/08 00:10 · 9 שנ׳")).toBeInTheDocument(),
+      expect(getByFullText("נוצר 22/08 23:58 · תוכנן ל־23/08 00:10 · נשלח 23/08 00:10 · 9 שנ׳")).toBeInTheDocument(),
     );
   });
 

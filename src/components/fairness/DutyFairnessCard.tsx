@@ -92,8 +92,35 @@ export function DutyFairnessCard({ view }: { view: DutyFairnessCardView }) {
 
       {view.liveDutyLabel ? (
         <div className="mt-2 flex flex-col gap-0.5 rounded-lg bg-status-above-soft px-2.5 py-2" data-testid="metric-duty-live">
-          <span className="text-xs font-medium text-status-above">● LIVE · {view.liveDutyLabel}</span>
-          <span className="text-[11px] text-muted-2">{view.liveDutySubLabel}</span>
+          {/* Both lines on this LIVE strip measured under WCAG AA 4.5:1 for
+              normal text against the actual rendered `bg-status-above-soft`
+              in LIGHT theme specifically (dark theme was already fine at
+              full strength):
+                - primary (`text-status-above` = `--warning`, unchanged):
+                  light 4.14:1 (fail), dark 7.16:1 (pass)
+                - secondary (`text-muted`, unchanged): light 4.49:1 (fail,
+                  just short), dark 5.12:1 (pass)
+              Darkening the shared `--warning`/`--muted` tokens themselves
+              would ripple into every other consumer of `bg-status-above-soft`/
+              `text-status-above`/`text-muted` app-wide, so this darkens ONLY
+              the light-theme value of these two specific spans, scoped to
+              this one card, via CSS `light-dark()` (this app already sets
+              `color-scheme: light`/`dark` per theme, so it resolves exactly
+              like every other themed token here) -- the dark-theme half of
+              each pair is the untouched `var(--status-above)`/`var(--muted)`,
+              so dark rendering is byte-identical to before. Both new light
+              values keep the same hue family (amber vs. neutral gray, same
+              distinction between the colored primary line and the quieter
+              secondary one) and clear 4.5:1 with a real margin, not a
+              hair over it:
+                - primary light `#9e4908` (darkened from `--warning`
+                  `#b45309`): 5.08:1
+                - secondary light `#57626e` (darkened from `--muted`
+                  `#5f6b78`): 5.13:1 */}
+          <span className="text-xs font-medium text-[light-dark(#9e4908,var(--status-above))]">
+            ● LIVE · {view.liveDutyLabel}
+          </span>
+          <span className="text-[11px] text-[light-dark(#57626e,var(--muted))]">{view.liveDutySubLabel}</span>
         </div>
       ) : null}
 

@@ -69,7 +69,7 @@ function SetupItemRow({ icon: Icon, title, description, actionLabel, onAction, h
         {actionLabel && href ? (
           <Link
             href={href}
-            className="mt-2 inline-flex items-center rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-strong"
+            className="mt-2 inline-flex items-center rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {actionLabel}
           </Link>
@@ -78,7 +78,7 @@ function SetupItemRow({ icon: Icon, title, description, actionLabel, onAction, h
           <button
             type="button"
             onClick={onAction}
-            className="mt-2 inline-flex items-center rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-strong"
+            className="mt-2 inline-flex items-center rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors duration-200 hover:bg-primary-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {actionLabel}
           </button>

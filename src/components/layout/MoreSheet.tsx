@@ -74,7 +74,7 @@ export function MoreSheet({ open, onClose, isManager }: MoreSheetProps) {
           <Link
             href="/shooting-ranges"
             onClick={onClose}
-            className="flex min-h-[48px] items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium text-foreground transition-colors duration-150 hover:bg-overlay-soft"
+            className="flex min-h-[48px] items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium text-foreground transition-colors duration-150 hover:bg-overlay-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <Target className="h-5 w-5 text-muted" aria-hidden="true" strokeWidth={1.75} />
             מטווחים
@@ -83,7 +83,7 @@ export function MoreSheet({ open, onClose, isManager }: MoreSheetProps) {
           <Link
             href="/countdown"
             onClick={onClose}
-            className="flex min-h-[48px] items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium text-foreground transition-colors duration-150 hover:bg-overlay-soft"
+            className="flex min-h-[48px] items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium text-foreground transition-colors duration-150 hover:bg-overlay-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <Hourglass className="h-5 w-5 text-muted" aria-hidden="true" strokeWidth={1.75} />
             עד מתי???
@@ -93,7 +93,7 @@ export function MoreSheet({ open, onClose, isManager }: MoreSheetProps) {
             <Link
               href="/manager"
               onClick={onClose}
-              className="flex min-h-[48px] items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium text-foreground transition-colors duration-150 hover:bg-overlay-soft"
+              className="flex min-h-[48px] items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium text-foreground transition-colors duration-150 hover:bg-overlay-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               <UserCog className="h-5 w-5 text-muted" aria-hidden="true" strokeWidth={1.75} />
               אזור מנהל
@@ -104,7 +104,7 @@ export function MoreSheet({ open, onClose, isManager }: MoreSheetProps) {
             <Link
               href="/notifications"
               onClick={onClose}
-              className="flex min-h-[48px] items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium text-foreground transition-colors duration-150 hover:bg-overlay-soft"
+              className="flex min-h-[48px] items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium text-foreground transition-colors duration-150 hover:bg-overlay-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               <BellRing className="h-5 w-5 text-muted" aria-hidden="true" strokeWidth={1.75} />
               מרכז התראות

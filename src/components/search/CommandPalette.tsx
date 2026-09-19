@@ -231,7 +231,7 @@ function IdlePane({ onPick }: { onPick: (query: string) => void }) {
             <button
               type="button"
               onClick={() => onPick(example)}
-              className="w-full rounded-xl px-3 py-2 text-start text-sm text-foreground transition-colors duration-150 hover:bg-overlay-soft"
+              className="w-full rounded-xl px-3 py-2 text-start text-sm text-foreground transition-colors duration-150 hover:bg-overlay-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               {example}
             </button>

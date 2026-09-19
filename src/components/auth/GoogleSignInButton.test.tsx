@@ -24,6 +24,13 @@ describe("GoogleSignInButton", () => {
     expect(screen.getByRole("button", { name: "המשך עם Google" })).toBeInTheDocument();
   });
 
+  it('marks the English "Google" fragment with lang="en" for Hebrew screen reader pronunciation, without changing the accessible name', () => {
+    render(<GoogleSignInButton />);
+    const button = screen.getByRole("button", { name: "המשך עם Google" });
+    const englishFragment = button.querySelector('[lang="en"]');
+    expect(englishFragment).toHaveTextContent("Google");
+  });
+
   it("starts the real Google OAuth flow via Supabase on click, preserving redirect/callback behavior", () => {
     render(<GoogleSignInButton />);
     fireEvent.click(screen.getByRole("button", { name: "המשך עם Google" }));

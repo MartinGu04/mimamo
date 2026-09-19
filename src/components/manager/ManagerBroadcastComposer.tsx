@@ -341,7 +341,7 @@ export function ManagerBroadcastComposer({
               role="radio"
               aria-checked={audienceKind === option.value}
               onClick={() => toggleAudience(option.value)}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium ring-1 transition-colors duration-150 ${
+              className={`rounded-full px-3 py-1.5 text-sm font-medium ring-1 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                 audienceKind === option.value
                   ? "bg-primary text-primary-foreground ring-primary"
                   : "bg-overlay-soft text-foreground ring-border hover:bg-overlay-strong"

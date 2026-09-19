@@ -33,7 +33,7 @@ function SignOutMenuItem() {
       role="menuitem"
       disabled={pending}
       aria-busy={pending}
-      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-start text-sm font-medium text-critical transition-colors duration-150 hover:bg-critical/10 disabled:cursor-not-allowed disabled:opacity-70"
+      className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-start text-sm font-medium text-critical transition-colors duration-150 hover:bg-critical/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-critical disabled:cursor-not-allowed disabled:opacity-70"
     >
       {pending ? (
         <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" strokeWidth={1.75} />
@@ -138,7 +138,7 @@ export function MobileProfileMenu({ name, isManager, avatarUrl }: MobileProfileM
             href="/settings"
             role="menuitem"
             onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-overlay-soft"
+            className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-overlay-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <CalendarSync className="h-4 w-4 text-muted" aria-hidden="true" strokeWidth={1.75} />
             סנכרון יומן

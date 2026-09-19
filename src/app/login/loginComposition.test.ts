@@ -77,8 +77,12 @@ describe("Google CTA is a single fixed treatment at every viewport size", () => 
     expect(googleButtonSource).not.toMatch(/lg:text-primary-foreground\b/);
   });
 
-  it('keeps the exact wording "המשך עם Google" and the Google glyph', () => {
-    expect(googleButtonSource).toContain("המשך עם Google");
+  it('keeps the exact wording "המשך עם Google" (accessible name) and the Google glyph', () => {
+    expect(googleButtonSource).toContain("המשך עם");
     expect(googleButtonSource).toContain("GoogleGlyph");
+  });
+
+  it('marks the English "Google" fragment with lang="en" for Hebrew screen reader pronunciation', () => {
+    expect(googleButtonSource).toMatch(/<span lang="en">Google<\/span>/);
   });
 });

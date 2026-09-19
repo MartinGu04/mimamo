@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Panel } from "@/components/ui/Panel";
 import { formatDeliveryDurationSeconds, formatJerusalemDateTime } from "@/lib/notifications/broadcastTiming";
 import { getRecentManagerBroadcastsAction, type RecentManagerBroadcastView } from "@/lib/notifications/manualBroadcastActions";
@@ -155,24 +155,55 @@ function fallbackDeliveryLabel(deliveryState: RecentManagerBroadcastView["delive
  * The latency DURATION (`formatDeliveryDurationSeconds`) is a pure elapsed
  * span, not an instant -- it never carries a date, and is deliberately
  * untouched by this date/time formatting.
+ *
+ * Each `formatJerusalemDateTime` result ("DD/MM HH:mm") is two adjacent
+ * numeric groups with no strong-direction character of its own -- inside
+ * this RTL row the bidi algorithm can reorder them against each other (same
+ * class of risk `TimeRange`/`IssueRow` isolate elsewhere in this app), so
+ * every one of those chunks renders inside its own `dir="ltr"` span. This
+ * returns `ReactNode`, not a plain string, specifically to carry those
+ * isolated spans -- the concatenated text content is byte-identical to the
+ * old plain-string result, so this is a pure rendering change.
  */
-function buildTimingLine(item: RecentManagerBroadcastView): string {
+function TimingLine({ item }: { item: RecentManagerBroadcastView }): ReactNode {
   const createdDisplayIso = item.scheduleCreatedAt ?? item.createdAt;
-  const parts = [`נוצר ${formatJerusalemDateTime(createdDisplayIso)}`];
-  if (item.scheduledFor) parts.push(`תוכנן ל־${formatJerusalemDateTime(item.scheduledFor)}`);
+  const segments: ReactNode[] = [
+    <span key="created">
+      {"נוצר "}
+      <span dir="ltr">{formatJerusalemDateTime(createdDisplayIso)}</span>
+    </span>,
+  ];
+  if (item.scheduledFor) {
+    segments.push(
+      <span key="scheduled">
+        {"תוכנן ל־"}
+        <span dir="ltr">{formatJerusalemDateTime(item.scheduledFor)}</span>
+      </span>,
+    );
+  }
 
   // Loose (`!=`) nullish checks, deliberately: an item shaped by an older
   // caller/fixture that PREDATES these fields has them as `undefined`
   // (missing), not `null` -- must be treated identically to "no data",
   // never mistaken for a truthy `firstSuccessfulPushAt` value.
   if (item.firstSuccessfulPushAt != null && item.deliveryLatencySeconds != null) {
-    parts.push(`נשלח ${formatJerusalemDateTime(item.firstSuccessfulPushAt)}`);
-    parts.push(formatDeliveryDurationSeconds(item.deliveryLatencySeconds));
+    segments.push(
+      <span key="sent">
+        {"נשלח "}
+        <span dir="ltr">{formatJerusalemDateTime(item.firstSuccessfulPushAt)}</span>
+      </span>,
+    );
+    segments.push(<span key="duration">{formatDeliveryDurationSeconds(item.deliveryLatencySeconds)}</span>);
   } else {
-    parts.push(fallbackDeliveryLabel(item.deliveryState));
+    segments.push(<span key="fallback">{fallbackDeliveryLabel(item.deliveryState)}</span>);
   }
 
-  return parts.join(" · ");
+  const nodes: ReactNode[] = [];
+  segments.forEach((segment, index) => {
+    if (index > 0) nodes.push(" · ");
+    nodes.push(segment);
+  });
+  return nodes;
 }
 
 /**
@@ -402,7 +433,9 @@ export function ManagerRecentBroadcastsSection({ reloadToken, pollWhileActive }:
             <p className="mt-0.5 text-xs text-muted">
               {audienceLabel(item)} · נשלח ע״י {item.createdByPersonName}
             </p>
-            <p className="mt-0.5 text-xs text-muted">{buildTimingLine(item)}</p>
+            <p className="mt-0.5 text-xs text-muted">
+              <TimingLine item={item} />
+            </p>
           </li>
         ))}
       </ul>
