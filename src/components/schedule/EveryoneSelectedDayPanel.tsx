@@ -119,9 +119,15 @@ export function EveryoneSelectedDayPanel({ dayMeta, dayView }: EveryoneSelectedD
   const genericSupervisorNames = dayView?.genericSupervisorNames ?? [];
   const genericTechnicianNames = dayView?.genericTechnicianNames ?? [];
   const hasGenericAssignment = genericSupervisorNames.length > 0 || genericTechnicianNames.length > 0;
+  const itemCount = duties.length + absences.length;
 
   return (
     <section aria-label="פרטי היום הנבחר">
+      {/* Same restrained sr-only day-change announcement as `SelectedDayPanel` (Phase 5 remediation) -- see its comment for the full reasoning. */}
+      <p role="status" className="sr-only">
+        {dayMeta.dateLabel}
+        {itemCount > 0 ? `, ${itemCount} תורנויות והיעדרויות` : ""}
+      </p>
       <Panel variant="panel" className={`flex flex-col gap-4 ${SELECTED_DAY_PANEL_MIN_HEIGHT_CLASS}`}>
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <p className="text-base font-semibold text-foreground sm:text-lg">{dayMeta.dateLabel}</p>

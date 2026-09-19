@@ -26,6 +26,26 @@ interface ProgressRingProps {
    * from ever being a source of a hydration mismatch).
    */
   showLiveMarker?: boolean;
+  /**
+   * Accessible name for the ring's `role="progressbar"` (Phase 5
+   * remediation) -- e.g. "כשירות מטווח". Required whenever `progress` is a
+   * real, meaningful value (every current caller); omit only for a purely
+   * decorative ring with nothing to expose. When present, the ring gets
+   * `aria-valuemin=0`/`aria-valuemax=100`/`aria-valuenow` (from `progress`,
+   * always within that declared range since `progress` is clamped first),
+   * and `children` -- the ring's own visual center readout -- is hidden
+   * from assistive tech so it never doubles up with the progressbar's own
+   * announced value.
+   */
+  accessibleLabel?: string;
+  /**
+   * Overrides the value assistive tech announces in place of the raw
+   * percentage `aria-valuenow` implies -- pass a phrase matching what
+   * `children` shows on screen (e.g. "45 ימים עד לפקיעת הכשירות") so the
+   * spoken value is exactly as meaningful as the visible one, never a
+   * bare, less precise percentage.
+   */
+  accessibleValueText?: string;
 }
 
 /**
@@ -45,8 +65,11 @@ export function ProgressRing({
   strokeWidth = 10,
   children,
   showLiveMarker = false,
+  accessibleLabel,
+  accessibleValueText,
 }: ProgressRingProps) {
   const clamped = Math.min(1, Math.max(0, progress));
+  const valueNow = Math.round(clamped * 100);
   const center = size / 2;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -63,7 +86,20 @@ export function ProgressRing({
   const markerY = center + radius * Math.sin(markerAngle);
 
   return (
-    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+    <div
+      className="relative inline-flex items-center justify-center"
+      style={{ width: size, height: size }}
+      {...(accessibleLabel
+        ? {
+            role: "progressbar" as const,
+            "aria-label": accessibleLabel,
+            "aria-valuemin": 0,
+            "aria-valuemax": 100,
+            "aria-valuenow": valueNow,
+            ...(accessibleValueText ? { "aria-valuetext": accessibleValueText } : {}),
+          }
+        : {})}
+    >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90" aria-hidden="true">
         <circle cx={center} cy={center} r={radius} fill="none" strokeWidth={strokeWidth} className="stroke-border" />
         <circle
@@ -90,7 +126,13 @@ export function ProgressRing({
           />
         ) : null}
       </svg>
-      <div className="absolute inset-0 flex items-center justify-center">{children}</div>
+      {/* Hidden from AT exactly when the progressbar role above already
+          announces an equivalent (and, via `accessibleValueText`, more
+          precise) value -- otherwise this visual center readout would be
+          read out a second time as a plain descendant of the progressbar. */}
+      <div className="absolute inset-0 flex items-center justify-center" aria-hidden={accessibleLabel ? "true" : undefined}>
+        {children}
+      </div>
     </div>
   );
 }

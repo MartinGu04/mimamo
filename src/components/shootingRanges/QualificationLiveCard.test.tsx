@@ -212,6 +212,46 @@ describe("QualificationLiveCard", () => {
 
   });
 
+  describe("progressbar accessibility (Phase 5 remediation)", () => {
+    it("exposes the ring as a labeled progressbar with a 0-100 value matching the visual arc", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-08-25T00:00:00.000Z"));
+      render(
+        <QualificationLiveCard
+          {...props({ startInstantIso: "2026-08-10T00:00:00.000Z", expiryInstantIso: "2027-02-10T00:00:00.000Z" })}
+        />,
+      );
+
+      const bar = screen.getByRole("progressbar", { name: "כשירות מטווח" });
+      expect(bar).toHaveAttribute("aria-valuemin", "0");
+      expect(bar).toHaveAttribute("aria-valuemax", "100");
+      const valueNow = Number(bar.getAttribute("aria-valuenow"));
+      expect(valueNow).toBeGreaterThanOrEqual(0);
+      expect(valueNow).toBeLessThanOrEqual(100);
+    });
+
+    it("gives the progressbar an aria-valuetext matching the visible days-remaining readout exactly, not a generic percentage", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-08-25T00:00:00.000Z"));
+      render(<QualificationLiveCard {...props({ expiryInstantIso: "2026-08-30T00:00:00.000Z" })} />);
+
+      expect(screen.getByText("5")).toBeInTheDocument(); // the visible days figure
+      expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuetext", "5 ימים עד לפקיעת הכשירות");
+    });
+
+    it("reflects an expired qualification's aria-valuetext distinctly from a valid one's", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-09-02T00:00:00.000Z"));
+      render(
+        <QualificationLiveCard
+          {...props({ status: "expired", startInstantIso: "2026-03-01T00:00:00.000Z", expiryInstantIso: "2026-09-01T00:00:00.000Z", initialDaysRemaining: -1 })}
+        />,
+      );
+
+      expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuetext", expect.stringContaining("מאז פקיעת הכשירות"));
+    });
+  });
+
   describe("reduced motion leaves the ring value and numeric clock unaffected", () => {
     it("still shows the correct remaining-progress ring and a per-second-ticking clock, with the marker still present and accurate", () => {
       vi.stubGlobal(

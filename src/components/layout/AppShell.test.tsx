@@ -28,13 +28,11 @@ describe("AppShell — mobile identity/sign-out", () => {
     );
     // Only the desktop IdentityFooter's sign-out is visible before the mobile profile menu opens.
     expect(screen.getAllByRole("button", { name: "התנתקות" })).toHaveLength(1);
-    expect(screen.queryByRole("menuitem", { name: "התנתקות" })).toBeNull();
 
     openMobileProfileMenu();
 
-    // Once open, the mobile profile menu's own sign-out (role="menuitem") joins the desktop one (role="button").
-    expect(screen.getAllByRole("button", { name: "התנתקות" })).toHaveLength(1);
-    expect(screen.getByRole("menuitem", { name: "התנתקות" })).toBeInTheDocument();
+    // Once open, the mobile profile menu's own sign-out (a plain button, not a menuitem -- Phase 5 remediation) joins the desktop one.
+    expect(screen.getAllByRole("button", { name: "התנתקות" })).toHaveLength(2);
   });
 
   it("the safe person name is reachable via the mobile profile menu, not permanently in the header", () => {
@@ -56,7 +54,7 @@ describe("AppShell — mobile identity/sign-out", () => {
     expect(screen.getAllByText("מנהל/ת").length).toBeGreaterThan(0);
   });
 
-  it("renders the global Emergency Mode banner when emergencyModeActive is true", () => {
+  it("renders the global Emergency Mode banner when emergencyModeActive is true, as an assertive alert", () => {
     renderWithTheme(
       <AppShell
         person={{ name: "דני בדיקה", isManager: false, avatarUrl: null, userId: "user-test-1" }}
@@ -65,7 +63,17 @@ describe("AppShell — mobile identity/sign-out", () => {
         <div>content</div>
       </AppShell>,
     );
-    expect(screen.getByTestId("emergency-mode-banner")).toBeInTheDocument();
+    const banner = screen.getByTestId("emergency-mode-banner");
+    expect(banner).toBeInTheDocument();
+    // Phase 5 remediation: activation is important/time-sensitive enough
+    // to genuinely warrant an assertive announcement, not a polite one --
+    // see `EmergencyModeBanner`'s own docstring.
+    expect(banner).toHaveAttribute("role", "alert");
+    expect(screen.getByRole("alert")).toBe(banner);
+    // No redundant explicit aria-live/aria-atomic alongside the role --
+    // `role="alert"` already implies both.
+    expect(banner).not.toHaveAttribute("aria-live");
+    expect(banner).not.toHaveAttribute("aria-atomic");
   });
 
   it("does not render the Emergency Mode banner by default / when regular", () => {
@@ -75,6 +83,32 @@ describe("AppShell — mobile identity/sign-out", () => {
       </AppShell>,
     );
     expect(screen.queryByTestId("emergency-mode-banner")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("keeps the SAME banner DOM node across an ordinary rerender while emergency mode stays active -- no remount, so no repeat announcement", () => {
+    const { rerender } = renderWithTheme(
+      <AppShell
+        person={{ name: "דני בדיקה", isManager: false, avatarUrl: null, userId: "user-test-1" }}
+        emergencyModeActive
+      >
+        <div>content</div>
+      </AppShell>,
+    );
+    const before = screen.getByTestId("emergency-mode-banner");
+
+    rerender(
+      <ThemeProvider>
+        <AppShell
+          person={{ name: "דני בדיקה", isManager: false, avatarUrl: null, userId: "user-test-1" }}
+          emergencyModeActive
+        >
+          <div>content</div>
+        </AppShell>
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByTestId("emergency-mode-banner")).toBe(before);
   });
 
   it("never renders an email anywhere in the shell", () => {
@@ -121,10 +155,7 @@ describe("AppShell — sign-out looks destructive", () => {
     );
     openMobileProfileMenu();
 
-    const buttons = [
-      ...screen.getAllByRole("button", { name: "התנתקות" }),
-      ...screen.getAllByRole("menuitem", { name: "התנתקות" }),
-    ];
+    const buttons = screen.getAllByRole("button", { name: "התנתקות" });
     expect(buttons).toHaveLength(2);
     for (const button of buttons) {
       expect(button.className).toMatch(/text-critical/);
@@ -285,7 +316,8 @@ describe("AppShell — theme control", () => {
     expect(screen.getAllByRole("button", { name: "מצב כהה" })).toHaveLength(2);
 
     openMobileProfileMenu();
-    expect(screen.queryByRole("menuitem", { name: /עבור למצב/ })).toBeNull();
+    const panel = screen.getByRole("group", { name: "תפריט פרופיל" });
+    expect(within(panel).queryByRole("button", { name: /עבור למצב/ })).toBeNull();
   });
 });
 

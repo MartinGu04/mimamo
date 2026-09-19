@@ -388,4 +388,37 @@ describe("SelectedDayPanel", () => {
       expect(panel.textContent).toContain("יובל ישראלי — טכנאי יום");
     });
   });
+
+  describe("selected-day change announcement (Phase 5 remediation)", () => {
+    it("announces the new date via a restrained, polite (role=status) sr-only region, mentioning the event count", () => {
+      render(<SelectedDayPanel dayMeta={meta()} events={[shiftEvent(), dutyEvent()]} />);
+      const status = screen.getByRole("status");
+      expect(status).toHaveClass("sr-only");
+      expect(status.textContent).toContain("יום ראשון · 16 באוגוסט · ג׳ באלול תשפ״ו");
+      expect(status.textContent).toContain("2 אירועים");
+    });
+
+    it("announces a free day distinctly from a day with events", () => {
+      render(<SelectedDayPanel dayMeta={meta()} events={[]} />);
+      expect(screen.getByRole("status").textContent).toContain("היום פנוי");
+    });
+
+    it("produces exactly one status announcement -- never a second, noisier one alongside it", () => {
+      render(<SelectedDayPanel dayMeta={meta()} events={[shiftEvent()]} />);
+      expect(screen.getAllByRole("status")).toHaveLength(1);
+    });
+
+    it("keeps the SAME status DOM node (never unmounted/recreated) across a rerender with an unchanged day -- an unrelated rerender never fires a fresh assistive-tech announcement", () => {
+      const { rerender } = render(<SelectedDayPanel dayMeta={meta()} events={[shiftEvent()]} />);
+      const before = screen.getByRole("status");
+
+      // Same day, a structurally-different-but-content-equal events array (a
+      // fresh array reference, exactly what a parent re-render after an
+      // unrelated state change would pass down).
+      rerender(<SelectedDayPanel dayMeta={meta()} events={[shiftEvent()]} />);
+      const after = screen.getByRole("status");
+
+      expect(after).toBe(before);
+    });
+  });
 });

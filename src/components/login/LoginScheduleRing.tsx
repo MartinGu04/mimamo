@@ -143,12 +143,18 @@ const SWEEP_HAND_TRAIL_PATH = `M 100 100 L ${SWEEP_HAND_TRAIL.x} ${SWEEP_HAND_TR
  * duty/day-off cards still float around its circumference on desktop
  * (`lg`+) exactly as before, but are hidden entirely below `lg` -- see
  * `FLOATING_CARDS`'s docstring -- so mobile shows only the ring/ticks/
- * logo/sweep hand. Entirely `aria-hidden` except where noted --
- * illustrative only, never real schedule data.
+ * logo/sweep hand. `aria-hidden` on this whole component's own root
+ * (Phase 5 remediation -- previously only the ring's inner SVG/image
+ * pieces carried it individually, leaving `FloatingCard`'s real title/time
+ * text exposed to assistive tech ahead of sign-in, as if it were the
+ * user's actual schedule) -- illustrative only, never real schedule data.
  */
 export function LoginScheduleRing() {
   return (
-    <div className="relative mx-auto w-[clamp(10.5rem,50vw,14rem)] sm:w-[clamp(19rem,88vw,26rem)] lg:mx-0 lg:w-[clamp(24rem,32vw,30rem)] xl:w-[clamp(30rem,42vw,42rem)]">
+    <div
+      aria-hidden="true"
+      className="relative mx-auto w-[clamp(10.5rem,50vw,14rem)] sm:w-[clamp(19rem,88vw,26rem)] lg:mx-0 lg:w-[clamp(24rem,32vw,30rem)] xl:w-[clamp(30rem,42vw,42rem)]"
+    >
       <div className="relative aspect-square w-full">
         <div
           aria-hidden="true"

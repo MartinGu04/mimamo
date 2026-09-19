@@ -36,4 +36,16 @@ describe("LoginScheduleRing", () => {
       expect(card?.className).toContain("lg:flex");
     }
   });
+
+  it("hides the whole illustrative composition from assistive tech (Phase 5 remediation) -- the floating cards' own title/time text used to be exposed even though every OTHER piece here already carried its own aria-hidden", () => {
+    const { container, getByText } = render(<LoginScheduleRing />);
+    expect(container.firstElementChild).toHaveAttribute("aria-hidden", "true");
+    // A descendant `aria-hidden="true"` doesn't itself prove the browser's
+    // accessibility tree excludes it -- only an ancestor chain up to the
+    // root does. Confirm every floating card's title sits inside the
+    // hidden root, not just alongside other individually-hidden siblings.
+    for (const title of ["משמרת ערב", "משמרת בוקר", "חופש", "תורנות", "משמרת לילה"]) {
+      expect(container.firstElementChild).toContainElement(getByText(title));
+    }
+  });
 });
