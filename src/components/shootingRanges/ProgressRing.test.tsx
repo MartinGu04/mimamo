@@ -1,6 +1,15 @@
-import { describe, expect, it } from "vitest";
-import { render } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
 import { ProgressRing } from "./ProgressRing";
+
+// This file previously only ever asserted against each render's own
+// `container`, so the lack of cleanup between tests went unnoticed --
+// `screen`-based queries (used by the progressbar tests below) search the
+// whole document, so leftover DOM from earlier tests in this file would
+// otherwise make them ambiguous.
+afterEach(() => {
+  cleanup();
+});
 
 function circles(container: HTMLElement) {
   return Array.from(container.querySelectorAll("circle"));
@@ -65,6 +74,62 @@ describe("ProgressRing", () => {
       const { container } = render(<ProgressRing progress={0.5} toneClassName="text-success" showLiveMarker />);
       const marker = container.querySelector('[data-testid="progress-ring-live-marker"]');
       expect(marker?.getAttribute("class")).toContain("animate-pulse-dot");
+    });
+  });
+
+  describe("progressbar semantics (Phase 5 remediation)", () => {
+    it("carries no progressbar role at all when no accessibleLabel is given -- never silently promising a value with no name", () => {
+      const { container } = render(<ProgressRing progress={0.5} toneClassName="text-success" />);
+      expect(container.querySelector('[role="progressbar"]')).toBeNull();
+    });
+
+    it("exposes role=progressbar with a 0-100 value derived from progress, once a label is given", () => {
+      render(<ProgressRing progress={0.5} toneClassName="text-success" accessibleLabel="כשירות מטווח" />);
+      const bar = screen.getByRole("progressbar", { name: "כשירות מטווח" });
+      expect(bar).toHaveAttribute("aria-valuemin", "0");
+      expect(bar).toHaveAttribute("aria-valuemax", "100");
+      expect(bar).toHaveAttribute("aria-valuenow", "50");
+    });
+
+    it("never exposes a value outside the declared 0-100 range, even for an out-of-bounds progress input", () => {
+      const { rerender } = render(<ProgressRing progress={-3} toneClassName="text-success" accessibleLabel="label" />);
+      expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
+
+      rerender(<ProgressRing progress={7} toneClassName="text-success" accessibleLabel="label" />);
+      expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
+    });
+
+    it("overrides the spoken value with aria-valuetext when given, so it matches the ring's own visible center readout exactly", () => {
+      render(
+        <ProgressRing progress={0.5} toneClassName="text-success" accessibleLabel="כשירות מטווח" accessibleValueText="45 ימים עד לפקיעת הכשירות">
+          <span>45</span>
+        </ProgressRing>,
+      );
+      expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuetext", "45 ימים עד לפקיעת הכשירות");
+    });
+
+    it("hides the visual center readout from assistive tech once the progressbar role already announces an equivalent value -- never doubled up", () => {
+      render(
+        <ProgressRing progress={0.5} toneClassName="text-success" accessibleLabel="כשירות מטווח">
+          <span>45</span>
+        </ProgressRing>,
+      );
+      // `getByText` doesn't itself respect `aria-hidden` (it reads the raw
+      // DOM), so the real proof this is excluded from the accessibility
+      // tree is the attribute on its containing wrapper, not absence from
+      // a text query -- the "45" is still visually present underneath.
+      const readout = screen.getByText("45");
+      expect(readout.closest('[aria-hidden="true"]')).not.toBeNull();
+      expect(screen.getByRole("progressbar").textContent).toContain("45");
+    });
+
+    it("keeps the center readout NOT wrapped in aria-hidden when there's no progressbar role to conflict with", () => {
+      render(
+        <ProgressRing progress={0.5} toneClassName="text-success">
+          <span>45</span>
+        </ProgressRing>,
+      );
+      expect(screen.getByText("45").closest('[aria-hidden="true"]')).toBeNull();
     });
   });
 });

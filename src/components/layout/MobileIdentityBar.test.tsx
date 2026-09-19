@@ -28,7 +28,7 @@ describe("MobileIdentityBar", () => {
 
   it("the Avatar is the profile-menu trigger, with an accessible name mentioning the user", async () => {
     await renderWithTheme(<MobileIdentityBar name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
-    expect(screen.getByRole("button", { name: /דני בדיקה/ })).toHaveAttribute("aria-haspopup", "menu");
+    expect(screen.getByRole("button", { name: /דני בדיקה/ })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("shows a real, enabled notification Bell control (PR #29) -- no longer the disabled 'בקרוב' placeholder", async () => {

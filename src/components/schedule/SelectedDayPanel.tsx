@@ -103,6 +103,22 @@ export function SelectedDayPanel({ dayMeta, events }: SelectedDayPanelProps) {
 
   return (
     <section aria-label="פרטי היום הנבחר">
+      {/*
+       * Restrained sr-only announcement (Phase 5 remediation) of a real
+       * day-selection change -- the visible panel below it fully re-renders
+       * per selected day, but nothing previously told assistive tech that
+       * happened. `role="status"` (implicit polite/atomic) rather than
+       * `alert`: useful to know, never urgent enough to interrupt. This
+       * text changes ONLY when `dayMeta`/`events` themselves change (a real
+       * new selection) -- an unrelated re-render with the same day produces
+       * the identical string, so React never touches this node's content
+       * and no repeat/noisy announcement fires while arrow-key navigating
+       * within the same day or elsewhere on the page.
+       */}
+      <p role="status" className="sr-only">
+        {dayMeta.dateLabel}
+        {events.length > 0 ? `, ${events.length} אירועים` : ", היום פנוי"}
+      </p>
       <Panel variant="panel" className={SELECTED_DAY_PANEL_MIN_HEIGHT_CLASS}>
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <p className="text-base font-semibold text-foreground sm:text-lg">{dayMeta.dateLabel}</p>

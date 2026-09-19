@@ -218,4 +218,31 @@ describe("EveryoneSelectedDayPanel", () => {
       expect(screen.getByText("טכנאי לילה")).toBeTruthy();
     });
   });
+
+  describe("selected-day change announcement (Phase 5 remediation)", () => {
+    it("announces the new date via a restrained, polite (role=status) sr-only region", () => {
+      render(<EveryoneSelectedDayPanel dayMeta={dayMeta()} dayView={null} />);
+      const status = screen.getByRole("status");
+      expect(status).toHaveClass("sr-only");
+      expect(status.textContent).toContain("יום · 12 באוגוסט");
+    });
+
+    it("mentions duties/absences in the announcement when there are any", () => {
+      render(
+        <EveryoneSelectedDayPanel
+          dayMeta={dayMeta()}
+          dayView={dayView({
+            duties: [{ key: "d1", title: "שומר 1", personName: "דני בדיקה", emoji: "💂" }],
+            absences: [],
+          })}
+        />,
+      );
+      expect(screen.getByRole("status").textContent).toContain("1 תורנויות והיעדרויות");
+    });
+
+    it("produces exactly one status announcement", () => {
+      render(<EveryoneSelectedDayPanel dayMeta={dayMeta()} dayView={null} />);
+      expect(screen.getAllByRole("status")).toHaveLength(1);
+    });
+  });
 });

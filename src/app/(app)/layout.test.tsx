@@ -404,6 +404,7 @@ describe("(app) layout — global Emergency Mode banner (spec section 3)", () =>
 
     expect(screen.getByTestId("emergency-mode-banner")).toBeInTheDocument();
     expect(screen.getByText(/מצב חירום פעיל/)).toBeInTheDocument();
+    expect(screen.getByTestId("emergency-mode-banner")).toHaveAttribute("role", "alert");
   });
 
   it("is present even for a configuration_error render (authorized user, broken schedule config)", async () => {

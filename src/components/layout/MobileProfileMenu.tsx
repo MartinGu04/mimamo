@@ -22,7 +22,7 @@ interface MobileProfileMenuProps {
  * disabling the button and swapping in a spinner for the network round
  * trip, so a second tap can't fire a duplicate sign-out.
  */
-function SignOutMenuItem() {
+function SignOutButton() {
   const { pending } = useFormStatus();
   return (
     <button
@@ -30,7 +30,6 @@ function SignOutMenuItem() {
       onClick={() => {
         unsubscribeCurrentPushSubscription();
       }}
-      role="menuitem"
       disabled={pending}
       aria-busy={pending}
       className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-start text-sm font-medium text-critical transition-colors duration-150 hover:bg-critical/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-critical disabled:cursor-not-allowed disabled:opacity-70"
@@ -60,6 +59,20 @@ function SignOutMenuItem() {
  * `MobileTopBarThemeAction` in the mobile top bar itself. This menu must
  * never again grow back into a secondary navigation surface -- it is
  * account controls only, mirroring what `IdentityFooter` is for desktop.
+ *
+ * Deliberately NOT `role="menu"`/`"menuitem"`/`aria-haspopup="menu"`
+ * (Phase 5 remediation) -- this popover implements none of the real ARIA
+ * menu's required keyboard model (Arrow/Home/End roving focus,
+ * typeahead), so claiming that role would promise assistive tech
+ * behavior that isn't there. It's genuinely just an ordinary disclosure
+ * revealing a plain link and a plain submit button, Tab-navigated like
+ * anywhere else on the page -- `role="group"` names the revealed panel
+ * as a labeled group of related controls without promising a menu's
+ * interaction model, and no `aria-haspopup` on the trigger either (none
+ * of its enumerated values -- menu/listbox/tree/grid/dialog -- fit a
+ * plain grouped disclosure). `aria-expanded`/`aria-controls` on the
+ * trigger, and the Escape/outside-pointerdown dismissal below, are
+ * unrelated to this and unchanged.
  *
  * Uses only the already-safe `name`/`isManager` passed down from the app
  * shell (the same identity the request-scoped read model already
@@ -101,7 +114,6 @@ export function MobileProfileMenu({ name, isManager, avatarUrl }: MobileProfileM
       <button
         ref={triggerRef}
         type="button"
-        aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
         aria-label={`תפריט פרופיל של ${name}`}
@@ -114,7 +126,7 @@ export function MobileProfileMenu({ name, isManager, avatarUrl }: MobileProfileM
       {open ? (
         <div
           id={menuId}
-          role="menu"
+          role="group"
           aria-label="תפריט פרופיל"
           // Anchored to the trigger's END edge (physically its left edge in
           // RTL), not its start edge: the Avatar sits near the physical
@@ -136,7 +148,6 @@ export function MobileProfileMenu({ name, isManager, avatarUrl }: MobileProfileM
 
           <Link
             href="/settings"
-            role="menuitem"
             onClick={() => setOpen(false)}
             className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-overlay-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
@@ -148,7 +159,7 @@ export function MobileProfileMenu({ name, isManager, avatarUrl }: MobileProfileM
 
           <form action={signOutAction}>
             <PushEndpointHiddenField />
-            <SignOutMenuItem />
+            <SignOutButton />
           </form>
         </div>
       ) : null}

@@ -77,7 +77,13 @@ export function QualificationLiveCard(props: QualificationLiveCardProps) {
     <div className="flex flex-col items-center gap-4 py-2 text-center">
       <p className="text-lg font-semibold text-foreground">כשירות מטווח</p>
 
-      <ProgressRing progress={progress} toneClassName={presentation.ringToneClassName} showLiveMarker={isLive && progress > 0}>
+      <ProgressRing
+        progress={progress}
+        toneClassName={presentation.ringToneClassName}
+        showLiveMarker={isLive && progress > 0}
+        accessibleLabel="כשירות מטווח"
+        accessibleValueText={`${parts.days} ימים ${isExpired ? "מאז פקיעת הכשירות" : "עד לפקיעת הכשירות"}`}
+      >
         <div className="flex flex-col items-center">
           <span className="text-3xl font-bold tabular-nums text-foreground">{parts.days}</span>
           <span className="text-xs text-muted">ימים</span>
