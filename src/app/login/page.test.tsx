@@ -191,3 +191,12 @@ describe("LoginPage — accessibility statement link (Phase 7)", () => {
     expect(screen.getByRole("link", { name: "הצהרת נגישות" })).toHaveAttribute("href", "/accessibility");
   });
 });
+
+describe("LoginPage — privacy notice link (Phase 9C)", () => {
+  it('renders a "מדיניות פרטיות" link pointing at /privacy, reachable before sign-in', async () => {
+    const element = await LoginPage({ searchParams: searchParams() });
+    renderWithTheme(element);
+
+    expect(screen.getByRole("link", { name: "מדיניות פרטיות" })).toHaveAttribute("href", "/privacy");
+  });
+});
