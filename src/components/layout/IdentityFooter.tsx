@@ -17,13 +17,13 @@ interface IdentityFooterProps {
 }
 
 /**
- * Identity card for the protected shell: app version, theme control, and
- * (anchoring the very bottom of the sidebar, PR #38 footer hierarchy
- * polish) avatar/name/manager indication/sign out. Version+theme sit ABOVE
- * the user/profile row deliberately -- the account block is the thing that
- * should visually anchor the bottom of the rail, with the quieter
- * utility row (version, theme) sitting just above it rather than below.
- * The theme control (sidebar/mobile-nav refinement pass) reads as part of
+ * Identity card for the protected shell, ordered bottom-to-top by how
+ * often it's touched: quiet informational/legal links (Phase 7 & 9C) at
+ * the top, a divider, the version/settings/theme utility row, then
+ * (anchoring the very bottom of the sidebar, PR #38 / footer hierarchy
+ * polish) avatar/name/manager indication/sign out as the LAST child so
+ * the account block keeps anchoring the very bottom of the rail. The
+ * theme control (sidebar/mobile-nav refinement pass) reads as part of
  * the account/personal controls next to the user block instead of a stray
  * toggle above the nav list. This is the ONLY theme control in the
  * sidebar; `Sidebar` itself renders none, and it's a single compact
@@ -33,29 +33,11 @@ interface IdentityFooterProps {
 export function IdentityFooter({ name, isManager, avatarUrl, userId }: IdentityFooterProps) {
   return (
     <div className="border-t border-sidebar-border px-5 py-5">
-      <div className="flex items-center justify-between gap-2 px-1">
-        <p className="text-[11px] text-sidebar-muted">גרסה {APP_VERSION}</p>
-        <div className="flex items-center gap-1">
-          <Link
-            href="/settings"
-            aria-label="סנכרון יומן"
-            title="סנכרון יומן"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-muted transition-colors duration-200 hover:bg-sidebar-hover hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
-            <CalendarSync className="h-[16px] w-[16px]" aria-hidden="true" strokeWidth={1.75} />
-          </Link>
-          <IdentityFooterThemeAction />
-        </div>
-      </div>
       {/* Phase 7: the one discoverable link into the public accessibility
-          statement from the desktop shell -- deliberately grouped with the
-          version/settings/theme utility row above the profile row, NOT
-          appended after it: the account/profile row below must stay the
-          LAST child so it keeps anchoring the very bottom of the rail (see
-          this component's own docstring, PR #38). */}
+          statement from the desktop shell. */}
       <Link
         href="/accessibility"
-        className="mt-1.5 block rounded px-1 text-[11px] text-sidebar-muted underline decoration-sidebar-muted/40 underline-offset-2 transition-colors duration-150 hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="block rounded px-1 text-[11px] text-sidebar-muted underline decoration-sidebar-muted/40 underline-offset-2 transition-colors duration-150 hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         הצהרת נגישות
       </Link>
@@ -69,6 +51,20 @@ export function IdentityFooter({ name, isManager, avatarUrl, userId }: IdentityF
       >
         מדיניות פרטיות
       </Link>
+      <div className="mt-3 flex items-center justify-between gap-2 border-t border-sidebar-border px-1 pt-3">
+        <p className="text-[11px] text-sidebar-muted">גרסה {APP_VERSION}</p>
+        <div className="flex items-center gap-1">
+          <Link
+            href="/settings"
+            aria-label="סנכרון יומן"
+            title="סנכרון יומן"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-muted transition-colors duration-200 hover:bg-sidebar-hover hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            <CalendarSync className="h-[16px] w-[16px]" aria-hidden="true" strokeWidth={1.75} />
+          </Link>
+          <IdentityFooterThemeAction />
+        </div>
+      </div>
       <div className="mt-3.5 flex items-center gap-3 rounded-xl px-1 py-1.5">
         <Avatar name={name} size="md" avatarUrl={avatarUrl} />
         <div className="min-w-0 flex-1">
