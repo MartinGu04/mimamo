@@ -96,9 +96,58 @@ describe("PrivacyNoticePage — data sources and services", () => {
     render(<PrivacyNoticePage />);
     expect(screen.getByText(/אינו מהווה קביעה פורמלית לגבי מעמדם המשפטי/)).toBeInTheDocument();
   });
+
+  it('describes Vercel as "אירוח" (hosting), not "אחסון"', () => {
+    render(<PrivacyNoticePage />);
+    expect(screen.getByText(/Vercel -- אירוח \(hosting\) והרצה של האפליקציה/)).toBeInTheDocument();
+  });
+});
+
+describe("PrivacyNoticePage — Google identity vs. Supabase internal user id (wording precision)", () => {
+  it("attributes only email/profile info to Google, and the internal user id to Supabase, not Google", () => {
+    render(<PrivacyNoticePage />);
+    expect(
+      screen.getByText(
+        /פרטי התחברות וזהות, כגון כתובת דוא״ל ותמונת פרופיל שמתקבלות דרך Google, וכן מזהה משתמש פנימי שמנוהל באמצעות Supabase/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('never claims Google supplies an account identifier ("מזהה חשבון")', () => {
+    const { container } = render(<PrivacyNoticePage />);
+    expect(container.textContent).not.toMatch(/מזהה חשבון/);
+  });
+});
+
+describe("PrivacyNoticePage — public-page data minimization", () => {
+  it("never names internal operational domain terms on the public page (סד״כ, מטווחים, recruitment/discharge dates)", () => {
+    const { container } = render(<PrivacyNoticePage />);
+    expect(container.textContent).not.toMatch(/סד״כ|מטווחים|תאריך גיוס|תאריך שחרור/);
+  });
+
+  it("still discloses broad, truthful categories of personnel and operational information", () => {
+    render(<PrivacyNoticePage />);
+    expect(screen.getByText(/פרטי כוח אדם בסיסיים הדרושים להתאמת המשתמש ולהרשאות המתאימות לו/)).toBeInTheDocument();
+    expect(screen.getByText(/מידע תפעולי הקשור לשיבוצים\/משמרות, זמינות, סטטוסים והסמכות רלוונטיות/)).toBeInTheDocument();
+    expect(screen.getByText(/תאריכים וסטטוסים הנדרשים לתכונות מסוימות במערכת/)).toBeInTheDocument();
+  });
 });
 
 describe("PrivacyNoticePage — analytics disclosure reflects Phase 9B", () => {
+  it("describes Vercel Web Analytics precisely (page views, general technical characteristics) without an aggregate-only overclaim", () => {
+    render(<PrivacyNoticePage />);
+    expect(
+      screen.getByText(
+        /האפליקציה משתמשת ב-Vercel Web Analytics לצורך סטטיסטיקות שימוש, כגון צפיות בעמודים ומאפיינים טכניים כלליים שמספק שירות האנליטיקס\./,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('does not claim analytics data is "מצטברים וסטטיסטיים בלבד" (purely aggregate)', () => {
+    const { container } = render(<PrivacyNoticePage />);
+    expect(container.textContent).not.toMatch(/נתוני שימוש מצטברים וסטטיסטיים בלבד/);
+  });
+
   it("states that query strings/fragments are stripped before analytics events are sent", () => {
     render(<PrivacyNoticePage />);
     expect(
@@ -114,6 +163,11 @@ describe("PrivacyNoticePage — analytics disclosure reflects Phase 9B", () => {
   it("states no advertising/marketing analytics are used", () => {
     render(<PrivacyNoticePage />);
     expect(screen.getByText(/אינה עושה שימוש בכלי אנליטיקס לצרכי פרסום או שיווק/)).toBeInTheDocument();
+  });
+
+  it("distinguishes Web Analytics from Vercel hosting/runtime logs", () => {
+    render(<PrivacyNoticePage />);
+    expect(screen.getByText(/נתוני האנליטיקס הללו שונים מיומני תפעול\/אחסון \(hosting\/runtime logs\) של Vercel/)).toBeInTheDocument();
   });
 });
 
@@ -162,10 +216,15 @@ describe("PrivacyNoticePage — no overclaiming", () => {
 });
 
 describe("PrivacyNoticePage — push notifications and calendar sync", () => {
-  it("explains push notification content may include a colleague's name/duty and can show on a locked device", () => {
+  it("explains push notification content may include operational info and another person's name, and can show on a locked device", () => {
     render(<PrivacyNoticePage />);
-    expect(screen.getByText(/שם של עמית לעבודה/)).toBeInTheDocument();
+    expect(screen.getByText(/מידע תפעולי ולעיתים גם שם של אדם אחר/)).toBeInTheDocument();
     expect(screen.getByText(/להציג את תוכן ההתראה גם כאשר המכשיר נעול/)).toBeInTheDocument();
+  });
+
+  it('does not publicly name the internal shift/duty terminology in the push disclosure', () => {
+    const { container } = render(<PrivacyNoticePage />);
+    expect(container.textContent).not.toMatch(/שם של עמית לעבודה|פרטי משמרת או תורנות/);
   });
 
   it("warns not to share the private calendar sync link/token", () => {
