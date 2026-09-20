@@ -1,5 +1,6 @@
 import { LoginHero } from "@/components/login/LoginHero";
 import { MAIN_CONTENT_ID, SkipToMainContentLink } from "@/components/layout/SkipToMainContentLink";
+import { PrivacyStorageNotice } from "@/components/privacy/PrivacyStorageNotice";
 import { parseCalendarDate } from "@/lib/domain/dutyBlocks";
 import { formatHebrewMonthName, formatHebrewWeekday } from "@/lib/presentation/hebrewDate";
 import { formatScheduleMinute } from "@/lib/presentation/scheduleTime";
@@ -79,6 +80,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           hasAuthError={hasAuthError}
         />
       </main>
+      <PrivacyStorageNotice variant="public" />
     </div>
   );
 }

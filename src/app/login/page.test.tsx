@@ -1,9 +1,10 @@
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import { LOGIN_FEATURE_HIGHLIGHTS, LOGIN_HERO_EYEBROW, LOGIN_HERO_HEADLINE } from "@/lib/config/loginCopy";
 import { APP_NAME } from "@/lib/config/productName";
+import { PRIVACY_STORAGE_NOTICE_DISMISSED_KEY } from "@/lib/privacy/privacyStorageNotice";
 
 const signInWithOAuth = vi.fn().mockResolvedValue({ data: {}, error: null });
 vi.mock("@/lib/supabase/client", () => ({
@@ -23,12 +24,20 @@ function searchParams(error?: string) {
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  window.localStorage.clear();
 });
 
 beforeEach(() => {
   vi.useFakeTimers();
   // 2026-08-14T09:09:32Z is 12:09:32 in Asia/Jerusalem (UTC+3, DST).
   vi.setSystemTime(new Date("2026-08-14T09:09:32.000Z"));
+  // Every existing test below predates the Phase 9D transparency notice and
+  // asserts on the page's ONE steady-state footer link set -- seed the
+  // notice as already-dismissed-on-this-device so its own (identically
+  // worded) links never turn those singular `getByRole` queries ambiguous.
+  // The notice's own first-visit/dismiss behavior is covered in its
+  // dedicated describe block below, which explicitly clears this key first.
+  window.localStorage.setItem(PRIVACY_STORAGE_NOTICE_DISMISSED_KEY, "1");
 });
 
 describe("LoginPage", () => {
@@ -198,5 +207,64 @@ describe("LoginPage — privacy notice link (Phase 9C)", () => {
     renderWithTheme(element);
 
     expect(screen.getByRole("link", { name: "מדיניות פרטיות" })).toHaveAttribute("href", "/privacy");
+  });
+});
+
+describe("LoginPage — cookie/storage transparency notice (Phase 9D)", () => {
+  it("shows the notice on first visit, before sign-in, when the dismissal key is absent", async () => {
+    window.localStorage.removeItem(PRIVACY_STORAGE_NOTICE_DISMISSED_KEY);
+    const element = await LoginPage({ searchParams: searchParams() });
+    renderWithTheme(element);
+
+    expect(screen.getByTestId("privacy-storage-notice")).toBeInTheDocument();
+    expect(screen.getByText(/עוגיות ואחסון מקומי/)).toBeInTheDocument();
+    // Now two links share this exact wording: the always-present footer
+    // link (Phase 9C) and this notice's own link.
+    expect(screen.getAllByRole("link", { name: "מדיניות פרטיות" })).toHaveLength(2);
+  });
+
+  it("renders no accept/reject/consent wording -- this is informational, not a consent banner", async () => {
+    window.localStorage.removeItem(PRIVACY_STORAGE_NOTICE_DISMISSED_KEY);
+    const element = await LoginPage({ searchParams: searchParams() });
+    renderWithTheme(element);
+
+    const notice = screen.getByTestId("privacy-storage-notice");
+    expect(notice.textContent).not.toMatch(/אישור|קבל|דחה|הסכמה|העדפות שיווק/);
+    expect(screen.queryByRole("button", { name: /אישור|קבל|דחה/ })).toBeNull();
+  });
+
+  it('clicking "הבנתי" writes the dismissal key and hides the notice, leaving the footer links untouched', async () => {
+    window.localStorage.removeItem(PRIVACY_STORAGE_NOTICE_DISMISSED_KEY);
+    const element = await LoginPage({ searchParams: searchParams() });
+    renderWithTheme(element);
+
+    fireEvent.click(screen.getByRole("button", { name: "הבנתי" }));
+
+    expect(screen.queryByTestId("privacy-storage-notice")).toBeNull();
+    expect(window.localStorage.getItem(PRIVACY_STORAGE_NOTICE_DISMISSED_KEY)).not.toBeNull();
+    expect(screen.getByRole("link", { name: "הצהרת נגישות" })).toHaveAttribute("href", "/accessibility");
+    expect(screen.getByRole("link", { name: "מדיניות פרטיות" })).toHaveAttribute("href", "/privacy");
+  });
+
+  it('navigating via the notice\'s own "מדיניות פרטיות" link does not dismiss it', async () => {
+    window.localStorage.removeItem(PRIVACY_STORAGE_NOTICE_DISMISSED_KEY);
+    const element = await LoginPage({ searchParams: searchParams() });
+    renderWithTheme(element);
+
+    const notice = screen.getByTestId("privacy-storage-notice");
+    const noticeLink = within(notice).getByRole("link", { name: "מדיניות פרטיות" });
+    fireEvent.click(noticeLink);
+
+    expect(screen.getByTestId("privacy-storage-notice")).toBeInTheDocument();
+    expect(window.localStorage.getItem(PRIVACY_STORAGE_NOTICE_DISMISSED_KEY)).toBeNull();
+  });
+
+  it("stays hidden once already dismissed on this device", async () => {
+    window.localStorage.setItem(PRIVACY_STORAGE_NOTICE_DISMISSED_KEY, "1");
+    const element = await LoginPage({ searchParams: searchParams() });
+    renderWithTheme(element);
+
+    expect(screen.queryByTestId("privacy-storage-notice")).toBeNull();
+    expect(screen.getAllByRole("link", { name: "מדיניות פרטיות" })).toHaveLength(1);
   });
 });

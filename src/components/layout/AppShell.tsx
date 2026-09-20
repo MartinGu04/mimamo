@@ -4,6 +4,7 @@ import { BottomNav } from "./BottomNav";
 import { PageBackdrop } from "./PageBackdrop";
 import { EmergencyModeBanner } from "./EmergencyModeBanner";
 import { MobileIdentityBar } from "./MobileIdentityBar";
+import { PrivacyStorageNotice } from "@/components/privacy/PrivacyStorageNotice";
 import { ShellUtilityBar } from "./ShellUtilityBar";
 import { Sidebar } from "./Sidebar";
 import { MAIN_CONTENT_ID, SkipToMainContentLink } from "./SkipToMainContentLink";
@@ -106,6 +107,7 @@ export function AppShell({
       </div>
       <BottomNav isManager={person?.isManager} />
       <AccessibilityPreferencesButton />
+      <PrivacyStorageNotice variant="authenticated" />
     </div>
   );
 }

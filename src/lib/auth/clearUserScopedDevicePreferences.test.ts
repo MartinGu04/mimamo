@@ -4,6 +4,7 @@ import { markInstallPromptDismissed, readInstallPromptDismissedAt } from "@/lib/
 import { markSetupItemSkipped, readSkippedSetupItems } from "@/lib/onboarding/setupCardPreference";
 import { THEME_STORAGE_KEY } from "@/lib/theme/themeScript";
 import { A11Y_STORAGE_KEY } from "@/lib/a11y/preferences";
+import { PRIVACY_STORAGE_NOTICE_DISMISSED_KEY } from "@/lib/privacy/privacyStorageNotice";
 import { clearUserScopedDevicePreferences } from "./clearUserScopedDevicePreferences";
 
 afterEach(() => {
@@ -55,6 +56,15 @@ describe("clearUserScopedDevicePreferences — sign-out orchestration (Phase 9B)
     clearUserScopedDevicePreferences("user-a");
 
     expect(window.localStorage.getItem(A11Y_STORAGE_KEY)).toBe(JSON.stringify({ textSize: "large" }));
+  });
+
+  it("never touches the privacy storage notice dismissal key (Phase 9D) -- device-wide, not account-scoped", () => {
+    window.localStorage.setItem(PRIVACY_STORAGE_NOTICE_DISMISSED_KEY, "1");
+    seedAllThreeForUser("user-a");
+
+    clearUserScopedDevicePreferences("user-a");
+
+    expect(window.localStorage.getItem(PRIVACY_STORAGE_NOTICE_DISMISSED_KEY)).toBe("1");
   });
 
   it("never uses localStorage.clear() -- only the three named keys are ever removed", () => {
