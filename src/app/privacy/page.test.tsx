@@ -155,6 +155,11 @@ describe("PrivacyNoticePage — analytics disclosure reflects Phase 9B", () => {
     ).toBeInTheDocument();
   });
 
+  it('scopes the "not included in the event" claim to just the stripped query/fragment parts, not the whole URL (the pathname is preserved)', () => {
+    render(<PrivacyNoticePage />);
+    expect(screen.getByText(/פרטים המופיעים בחלקים אלה של הכתובת אינם נכללים באירוע/)).toBeInTheDocument();
+  });
+
   it("states no person identifier is intentionally attached to analytics events", () => {
     render(<PrivacyNoticePage />);
     expect(screen.getByText(/אינה מצרפת ביודעין שם, דוא״ל או מזהה אישי אחר לאירועי האנליטיקס/)).toBeInTheDocument();
