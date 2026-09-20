@@ -1,8 +1,9 @@
 import type { ReactElement } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import { A11yPreferencesProvider } from "@/lib/a11y/A11yPreferencesProvider";
+import { PRIVACY_STORAGE_NOTICE_DISMISSED_KEY } from "@/lib/privacy/privacyStorageNotice";
 import { AppShell } from "./AppShell";
 
 /** Opens the mobile header's profile menu, which now hides the sign-out affordance/theme action until the Avatar trigger is clicked. */
@@ -12,8 +13,18 @@ function openMobileProfileMenu() {
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
 
+beforeEach(() => {
+  // Every existing test below predates the Phase 9D transparency notice --
+  // seed it as already-dismissed-on-this-device so it never shows up as an
+  // extra, unexpected fixed element in tests that aren't about it. Its own
+  // behavior is covered in the dedicated describe block further down,
+  // which explicitly clears this key first.
+  window.localStorage.setItem(PRIVACY_STORAGE_NOTICE_DISMISSED_KEY, "1");
+});
+
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 function renderWithTheme(ui: ReactElement) {
@@ -397,5 +408,55 @@ describe("AppShell — avatarUrl (presentation-only Google account photo)", () =
     );
     expect(container.querySelector('[data-testid="avatar-photo"]')).toBeNull();
     expect(screen.getAllByText("דב").length).toBeGreaterThan(0);
+  });
+});
+
+describe("AppShell — cookie/storage transparency notice (Phase 9D)", () => {
+  it("mounts exactly one instance of the notice, shown on first visit", () => {
+    window.localStorage.removeItem(PRIVACY_STORAGE_NOTICE_DISMISSED_KEY);
+    renderWithTheme(
+      <AppShell person={{ name: "דני בדיקה", isManager: false, avatarUrl: null, userId: "user-test-1" }}>
+        <div>content</div>
+      </AppShell>,
+    );
+    expect(screen.getAllByTestId("privacy-storage-notice")).toHaveLength(1);
+  });
+
+  it("stays hidden once already dismissed on this device", () => {
+    renderWithTheme(
+      <AppShell person={{ name: "דני בדיקה", isManager: false, avatarUrl: null, userId: "user-test-1" }}>
+        <div>content</div>
+      </AppShell>,
+    );
+    expect(screen.queryByTestId("privacy-storage-notice")).toBeNull();
+  });
+
+  it('clicking "הבנתי" hides it without affecting the sign-out affordance or bottom navigation', () => {
+    window.localStorage.removeItem(PRIVACY_STORAGE_NOTICE_DISMISSED_KEY);
+    renderWithTheme(
+      <AppShell person={{ name: "דני בדיקה", isManager: false, avatarUrl: null, userId: "user-test-1" }}>
+        <div>content</div>
+      </AppShell>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "הבנתי" }));
+
+    expect(screen.queryByTestId("privacy-storage-notice")).toBeNull();
+    expect(screen.getByRole("navigation", { name: "ניווט תחתון" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "התנתקות" }).length).toBeGreaterThan(0);
+  });
+
+  it("positions the notice clear of BottomNav's height, reusing the same bottom clearance as the accessibility button", () => {
+    window.localStorage.removeItem(PRIVACY_STORAGE_NOTICE_DISMISSED_KEY);
+    renderWithTheme(
+      <AppShell person={{ name: "דני בדיקה", isManager: false, avatarUrl: null, userId: "user-test-1" }}>
+        <div>content</div>
+      </AppShell>,
+    );
+    const notice = screen.getByTestId("privacy-storage-notice");
+    expect(notice.className).toMatch(/bottom-\[calc\(4\.75rem\+env\(safe-area-inset-bottom\)\)\]/);
+    // Anchored to the opposite corner (start) from AccessibilityPreferencesButton (end), so they never overlap.
+    expect(notice.className).toMatch(/start-4/);
+    expect(notice.className).not.toMatch(/\bend-4\b/);
   });
 });
