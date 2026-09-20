@@ -151,6 +151,19 @@ describe("IdentityFooter — calendar sync link (renamed from הגדרות, nav 
   });
 });
 
+describe("IdentityFooter — accessibility statement link (Phase 7)", () => {
+  it('renders a "הצהרת נגישות" link pointing at /accessibility', () => {
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    expect(screen.getByRole("link", { name: "הצהרת נגישות" })).toHaveAttribute("href", "/accessibility");
+  });
+
+  it("keeps visible keyboard focus on the accessibility link", () => {
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    const link = screen.getByRole("link", { name: "הצהרת נגישות" });
+    expect(link.className).toMatch(/focus-visible:outline/);
+  });
+});
+
 describe("IdentityFooter — avatar photo", () => {
   it("passes avatarUrl through to the Avatar (image element present when given a photo)", () => {
     const { container } = renderWithTheme(
