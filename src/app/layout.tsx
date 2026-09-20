@@ -7,7 +7,7 @@ import { A11yPreferencesProvider } from "@/lib/a11y/A11yPreferencesProvider";
 import { A11Y_INIT_SCRIPT } from "@/lib/a11y/preferences";
 import { ServiceWorkerManager } from "@/components/pwa/ServiceWorkerManager";
 import { PwaInstallProvider } from "@/components/pwa/PwaInstallProvider";
-import { Analytics } from "@vercel/analytics/next";
+import { PrivacySafeAnalytics } from "@/components/privacy/PrivacySafeAnalytics";
 import "./globals.css";
 
 const heebo = Heebo({
@@ -126,7 +126,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </PwaInstallProvider>
           </A11yPreferencesProvider>
         </ThemeProvider>
-        <Analytics />
+        <PrivacySafeAnalytics />
       </body>
     </html>
   );

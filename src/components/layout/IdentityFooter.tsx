@@ -12,6 +12,8 @@ interface IdentityFooterProps {
   isManager: boolean;
   /** Presentation-only Google account photo -- see `lib/auth/currentUser.ts`. `null` falls back to initials in `Avatar`. */
   avatarUrl: string | null;
+  /** Authenticated Supabase user id -- threaded through only to `IdentityFooterSignOutButton`'s sign-out cleanup (Privacy Phase 9B). */
+  userId: string;
 }
 
 /**
@@ -28,7 +30,7 @@ interface IdentityFooterProps {
  * icon-only light/dark action (`IdentityFooterThemeAction`), not the
  * 3-option `ThemeToggle`.
  */
-export function IdentityFooter({ name, isManager, avatarUrl }: IdentityFooterProps) {
+export function IdentityFooter({ name, isManager, avatarUrl, userId }: IdentityFooterProps) {
   return (
     <div className="border-t border-sidebar-border px-5 py-5">
       <div className="flex items-center justify-between gap-2 px-1">
@@ -65,7 +67,7 @@ export function IdentityFooter({ name, isManager, avatarUrl }: IdentityFooterPro
         </div>
         <form action={signOutAction}>
           <PushEndpointHiddenField />
-          <IdentityFooterSignOutButton />
+          <IdentityFooterSignOutButton userId={userId} />
         </form>
       </div>
     </div>

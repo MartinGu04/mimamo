@@ -648,6 +648,55 @@ describe("crash-recovery scenarios (the reviewed hole this design fixes)", () =>
   });
 });
 
+describe("runDueCustomWeeklyRuleDispatch -- PII-safe error logging (Phase 9B)", () => {
+  it("never logs the raw error message -- routes through the same sanitizeWorkerError/formatWorkerErrorLog the rest of the worker uses, while keeping ruleId/occurrenceDate as safe context", async () => {
+    const email = "person@example.com";
+    const url = "https://internal.example.com/secret?token=abc";
+    const longToken = "aVeryLongOpaqueBearerTokenThatShouldNeverBeLogged1234567890";
+    const sensitiveMessage = `failed for ${email} at ${url} token=${longToken}`;
+
+    vi.resetModules();
+    vi.doMock("./store", () => ({
+      claimNotificationRuleOccurrence: () => {
+        throw new Error(sensitiveMessage);
+      },
+      setNotificationRuleOccurrenceBatchId: vi.fn(),
+      completeNotificationRuleOccurrence: vi.fn(),
+      listCompletedNotificationRuleOccurrenceKeys: async () => new Set<string>(),
+      listRecoverableNotificationRuleOccurrences: async () => [],
+      insertManagerNotificationBatchIfAbsent: vi.fn(),
+      getManagerNotificationBatchById: vi.fn(),
+      insertNotificationJobIfAbsent: vi.fn(),
+    }));
+    vi.doMock("./recipients", async (importOriginal) => {
+      const actual = await importOriginal<typeof import("./recipients")>();
+      return {
+        ...actual,
+        fetchAllUserIdsByEmail: async () => new Map(),
+        fetchAllSubscribedUserIds: async () => [],
+      };
+    });
+
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { runDueCustomWeeklyRuleDispatch } = await import("./recurringRuleDispatch");
+
+    const summary = await runDueCustomWeeklyRuleDispatch([{ ruleId: "rule-1", occurrenceDate: "2026-08-22" }], []);
+
+    expect(summary).toEqual({ dispatched: 0, failed: 1 });
+    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+    const loggedLine = consoleErrorSpy.mock.calls[0]?.join(" ") ?? "";
+
+    expect(loggedLine).not.toContain(email);
+    expect(loggedLine).not.toContain(url);
+    expect(loggedLine).not.toContain(longToken);
+    expect(loggedLine).not.toContain(sensitiveMessage);
+    // Safe, non-personal context is still present.
+    expect(loggedLine).toContain("rule=rule-1");
+    expect(loggedLine).toContain("date=2026-08-22");
+    expect(loggedLine).toContain("stage=recurring_rules");
+  });
+});
+
 describe("Recovery Test Matrix -- Blocker 1 (recovery-discoverability independent of current rule state)", () => {
   it("1. a stale claim whose rule was DISABLED while claimed still resumes and completes from its frozen snapshot", async () => {
     registerRule(claimStore, rule());

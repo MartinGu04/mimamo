@@ -43,6 +43,23 @@ export function markInstallPromptDismissed(userId: string): void {
 }
 
 /**
+ * Best-effort removal of this device's install-prompt dismissal for one
+ * specific user (Privacy Phase 9B) -- called on sign-out so a departed
+ * account's dismissal does not linger in `localStorage` on a shared
+ * device. Removes ONLY the one key namespaced by the given `userId`,
+ * never another user's same-prefixed key. A failure here (private mode,
+ * quota, disabled storage) must never break sign-out.
+ */
+export function clearInstallPromptPreference(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(storageKey(userId));
+  } catch {
+    // Intentionally ignored -- see docstring above.
+  }
+}
+
+/**
  * Whether a stored dismissal is still within the cooldown window. Pure --
  * takes `now` explicitly so it stays trivially testable without faking the
  * system clock.

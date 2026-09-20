@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { markPushPreferenceDisabled, markPushPreferenceEnabled, readPushPreference } from "./pushPreference";
+import { clearPushPreference, markPushPreferenceDisabled, markPushPreferenceEnabled, readPushPreference } from "./pushPreference";
 
 afterEach(() => {
   window.localStorage.clear();
@@ -57,5 +57,33 @@ describe("pushPreference — fails safe on corrupt/unavailable storage", () => {
     });
     expect(() => markPushPreferenceEnabled("user-a")).not.toThrow();
     expect(() => markPushPreferenceDisabled("user-a")).not.toThrow();
+  });
+});
+
+describe("clearPushPreference — sign-out cleanup (Phase 9B)", () => {
+  it("removes the current user's own stored preference", () => {
+    markPushPreferenceEnabled("user-a");
+    clearPushPreference("user-a");
+    expect(readPushPreference("user-a")).toBeNull();
+    expect(window.localStorage.getItem("mi-ma-mo:push-preference:user-a")).toBeNull();
+  });
+
+  it("never removes a DIFFERENT user's preference on the same shared device", () => {
+    markPushPreferenceEnabled("user-a");
+    markPushPreferenceEnabled("user-b");
+    clearPushPreference("user-a");
+    expect(readPushPreference("user-a")).toBeNull();
+    expect(readPushPreference("user-b")).toBe("enabled");
+  });
+
+  it("is a harmless no-op when the user never had a stored preference", () => {
+    expect(() => clearPushPreference("user-never-stored")).not.toThrow();
+  });
+
+  it("localStorage.removeItem throwing never throws out of clearPushPreference", () => {
+    vi.spyOn(window.localStorage, "removeItem").mockImplementation(() => {
+      throw new Error("storage disabled");
+    });
+    expect(() => clearPushPreference("user-a")).not.toThrow();
   });
 });
