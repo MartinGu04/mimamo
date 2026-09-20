@@ -16,6 +16,7 @@ import {
   setNotificationRuleOccurrenceBatchId,
   type BroadcastAudienceKind,
 } from "./store";
+import { formatWorkerErrorLog, sanitizeWorkerError } from "./workerErrors";
 
 /**
  * Manager-created weekly recurring notifications ("📌 תזכורת לאילוצים
@@ -349,9 +350,14 @@ export async function runDueCustomWeeklyRuleDispatch(
       if (outcome === "dispatched") dispatched++;
     } catch (error) {
       failed++;
+      // Routed through the SAME PII-safe sanitizer every other worker
+      // failure log already uses (`workerErrors.ts`) -- this used to log
+      // `error.message` directly, the one remaining spot in the
+      // notification engine that bypassed it. `rule=`/`date=` are safe,
+      // non-personal context appended after the sanitized representation,
+      // never part of what gets redacted.
       console.error(
-        `[notifications] recurring rule dispatch failed rule=${occurrence.ruleId} date=${occurrence.occurrenceDate}`,
-        error instanceof Error ? error.message : "unknown_error",
+        `${formatWorkerErrorLog("recurring_rules", sanitizeWorkerError(error))} rule=${occurrence.ruleId} date=${occurrence.occurrenceDate}`,
       );
     }
   }

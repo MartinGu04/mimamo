@@ -37,38 +37,38 @@ function renderWithTheme(ui: ReactElement) {
 
 describe("IdentityFooter", () => {
   it("shows the person's name", () => {
-    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
     expect(screen.getByText("דני בדיקה")).toBeInTheDocument();
   });
 
   it("shows the manager indication only when isManager is true", () => {
     const { rerender } = render(
       <ThemeProvider>
-        <IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />
+        <IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />
       </ThemeProvider>,
     );
     expect(screen.queryByText("מנהל/ת")).toBeNull();
 
     rerender(
       <ThemeProvider>
-        <IdentityFooter name="נועה מנהלת" isManager={true} avatarUrl={null} />
+        <IdentityFooter name="נועה מנהלת" isManager={true} avatarUrl={null} userId="user-test-1" />
       </ThemeProvider>,
     );
     expect(screen.getByText("מנהל/ת")).toBeInTheDocument();
   });
 
   it("renders a reachable sign-out button", () => {
-    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
     expect(screen.getByRole("button", { name: "התנתקות" })).toBeInTheDocument();
   });
 
   it("never renders an email anywhere", () => {
-    const { container } = renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    const { container } = renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
     expect(container.textContent).not.toContain("@");
   });
 
   it("shows the app version, sourced from the real package.json version", () => {
-    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
     expect(APP_VERSION).toBe(packageJson.version);
     expect(screen.getByText(new RegExp(packageJson.version.replace(/\./g, "\\.")))).toBeInTheDocument();
   });
@@ -76,14 +76,14 @@ describe("IdentityFooter", () => {
 
 describe("IdentityFooter — single-action theme control (not the 3-option ThemeToggle)", () => {
   it("never renders the 3-option system/light/dark segmented control", () => {
-    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
     expect(screen.queryByRole("radiogroup")).toBeNull();
     expect(screen.queryByText("מערכת")).toBeNull();
   });
 
   it('when the effective theme is dark, offers "מצב בהיר" and switches to explicit light on click', () => {
     mockMatchMedia(true);
-    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
     const action = screen.getByRole("button", { name: "מצב בהיר" });
     fireEvent.click(action);
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("light");
@@ -91,14 +91,14 @@ describe("IdentityFooter — single-action theme control (not the 3-option Theme
 
   it('when the effective theme is light, offers "מצב כהה" and switches to explicit dark on click', () => {
     mockMatchMedia(false);
-    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
     const action = screen.getByRole("button", { name: "מצב כהה" });
     fireEvent.click(action);
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
   });
 
   it("exactly one theme control renders here", () => {
-    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
     const actions = [
       ...screen.queryAllByRole("button", { name: "מצב בהיר" }),
       ...screen.queryAllByRole("button", { name: "מצב כהה" }),
@@ -109,7 +109,7 @@ describe("IdentityFooter — single-action theme control (not the 3-option Theme
 
 describe("IdentityFooter — footer hierarchy (PR #38 desktop shell polish)", () => {
   it("version and theme control appear ABOVE the user/profile row in DOM order", () => {
-    const { container } = renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    const { container } = renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
     const version = screen.getByText(new RegExp(APP_VERSION.replace(/\./g, "\\.")));
     const nameNode = screen.getByText("דני בדיקה");
     const position = version.compareDocumentPosition(nameNode);
@@ -119,7 +119,7 @@ describe("IdentityFooter — footer hierarchy (PR #38 desktop shell polish)", ()
   });
 
   it("the user/profile row is the LAST child block, anchoring the bottom of the footer", () => {
-    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
     const signOut = screen.getByRole("button", { name: "התנתקות" });
     const footer = signOut.closest("div.border-t") as HTMLElement;
     const lastChild = footer.lastElementChild;
@@ -127,13 +127,13 @@ describe("IdentityFooter — footer hierarchy (PR #38 desktop shell polish)", ()
   });
 
   it("the desktop theme control renders icon-only -- no visible text label", () => {
-    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
     const action = screen.getByRole("button", { name: "מצב כהה" });
     expect(action.textContent).toBe("");
   });
 
   it("the desktop theme control has a title tooltip matching its accessible label", () => {
-    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
     const action = screen.getByRole("button", { name: "מצב כהה" });
     expect(action).toHaveAttribute("title", "מצב כהה");
   });
@@ -141,24 +141,24 @@ describe("IdentityFooter — footer hierarchy (PR #38 desktop shell polish)", ()
 
 describe("IdentityFooter — calendar sync link (renamed from הגדרות, nav redesign pass)", () => {
   it('links to /settings, labeled "סנכרון יומן"', () => {
-    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
     expect(screen.getByRole("link", { name: "סנכרון יומן" })).toHaveAttribute("href", "/settings");
   });
 
   it('no longer exposes the old "הגדרות" label', () => {
-    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
     expect(screen.queryByRole("link", { name: "הגדרות" })).toBeNull();
   });
 });
 
 describe("IdentityFooter — accessibility statement link (Phase 7)", () => {
   it('renders a "הצהרת נגישות" link pointing at /accessibility', () => {
-    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
     expect(screen.getByRole("link", { name: "הצהרת נגישות" })).toHaveAttribute("href", "/accessibility");
   });
 
   it("keeps visible keyboard focus on the accessibility link", () => {
-    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
     const link = screen.getByRole("link", { name: "הצהרת נגישות" });
     expect(link.className).toMatch(/focus-visible:outline/);
   });
@@ -167,14 +167,14 @@ describe("IdentityFooter — accessibility statement link (Phase 7)", () => {
 describe("IdentityFooter — avatar photo", () => {
   it("passes avatarUrl through to the Avatar (image element present when given a photo)", () => {
     const { container } = renderWithTheme(
-      <IdentityFooter name="דני בדיקה" isManager={false} avatarUrl="https://lh3.googleusercontent.com/a/photo.jpg" />,
+      <IdentityFooter name="דני בדיקה" isManager={false} avatarUrl="https://lh3.googleusercontent.com/a/photo.jpg" userId="user-test-1" />,
     );
     const img = container.querySelector("img");
     expect(img).toHaveAttribute("src", "https://lh3.googleusercontent.com/a/photo.jpg");
   });
 
   it("renders initials, not a broken image, when avatarUrl is null", () => {
-    const { container } = renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} />);
+    const { container } = renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
     expect(container.querySelector("img")).toBeNull();
     expect(screen.getByText("דב")).toBeInTheDocument();
   });

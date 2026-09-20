@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { markSetupItemSkipped, readSkippedSetupItems } from "./setupCardPreference";
+import { clearSkippedSetupItems, markSetupItemSkipped, readSkippedSetupItems } from "./setupCardPreference";
 
 afterEach(() => {
   window.localStorage.clear();
@@ -88,5 +88,34 @@ describe("setupCardPreference — fails safe on corrupt/unavailable storage", ()
       throw new Error("quota exceeded");
     });
     expect(() => markSetupItemSkipped("user-a", "install")).not.toThrow();
+  });
+});
+
+describe("clearSkippedSetupItems — sign-out cleanup (Phase 9B)", () => {
+  it("removes the current user's own skipped-items state", () => {
+    markSetupItemSkipped("user-a", "install");
+    markSetupItemSkipped("user-a", "notifications");
+    clearSkippedSetupItems("user-a");
+    expect(readSkippedSetupItems("user-a").size).toBe(0);
+    expect(window.localStorage.getItem("mi-ma-mo:setup-card-skipped:user-a")).toBeNull();
+  });
+
+  it("never removes a DIFFERENT user's skipped-items state on the same shared device", () => {
+    markSetupItemSkipped("user-a", "install");
+    markSetupItemSkipped("user-b", "calendar_sync");
+    clearSkippedSetupItems("user-a");
+    expect(readSkippedSetupItems("user-a").size).toBe(0);
+    expect(readSkippedSetupItems("user-b").has("calendar_sync")).toBe(true);
+  });
+
+  it("is a harmless no-op when the user never skipped anything", () => {
+    expect(() => clearSkippedSetupItems("user-never-stored")).not.toThrow();
+  });
+
+  it("localStorage.removeItem throwing never throws out of clearSkippedSetupItems", () => {
+    vi.spyOn(window.localStorage, "removeItem").mockImplementation(() => {
+      throw new Error("storage disabled");
+    });
+    expect(() => clearSkippedSetupItems("user-a")).not.toThrow();
   });
 });

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  clearInstallPromptPreference,
   INSTALL_PROMPT_COOLDOWN_MS,
   isInstallPromptDismissalActive,
   markInstallPromptDismissed,
@@ -53,6 +54,34 @@ describe("installPromptPreference — fails safe on corrupt/unavailable storage"
       throw new Error("quota exceeded");
     });
     expect(() => markInstallPromptDismissed("user-a")).not.toThrow();
+  });
+});
+
+describe("clearInstallPromptPreference — sign-out cleanup (Phase 9B)", () => {
+  it("removes the current user's own stored dismissal", () => {
+    markInstallPromptDismissed("user-a");
+    clearInstallPromptPreference("user-a");
+    expect(readInstallPromptDismissedAt("user-a")).toBeNull();
+    expect(window.localStorage.getItem("mi-ma-mo:install-prompt-dismissed:user-a")).toBeNull();
+  });
+
+  it("never removes a DIFFERENT user's dismissal on the same shared device", () => {
+    markInstallPromptDismissed("user-a");
+    markInstallPromptDismissed("user-b");
+    clearInstallPromptPreference("user-a");
+    expect(readInstallPromptDismissedAt("user-a")).toBeNull();
+    expect(readInstallPromptDismissedAt("user-b")).not.toBeNull();
+  });
+
+  it("is a harmless no-op when the user never dismissed anything", () => {
+    expect(() => clearInstallPromptPreference("user-never-stored")).not.toThrow();
+  });
+
+  it("localStorage.removeItem throwing never throws out of clearInstallPromptPreference", () => {
+    vi.spyOn(window.localStorage, "removeItem").mockImplementation(() => {
+      throw new Error("storage disabled");
+    });
+    expect(() => clearInstallPromptPreference("user-a")).not.toThrow();
   });
 });
 

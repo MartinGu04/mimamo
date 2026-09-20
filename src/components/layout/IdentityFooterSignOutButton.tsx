@@ -3,6 +3,12 @@
 import { useFormStatus } from "react-dom";
 import { Loader2, LogOut } from "lucide-react";
 import { unsubscribeCurrentPushSubscription } from "@/lib/push/browserSubscription";
+import { clearUserScopedDevicePreferences } from "@/lib/auth/clearUserScopedDevicePreferences";
+
+interface IdentityFooterSignOutButtonProps {
+  /** The signing-out user's own id -- see `clearUserScopedDevicePreferences`'s own docstring for why this must be exactly this user's id, never a client-supplied/guessed value. */
+  userId: string;
+}
 
 /**
  * `IdentityFooter`'s sign-out submit button, split into its own client
@@ -11,21 +17,26 @@ import { unsubscribeCurrentPushSubscription } from "@/lib/push/browserSubscripti
  * button and swapping in a spinner for the network round trip, so a
  * second tap can't fire a duplicate sign-out.
  *
- * The `onClick` fires a best-effort, fire-and-forget local
- * `unsubscribeCurrentPushSubscription()` (PR #29) ALONGSIDE the normal
- * form submission -- it never calls `preventDefault()`, so it can never
- * delay or block sign-out. This is independent of (and races harmlessly
- * with) `signOutAction`'s own server-side subscription-row cleanup: this
- * one only talks to the browser's local Service Worker/push state, never
- * this app's own session/cookies.
+ * The `onClick` fires two best-effort, fire-and-forget local cleanups
+ * ALONGSIDE the normal form submission -- `unsubscribeCurrentPushSubscription()`
+ * (PR #29) and, since Privacy Phase 9B,
+ * `clearUserScopedDevicePreferences(userId)` (removes this user's
+ * `localStorage`-scoped push/install-prompt/setup-card preferences so
+ * they don't linger on a shared device after sign-out). Neither ever
+ * calls `preventDefault()`, so neither can delay or block sign-out. Both
+ * are independent of (and race harmlessly with) `signOutAction`'s own
+ * server-side subscription-row cleanup: these only touch the browser's
+ * local Service Worker/push state and `localStorage`, never this app's
+ * own session/cookies.
  */
-export function IdentityFooterSignOutButton() {
+export function IdentityFooterSignOutButton({ userId }: IdentityFooterSignOutButtonProps) {
   const { pending } = useFormStatus();
 
   return (
     <button
       type="submit"
       onClick={() => {
+        clearUserScopedDevicePreferences(userId);
         unsubscribeCurrentPushSubscription();
       }}
       aria-label={pending ? "מתנתק..." : "התנתקות"}

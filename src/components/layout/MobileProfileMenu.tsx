@@ -8,6 +8,7 @@ import { signOutAction } from "@/lib/auth/actions";
 import { Avatar } from "@/components/ui/Avatar";
 import { PushEndpointHiddenField } from "@/components/pwa/PushEndpointHiddenField";
 import { unsubscribeCurrentPushSubscription } from "@/lib/push/browserSubscription";
+import { clearUserScopedDevicePreferences } from "@/lib/auth/clearUserScopedDevicePreferences";
 import { EXPAND_HIT_AREA_VERTICAL_CLASS } from "@/components/ui/hitArea";
 
 interface MobileProfileMenuProps {
@@ -15,6 +16,8 @@ interface MobileProfileMenuProps {
   isManager: boolean;
   /** Presentation-only Google account photo -- see `lib/auth/currentUser.ts`. `null` falls back to initials in `Avatar`. */
   avatarUrl: string | null;
+  /** Authenticated Supabase user id -- threaded through only to the sign-out button's cleanup (Privacy Phase 9B). */
+  userId: string;
 }
 
 /**
@@ -22,13 +25,23 @@ interface MobileProfileMenuProps {
  * enclosing `<form action={signOutAction}>`'s real pending state --
  * disabling the button and swapping in a spinner for the network round
  * trip, so a second tap can't fire a duplicate sign-out.
+ *
+ * The `onClick` fires two best-effort, fire-and-forget local cleanups
+ * ALONGSIDE the normal form submission -- `unsubscribeCurrentPushSubscription()`
+ * (PR #29) and, since Privacy Phase 9B, `clearUserScopedDevicePreferences(userId)`
+ * (removes this user's `localStorage`-scoped push/install-prompt/setup-card
+ * preferences so they don't linger on a shared device after sign-out).
+ * Neither ever calls `preventDefault()`, so neither can delay or block
+ * sign-out -- see `IdentityFooterSignOutButton`'s own docstring for the
+ * same desktop-side behavior.
  */
-function SignOutButton() {
+function SignOutButton({ userId }: { userId: string }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
       onClick={() => {
+        clearUserScopedDevicePreferences(userId);
         unsubscribeCurrentPushSubscription();
       }}
       disabled={pending}
@@ -84,7 +97,7 @@ function SignOutButton() {
  * resolved) -- no email, no new fetch. Sign-out is still the plain
  * `signOutAction` form (works with no client JS).
  */
-export function MobileProfileMenu({ name, isManager, avatarUrl }: MobileProfileMenuProps) {
+export function MobileProfileMenu({ name, isManager, avatarUrl, userId }: MobileProfileMenuProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -175,7 +188,7 @@ export function MobileProfileMenu({ name, isManager, avatarUrl }: MobileProfileM
 
           <form action={signOutAction}>
             <PushEndpointHiddenField />
-            <SignOutButton />
+            <SignOutButton userId={userId} />
           </form>
         </div>
       ) : null}

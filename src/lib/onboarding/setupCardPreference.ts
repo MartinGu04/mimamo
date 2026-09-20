@@ -56,3 +56,20 @@ export function markSetupItemSkipped(userId: string, item: SetupItemKey): void {
     // Intentionally ignored -- see docstring above.
   }
 }
+
+/**
+ * Best-effort removal of this device's skipped-setup-item state for one
+ * specific user (Privacy Phase 9B) -- called on sign-out so a departed
+ * account's skip choices do not linger in `localStorage` on a shared
+ * device. Removes ONLY the one key namespaced by the given `userId`,
+ * never another user's same-prefixed key. A failure here (private mode,
+ * quota, disabled storage) must never break sign-out.
+ */
+export function clearSkippedSetupItems(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(storageKey(userId));
+  } catch {
+    // Intentionally ignored -- see docstring above.
+  }
+}

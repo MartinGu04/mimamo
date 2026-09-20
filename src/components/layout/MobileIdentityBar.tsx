@@ -9,7 +9,7 @@ interface MobileIdentityBarProps {
   isManager: boolean;
   /** Presentation-only Google account photo -- see `lib/auth/currentUser.ts`. `null` falls back to initials. */
   avatarUrl: string | null;
-  /** Authenticated Supabase user id, threaded through only to `NotificationBell`'s `usePushSubscription` -- see `AppShell`'s own docstring. */
+  /** Authenticated Supabase user id, threaded through to `NotificationBell`'s `usePushSubscription` (see `AppShell`'s own docstring) and, since Privacy Phase 9B, to `MobileProfileMenu`'s sign-out cleanup. */
   userId: string;
 }
 
@@ -59,7 +59,7 @@ export function MobileIdentityBar({ name, isManager, avatarUrl, userId }: Mobile
             previous user's Push UI state linger, even for a single
             frame. */}
         <NotificationBell key={userId} variant="mobile" userId={userId} />
-        <MobileProfileMenu name={name} isManager={isManager} avatarUrl={avatarUrl} />
+        <MobileProfileMenu name={name} isManager={isManager} avatarUrl={avatarUrl} userId={userId} />
       </div>
     </div>
   );
