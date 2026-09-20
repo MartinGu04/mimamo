@@ -15,22 +15,26 @@ const TEXT_SIZE_OPTIONS: ReadonlyArray<{ value: A11yTextSize; label: string }> =
 ];
 
 /**
- * One text-size choice, styled as a segmented control -- same
- * `role="radiogroup"`/`role="radio"`/`aria-checked` pattern `ThemeToggle`
- * already established for a small mutually-exclusive choice, reused rather
- * than reinvented.
+ * One text-size choice, styled as a segmented control. Deliberately plain
+ * `role="group"` + `<button aria-pressed>`, NOT `role="radiogroup"`/
+ * `role="radio"` (an earlier version of this used that pattern, matching
+ * `ThemeToggle` -- but a real ARIA radio group promises arrow-key/Home/End
+ * roving-focus keyboard behavior, which this never implemented, leaving
+ * every option as a separate Tab stop). In the accessibility preferences
+ * panel itself, shipping radio semantics without their interaction model
+ * is worse than not claiming them: plain Tab-reachable toggle buttons with
+ * `aria-pressed` are honest about what this control actually does.
  */
 function TextSizeControl({ value, onChange }: { value: A11yTextSize; onChange: (size: A11yTextSize) => void }) {
   return (
-    <div role="radiogroup" aria-label="גודל טקסט" className="flex items-center gap-1 rounded-full bg-overlay-soft p-1">
+    <div role="group" aria-label="גודל טקסט" className="flex items-center gap-1 rounded-full bg-overlay-soft p-1">
       {TEXT_SIZE_OPTIONS.map((option) => {
         const isActive = value === option.value;
         return (
           <button
             key={option.value}
             type="button"
-            role="radio"
-            aria-checked={isActive}
+            aria-pressed={isActive}
             onClick={() => onChange(option.value)}
             className={`flex-1 rounded-full px-2 py-1.5 text-xs font-medium transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
               isActive ? "bg-surface-1 text-primary" : "text-muted hover:text-foreground"

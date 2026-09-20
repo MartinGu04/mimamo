@@ -78,7 +78,7 @@ describe("AccessibilityPreferencesButton — trigger", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("never claims menu semantics -- every control inside is a plain radio/switch/button/link", () => {
+  it("never claims menu semantics -- every control inside is a plain button/switch/link", () => {
     renderWidget();
     openPanel();
     expect(screen.queryByRole("menu")).toBeNull();
@@ -132,31 +132,39 @@ describe("AccessibilityPreferencesButton — dismiss behavior", () => {
 });
 
 describe("AccessibilityPreferencesButton — text size", () => {
-  it("defaults to רגיל selected and no root attribute set", () => {
+  it("defaults to רגיל pressed and no root attribute set", () => {
     renderWidget();
     openPanel();
-    expect(screen.getByRole("radio", { name: "רגיל" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("button", { name: "רגיל" })).toHaveAttribute("aria-pressed", "true");
     expect(document.documentElement.hasAttribute("data-a11y-text")).toBe(false);
   });
 
-  it("choosing מוגדל sets data-a11y-text=enlarged and updates the selected radio", () => {
+  it("choosing מוגדל sets data-a11y-text=enlarged and updates aria-pressed on both options", () => {
     renderWidget();
     openPanel();
 
-    fireEvent.click(screen.getByRole("radio", { name: "מוגדל" }));
+    fireEvent.click(screen.getByRole("button", { name: "מוגדל" }));
 
     expect(document.documentElement.getAttribute("data-a11y-text")).toBe("enlarged");
-    expect(screen.getByRole("radio", { name: "מוגדל" })).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByRole("radio", { name: "רגיל" })).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("button", { name: "מוגדל" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "רגיל" })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("choosing מוגדל מאוד sets data-a11y-text=xlarge", () => {
     renderWidget();
     openPanel();
 
-    fireEvent.click(screen.getByRole("radio", { name: "מוגדל מאוד" }));
+    fireEvent.click(screen.getByRole("button", { name: "מוגדל מאוד" }));
 
     expect(document.documentElement.getAttribute("data-a11y-text")).toBe("xlarge");
+  });
+
+  it("never claims radiogroup/radio semantics -- no interaction model backs them", () => {
+    renderWidget();
+    openPanel();
+    expect(screen.queryByRole("radiogroup")).toBeNull();
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(screen.getByRole("group", { name: "גודל טקסט" })).toBeInTheDocument();
   });
 });
 
@@ -206,7 +214,7 @@ describe("AccessibilityPreferencesButton — reset", () => {
     renderWidget();
     openPanel();
 
-    fireEvent.click(screen.getByRole("radio", { name: "מוגדל" }));
+    fireEvent.click(screen.getByRole("button", { name: "מוגדל" }));
     fireEvent.click(screen.getByRole("switch", { name: "הפחתת תנועה" }));
     fireEvent.click(screen.getByRole("switch", { name: "הפחתת שקיפות" }));
     fireEvent.click(screen.getByRole("switch", { name: "הדגשת קישורים" }));
@@ -214,7 +222,7 @@ describe("AccessibilityPreferencesButton — reset", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "איפוס הגדרות נגישות" }));
 
-    expect(screen.getByRole("radio", { name: "רגיל" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("button", { name: "רגיל" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("switch", { name: "הפחתת תנועה" })).toHaveAttribute("aria-checked", "false");
     expect(screen.getByRole("switch", { name: "הפחתת שקיפות" })).toHaveAttribute("aria-checked", "false");
     expect(screen.getByRole("switch", { name: "הדגשת קישורים" })).toHaveAttribute("aria-checked", "false");
@@ -234,7 +242,7 @@ describe("AccessibilityPreferencesButton — persistence across reload", () => {
     renderWidget();
     openPanel();
 
-    expect(screen.getByRole("radio", { name: "מוגדל מאוד" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("button", { name: "מוגדל מאוד" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("switch", { name: "הפחתת תנועה" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("switch", { name: "הפחתת שקיפות" })).toHaveAttribute("aria-checked", "false");
     expect(screen.getByRole("switch", { name: "הדגשת קישורים" })).toHaveAttribute("aria-checked", "true");
