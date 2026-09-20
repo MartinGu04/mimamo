@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
+import { A11yPreferencesProvider } from "@/lib/a11y/A11yPreferencesProvider";
 import { AppShell } from "./AppShell";
 
 /** Opens the mobile header's profile menu, which now hides the sign-out affordance/theme action until the Avatar trigger is clicked. */
@@ -16,7 +17,11 @@ afterEach(() => {
 });
 
 function renderWithTheme(ui: ReactElement) {
-  return render(<ThemeProvider>{ui}</ThemeProvider>);
+  return render(
+    <ThemeProvider>
+      <A11yPreferencesProvider>{ui}</A11yPreferencesProvider>
+    </ThemeProvider>,
+  );
 }
 
 describe("AppShell — mobile identity/sign-out", () => {
@@ -99,12 +104,14 @@ describe("AppShell — mobile identity/sign-out", () => {
 
     rerender(
       <ThemeProvider>
-        <AppShell
-          person={{ name: "דני בדיקה", isManager: false, avatarUrl: null, userId: "user-test-1" }}
-          emergencyModeActive
-        >
-          <div>content</div>
-        </AppShell>
+        <A11yPreferencesProvider>
+          <AppShell
+            person={{ name: "דני בדיקה", isManager: false, avatarUrl: null, userId: "user-test-1" }}
+            emergencyModeActive
+          >
+            <div>content</div>
+          </AppShell>
+        </A11yPreferencesProvider>
       </ThemeProvider>,
     );
 
@@ -267,9 +274,11 @@ describe("AppShell — notification bells are keyed by userId (account-switch sa
     // over the previous user's open popover or `usePushSubscription` state.
     rerender(
       <ThemeProvider>
-        <AppShell person={{ name: "דני בדיקה", isManager: false, avatarUrl: null, userId: "user-b" }}>
-          <div>content</div>
-        </AppShell>
+        <A11yPreferencesProvider>
+          <AppShell person={{ name: "דני בדיקה", isManager: false, avatarUrl: null, userId: "user-b" }}>
+            <div>content</div>
+          </AppShell>
+        </A11yPreferencesProvider>
       </ThemeProvider>,
     );
 

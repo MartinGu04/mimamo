@@ -2,12 +2,17 @@ import type { ComponentProps, ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
+import { A11yPreferencesProvider } from "@/lib/a11y/A11yPreferencesProvider";
 import { formatHebrewWeekdayAndDate } from "@/lib/presentation/hebrewDate";
 import { APP_NAME } from "@/lib/config/productName";
 import type { PersonalProfile } from "@/lib/readModels/types";
 
 function renderWithTheme(ui: ReactElement) {
-  return render(<ThemeProvider>{ui}</ThemeProvider>);
+  return render(
+    <ThemeProvider>
+      <A11yPreferencesProvider>{ui}</A11yPreferencesProvider>
+    </ThemeProvider>,
+  );
 }
 
 const getRequestPersonalSchedule = vi.fn();

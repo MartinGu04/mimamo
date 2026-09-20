@@ -3,6 +3,8 @@ import { Heebo } from "next/font/google";
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/config/productName";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import { THEME_INIT_SCRIPT } from "@/lib/theme/themeScript";
+import { A11yPreferencesProvider } from "@/lib/a11y/A11yPreferencesProvider";
+import { A11Y_INIT_SCRIPT } from "@/lib/a11y/preferences";
 import { ServiceWorkerManager } from "@/components/pwa/ServiceWorkerManager";
 import { PwaInstallProvider } from "@/components/pwa/PwaInstallProvider";
 import { Analytics } from "@vercel/analytics/next";
@@ -115,11 +117,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="he" dir="rtl" className={`${heebo.variable} antialiased`}>
       <body>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: A11Y_INIT_SCRIPT }} />
         <ThemeProvider>
-          <PwaInstallProvider>
-            {children}
-            <ServiceWorkerManager />
-          </PwaInstallProvider>
+          <A11yPreferencesProvider>
+            <PwaInstallProvider>
+              {children}
+              <ServiceWorkerManager />
+            </PwaInstallProvider>
+          </A11yPreferencesProvider>
         </ThemeProvider>
         <Analytics />
       </body>

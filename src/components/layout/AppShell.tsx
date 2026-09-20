@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AccessibilityPreferencesButton } from "./AccessibilityPreferencesButton";
 import { BottomNav } from "./BottomNav";
 import { PageBackdrop } from "./PageBackdrop";
 import { EmergencyModeBanner } from "./EmergencyModeBanner";
@@ -104,6 +105,7 @@ export function AppShell({
         </main>
       </div>
       <BottomNav isManager={person?.isManager} />
+      <AccessibilityPreferencesButton />
     </div>
   );
 }
