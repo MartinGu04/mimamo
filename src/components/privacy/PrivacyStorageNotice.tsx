@@ -58,14 +58,15 @@ interface PrivacyStorageNoticeProps {
    *
    * "authenticated": mounted exactly once from `AppShell`, positioned clear
    * of both `BottomNav` and `AccessibilityPreferencesButton`'s own fixed
-   * corner (see the component docstring below). Uses `glass-subtle` rather
-   * than that button's `glass-medium` -- unlike the button's popover, this
-   * notice sits fixed over page content (the sidebar/profile footer) from
-   * first paint until dismissed, so it needs to read as solidly separated
-   * rather than momentarily floating; `glass-subtle` is this design
-   * system's own "close to opaque, glass as a hint not something to read
-   * past" level (see `components/ui/glass.ts`), the same one already used
-   * for dense overlapping cards like `ShiftFairnessCard`/`IssueRow`.
+   * corner (see the component docstring below). Deliberately opts OUT of
+   * this design system's `.glass-*` vocabulary (see `components/ui/glass.ts`)
+   * -- even the "close to opaque" `glass-subtle` level still carries a
+   * fractional alpha (meaningfully below 1 in dark mode) plus a backdrop
+   * blur, and this notice sits fixed over page content (the sidebar/profile
+   * footer) from first paint until dismissed, not just momentarily like
+   * `AccessibilityPreferencesButton`'s popover. A plain, fully opaque
+   * `bg-surface-1` card (no blur, no translucency) is what makes it read as
+   * a genuinely solid floating card with nothing bleeding through.
    */
   variant: PrivacyStorageNoticeVariant;
 }
@@ -140,7 +141,7 @@ export function PrivacyStorageNotice({ variant }: PrivacyStorageNoticeProps) {
       <div
         className={
           isAuthenticated
-            ? "glass-subtle rounded-xl bg-surface-1 p-4 text-foreground shadow-[var(--shadow-elevated)] ring-1 ring-border-strong"
+            ? "rounded-xl bg-surface-1 p-4 text-foreground shadow-[var(--shadow-elevated)] ring-1 ring-border-strong"
             : "rounded-xl bg-[#10151f]/90 p-4 text-white ring-1 ring-white/10 backdrop-blur-sm"
         }
       >
