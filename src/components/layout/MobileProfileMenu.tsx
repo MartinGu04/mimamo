@@ -184,6 +184,16 @@ export function MobileProfileMenu({ name, isManager, avatarUrl, userId }: Mobile
             הצהרת נגישות
           </Link>
 
+          {/* Phase 9C: same footer-style carve-out as the accessibility
+              statement link above, for the public privacy notice. */}
+          <Link
+            href="/privacy"
+            onClick={() => setOpen(false)}
+            className="block rounded-xl px-2.5 py-1.5 text-xs font-medium text-muted transition-colors duration-150 hover:bg-overlay-soft hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            מדיניות פרטיות
+          </Link>
+
           <div className="my-1 h-px bg-border" />
 
           <form action={signOutAction}>

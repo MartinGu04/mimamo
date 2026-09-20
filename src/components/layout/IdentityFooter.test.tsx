@@ -164,6 +164,19 @@ describe("IdentityFooter — accessibility statement link (Phase 7)", () => {
   });
 });
 
+describe("IdentityFooter — privacy notice link (Phase 9C)", () => {
+  it('renders a "מדיניות פרטיות" link pointing at /privacy', () => {
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
+    expect(screen.getByRole("link", { name: "מדיניות פרטיות" })).toHaveAttribute("href", "/privacy");
+  });
+
+  it("keeps visible keyboard focus on the privacy notice link", () => {
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
+    const link = screen.getByRole("link", { name: "מדיניות פרטיות" });
+    expect(link.className).toMatch(/focus-visible:outline/);
+  });
+});
+
 describe("IdentityFooter — avatar photo", () => {
   it("passes avatarUrl through to the Avatar (image element present when given a photo)", () => {
     const { container } = renderWithTheme(

@@ -161,6 +161,14 @@ describe("MobileProfileMenu — accessibility statement link (Phase 7)", () => {
   });
 });
 
+describe("MobileProfileMenu — privacy notice link (Phase 9C)", () => {
+  it('renders a "מדיניות פרטיות" link pointing at /privacy inside the open panel', () => {
+    renderWithTheme(<MobileProfileMenu name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /תפריט פרופיל/ }));
+    expect(screen.getByRole("link", { name: "מדיניות פרטיות" })).toHaveAttribute("href", "/privacy");
+  });
+});
+
 describe("MobileProfileMenu — logout", () => {
   it("logout remains reachable inside the panel, as a plain button (not a menuitem)", () => {
     renderWithTheme(<MobileProfileMenu name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);

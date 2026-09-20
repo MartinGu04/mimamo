@@ -59,6 +59,16 @@ export function IdentityFooter({ name, isManager, avatarUrl, userId }: IdentityF
       >
         הצהרת נגישות
       </Link>
+      {/* Phase 9C: the discoverable link into the public privacy notice,
+          grouped with the accessibility statement link for the same reason
+          (see the comment above) -- a legal/informational link, not app
+          navigation. */}
+      <Link
+        href="/privacy"
+        className="mt-1 block rounded px-1 text-[11px] text-sidebar-muted underline decoration-sidebar-muted/40 underline-offset-2 transition-colors duration-150 hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      >
+        מדיניות פרטיות
+      </Link>
       <div className="mt-3.5 flex items-center gap-3 rounded-xl px-1 py-1.5">
         <Avatar name={name} size="md" avatarUrl={avatarUrl} />
         <div className="min-w-0 flex-1">
