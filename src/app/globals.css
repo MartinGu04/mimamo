@@ -781,6 +781,22 @@ body {
       backdrop-filter: none;
     }
   }
+
+  /* The Phase 8 accessibility preferences panel's manual "reduce
+     transparency" toggle -- same effect as the OS media query above, just
+     opt-in rather than system-detected. Deliberately never the OTHER
+     direction: there is no rule anywhere that raises transparency back up
+     when the OS itself already asked for less, so this can only ever ADD
+     opacity on top of (never remove it from) `prefers-reduced-transparency`. */
+  :root[data-a11y-reduce-transparency="true"] {
+    --glass-alpha-bump: 1;
+  }
+
+  [data-a11y-reduce-transparency="true"] :is(.glass-strong, .glass-medium, .glass-subtle, .glass-scrim) {
+    background-image: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -975,4 +991,77 @@ body {
     animation-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* The Phase 8 accessibility preferences panel's manual "reduce motion"
+   toggle -- the SAME rule as the `prefers-reduced-motion` media query
+   above, just opt-in rather than system-detected, so the two work
+   additively (either alone, or both together, reduce motion; this never
+   reintroduces motion the OS preference already turned off). */
+[data-a11y-reduce-motion="true"] .animate-pulse-dot,
+[data-a11y-reduce-motion="true"] .animate-pulse-ring,
+[data-a11y-reduce-motion="true"] .animate-fade-up,
+[data-a11y-reduce-motion="true"] .animate-breathe,
+[data-a11y-reduce-motion="true"] .animate-issue-pulse,
+[data-a11y-reduce-motion="true"] .animate-login-now-drift,
+[data-a11y-reduce-motion="true"] .animate-login-clock-sweep,
+[data-a11y-reduce-motion="true"] .animate-satcom-drift,
+[data-a11y-reduce-motion="true"] .animate-satcom-arc-drift,
+[data-a11y-reduce-motion="true"] .animate-satcom-arc-drift-alt,
+[data-a11y-reduce-motion="true"] .animate-satcom-twinkle,
+[data-a11y-reduce-motion="true"] .animate-satcom-twinkle-late,
+[data-a11y-reduce-motion="true"] .animate-satcom-breathe,
+[data-a11y-reduce-motion="true"] .animate-satcom-breathe-slow,
+[data-a11y-reduce-motion="true"] .animate-satcom-trace,
+[data-a11y-reduce-motion="true"] .animate-satcom-trace-late,
+[data-a11y-reduce-motion="true"] .animate-satcom-ping,
+[data-a11y-reduce-motion="true"] .animate-satcom-ping-late,
+[data-a11y-reduce-motion="true"] .animate-satcom-dish-idle,
+[data-a11y-reduce-motion="true"] .skeleton {
+  animation: none !important;
+}
+
+[data-a11y-reduce-motion="true"] *,
+[data-a11y-reduce-motion="true"] *::before,
+[data-a11y-reduce-motion="true"] *::after {
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Accessibility preferences panel (Phase 8) -- a user PREFERENCE layer,   */
+/* never a compliance fix, applied entirely through the `data-a11y-*`      */
+/* attributes `A11yPreferencesProvider` sets on `<html>` (spec section 5). */
+/* Reduce-transparency lives beside the `.glass-*` rules above (matching   */
+/* specificity, see there); this block covers text size and link emphasis.*/
+/* ---------------------------------------------------------------------- */
+
+/* Scales the root rem unit -- every Tailwind text/spacing utility in this
+   app is rem-based, so this scales the whole UI proportionally rather than
+   needing a per-component override, and never relies on the browser's own
+   zoom (spec explicitly asks for an app-level mechanism instead). */
+html[data-a11y-text="enlarged"] {
+  font-size: 112.5%;
+}
+
+html[data-a11y-text="xlarge"] {
+  font-size: 125%;
+}
+
+/* Scoped to the page's real content landmark (`#main-content`, see
+   `SkipToMainContentLink`'s `MAIN_CONTENT_ID`) -- every app-chrome
+   surface (Sidebar, BottomNav, the mobile top bar, this very panel's own
+   trigger) renders OUTSIDE `<main>`, so this never touches navigation.
+   Within it, links already styled as a pill/tab/button/card
+   (`rounded-full`/`rounded-lg`/`rounded-xl`/`rounded-2xl` -- this
+   codebase's own convention for those, e.g. `MonthNav`'s arrow buttons,
+   `DutyViewToggle`'s tabs, `RecentChangesPanel`'s row links) are excluded,
+   so only genuinely textual inline links pick up the underline -- spec
+   section 2D's "do not unnecessarily alter button-like controls". */
+[data-a11y-emphasize-links="true"]
+  #main-content
+  a:not([class*="rounded-full"]):not([class*="rounded-lg"]):not([class*="rounded-xl"]):not([class*="rounded-2xl"]) {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
