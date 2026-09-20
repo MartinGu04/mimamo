@@ -177,6 +177,66 @@ describe("IdentityFooter — privacy notice link (Phase 9C)", () => {
   });
 });
 
+describe("IdentityFooter — footer hierarchy polish (informational links above divider, utilities below)", () => {
+  function findDividerRow() {
+    const version = screen.getByText(new RegExp(APP_VERSION.replace(/\./g, "\\.")));
+    return version.closest("div.border-t") as HTMLElement;
+  }
+
+  it("accessibility link appears before the version/utilities divider row in DOM order", () => {
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
+    const link = screen.getByRole("link", { name: "הצהרת נגישות" });
+    const dividerRow = findDividerRow();
+    const position = link.compareDocumentPosition(dividerRow);
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("privacy link appears before the version/utilities divider row in DOM order", () => {
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
+    const link = screen.getByRole("link", { name: "מדיניות פרטיות" });
+    const dividerRow = findDividerRow();
+    const position = link.compareDocumentPosition(dividerRow);
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("the divider uses the existing sidebar border token, not a new color", () => {
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
+    expect(findDividerRow().className).toMatch(/border-sidebar-border/);
+  });
+
+  it("version and utility controls (calendar sync, theme) render inside the row after the divider", () => {
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
+    const dividerRow = findDividerRow();
+    const calendarLink = screen.getByRole("link", { name: "סנכרון יומן" });
+    const themeAction = screen.getByRole("button", { name: /מצב (בהיר|כהה)/ });
+    expect(dividerRow.contains(calendarLink)).toBe(true);
+    expect(dividerRow.contains(themeAction)).toBe(true);
+  });
+
+  it("the profile/account row still remains the last child, anchoring the bottom of the footer", () => {
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
+    const signOut = screen.getByRole("button", { name: "התנתקות" });
+    const footer = signOut.closest("div.border-t.px-5") as HTMLElement;
+    const lastChild = footer.lastElementChild;
+    expect(lastChild?.contains(signOut)).toBe(true);
+  });
+
+  it("APP_VERSION is still sourced from the existing package.json config, not hardcoded", () => {
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
+    expect(APP_VERSION).toBe(packageJson.version);
+    expect(screen.getByText(new RegExp(packageJson.version.replace(/\./g, "\\.")))).toBeInTheDocument();
+  });
+
+  it("exactly one theme control still renders in the footer", () => {
+    renderWithTheme(<IdentityFooter name="דני בדיקה" isManager={false} avatarUrl={null} userId="user-test-1" />);
+    const actions = [
+      ...screen.queryAllByRole("button", { name: "מצב בהיר" }),
+      ...screen.queryAllByRole("button", { name: "מצב כהה" }),
+    ];
+    expect(actions).toHaveLength(1);
+  });
+});
+
 describe("IdentityFooter — avatar photo", () => {
   it("passes avatarUrl through to the Avatar (image element present when given a photo)", () => {
     const { container } = renderWithTheme(
