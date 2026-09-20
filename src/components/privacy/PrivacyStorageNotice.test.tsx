@@ -108,9 +108,21 @@ describe("PrivacyStorageNotice — variants (Phase 9D)", () => {
     expect(notice.innerHTML).not.toMatch(/text-foreground|bg-surface-1|glass-medium/);
   });
 
-  it("the authenticated variant reuses the shared design-system tokens/glass treatment", () => {
+  it("the authenticated variant reuses the shared design-system surface tokens", () => {
     render(<PrivacyStorageNotice variant="authenticated" />);
     const notice = screen.getByTestId("privacy-storage-notice");
-    expect(notice.innerHTML).toMatch(/glass-medium/);
+    expect(notice.innerHTML).toMatch(/bg-surface-1/);
+    expect(notice.innerHTML).toMatch(/ring-border-strong/);
+  });
+
+  it("the authenticated variant uses an opaque/solid-enough surface, not a highly transparent one", () => {
+    render(<PrivacyStorageNotice variant="authenticated" />);
+    const notice = screen.getByTestId("privacy-storage-notice");
+    // `glass-subtle` is this design system's "close to opaque" glass level
+    // (see `components/ui/glass.ts`) -- `glass-medium`/`glass-strong` are
+    // both meaningfully more transparent and must not be used here, since
+    // the notice sits fixed over other page content until dismissed.
+    expect(notice.innerHTML).toMatch(/glass-subtle/);
+    expect(notice.innerHTML).not.toMatch(/glass-medium|glass-strong/);
   });
 });

@@ -56,11 +56,16 @@ interface PrivacyStorageNoticeProps {
    * uses literal white/opacity styling, matching `LoginErrorNotice`/
    * `LoginFeatureStrip`, never theme tokens.
    *
-   * "authenticated": mounted exactly once from `AppShell`, uses the same
-   * design-system tokens/`glass-medium` treatment as
-   * `AccessibilityPreferencesButton`, and is positioned clear of both
-   * `BottomNav` and that button's own fixed corner (see the component
-   * docstring below).
+   * "authenticated": mounted exactly once from `AppShell`, positioned clear
+   * of both `BottomNav` and `AccessibilityPreferencesButton`'s own fixed
+   * corner (see the component docstring below). Uses `glass-subtle` rather
+   * than that button's `glass-medium` -- unlike the button's popover, this
+   * notice sits fixed over page content (the sidebar/profile footer) from
+   * first paint until dismissed, so it needs to read as solidly separated
+   * rather than momentarily floating; `glass-subtle` is this design
+   * system's own "close to opaque, glass as a hint not something to read
+   * past" level (see `components/ui/glass.ts`), the same one already used
+   * for dense overlapping cards like `ShiftFairnessCard`/`IssueRow`.
    */
   variant: PrivacyStorageNoticeVariant;
 }
@@ -135,7 +140,7 @@ export function PrivacyStorageNotice({ variant }: PrivacyStorageNoticeProps) {
       <div
         className={
           isAuthenticated
-            ? "glass-medium rounded-xl bg-surface-1 p-4 text-foreground shadow-[var(--shadow-elevated)] ring-1 ring-border-strong"
+            ? "glass-subtle rounded-xl bg-surface-1 p-4 text-foreground shadow-[var(--shadow-elevated)] ring-1 ring-border-strong"
             : "rounded-xl bg-[#10151f]/90 p-4 text-white ring-1 ring-white/10 backdrop-blur-sm"
         }
       >
