@@ -68,7 +68,7 @@ describe("AccessibilityStatementPage — careful compliance wording", () => {
     expect(text).not.toMatch(/עומדת בתאימות מלאה/);
   });
 
-  it('explicitly states final compliance is NOT yet declared, pending the manual verification phase', () => {
+  it('still does NOT declare full/absolute compliance, even after manual verification', () => {
     render(<AccessibilityStatementPage />);
     expect(screen.getByText(/איננו מצהירים כי האפליקציה עומדת בהתאמה מלאה/)).toBeInTheDocument();
   });
@@ -84,11 +84,37 @@ describe("AccessibilityStatementPage — careful compliance wording", () => {
     expect(screen.getByText(/תחזוקת הנגישות של האפליקציה היא תהליך מתמשך/)).toBeInTheDocument();
   });
 
+  it("never claims external certification or a regulator/professional audit", () => {
+    const { container } = render(<AccessibilityStatementPage />);
+    expect(container.textContent).not.toMatch(/מוסמך|הוסמכ|ביקורת חיצונית|אישור חיצוני|מבוקר/);
+  });
+
   it("references the real legal/standard basis: the 2013 regulations, IS 5568, and WCAG 2.0 AA", () => {
     render(<AccessibilityStatementPage />);
     expect(screen.getByText(/תשע״ג-2013/)).toBeInTheDocument();
     expect(screen.getByText(/ת״י 5568/)).toBeInTheDocument();
     expect(screen.getByText(/WCAG 2\.0/)).toBeInTheDocument();
+  });
+});
+
+describe("AccessibilityStatementPage — manual AT verification now completed", () => {
+  it('no longer says manual assistive-technology verification is still pending/in progress', () => {
+    const { container } = render(<AccessibilityStatementPage />);
+    expect(container.textContent).not.toMatch(/טרם הושלמה|עדיין מתבצע/);
+  });
+
+  it('states that manual keyboard navigation and screen-reader verification were performed', () => {
+    render(<AccessibilityStatementPage />);
+    expect(
+      screen.getByText(/במסגרת בדיקת הנגישות בוצעה גם בדיקה ידנית של ניווט באמצעות מקלדת ושל שימוש בקורא מסך/),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the ongoing-maintenance wording in the limitations section without an "AT verification still in progress" claim', () => {
+    render(<AccessibilityStatementPage />);
+    expect(
+      screen.getByText(/גם לאחר ביצוע בדיקת הנגישות, ייתכן שיתגלו ממצאים נוספים או תרחישי שימוש שטרם טופלו במלואם/),
+    ).toBeInTheDocument();
   });
 });
 

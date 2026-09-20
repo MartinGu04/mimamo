@@ -71,9 +71,9 @@ const IMPLEMENTED_FEATURES = [
  * Content is intentionally conservative about compliance claims: this
  * describes what has actually shipped in Phases 1-6, references the
  * relevant standards as the basis the work follows rather than a
- * completed certification, and is explicit that manual assistive-
- * technology verification is still pending. It must never be edited to
- * claim full/100% compliance before that final verification phase.
+ * completed certification, and now notes that manual keyboard/screen-
+ * reader verification has been performed -- without claiming full/100%
+ * compliance, external certification, or a specific named screen reader.
  *
  * Section 7 (פנייה בנושא נגישות) links a real accessibility contact email
  * (`ACCESSIBILITY_CONTACT_EMAIL`, below), supplied directly by the project
@@ -117,8 +117,8 @@ export default function AccessibilityStatementPage() {
                 <li>הנחיות WCAG 2.0 ברמה AA</li>
               </ul>
               <p className={P_CLASS}>
-                עד לסיום שלב הבדיקה הידנית המסכמת של תהליך ההנגשה, איננו מצהירים כי האפליקציה עומדת בהתאמה מלאה או
-                מוחלטת לתקנים אלו -- הנגשת האפליקציה היא תהליך מתמשך.
+                איננו מצהירים כי האפליקציה עומדת בהתאמה מלאה או מוחלטת לתקנים אלו -- הנגשת האפליקציה היא תהליך
+                מתמשך, ואנו ממשיכים לאתר ולטפל בממצאים נוספים ככל שהם מתגלים.
               </p>
             </section>
 
@@ -146,16 +146,17 @@ export default function AccessibilityStatementPage() {
             <section className="mt-6">
               <h2 className={H2_CLASS}>תאימות לטכנולוגיות מסייעות</h2>
               <p className={P_CLASS}>
-                באפליקציה מיושמת סמנטיקת HTML/ARIA שנועדה לתמוך בקוראי מסך ובניווט מקלדת. בדיקה ידנית מול
-                טכנולוגיות מסייעות בפועל היא חלק מתהליך בדיקת הנגישות המסכם, וטרם הושלמה במלואה.
+                באפליקציה מיושמת סמנטיקת HTML/ARIA שנועדה לתמוך בקוראי מסך ובניווט מקלדת. במסגרת בדיקת הנגישות
+                בוצעה גם בדיקה ידנית של ניווט באמצעות מקלדת ושל שימוש בקורא מסך. לצד הבדיקות האוטומטיות ותיקוני
+                הנגישות שבוצעו, נמשיך לתחזק ולשפר את נגישות האפליקציה באופן שוטף.
               </p>
             </section>
 
             <section className="mt-6">
               <h2 className={H2_CLASS}>מגבלות ותהליך שיפור מתמשך</h2>
               <p className={P_CLASS}>
-                תחזוקת הנגישות של האפליקציה היא תהליך מתמשך. חלק מהבדיקות הנדרשות, ובהן אימות ידני מול טכנולוגיות
-                מסייעות, עדיין מתבצעות. ממצאים חדשים המתגלים בתהליך מטופלים על ידינו באופן שוטף.
+                תחזוקת הנגישות של האפליקציה היא תהליך מתמשך. גם לאחר ביצוע בדיקת הנגישות, ייתכן שיתגלו ממצאים
+                נוספים או תרחישי שימוש שטרם טופלו במלואם. ממצאים כאלה מטופלים על ידינו באופן שוטף.
               </p>
             </section>
 
