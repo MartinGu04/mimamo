@@ -14,6 +14,7 @@ export type A11yTextSize = "default" | "enlarged" | "xlarge";
 
 export interface A11yPreferences {
   textSize: A11yTextSize;
+  highContrast: boolean;
   reduceMotion: boolean;
   reduceTransparency: boolean;
   emphasizeLinks: boolean;
@@ -21,6 +22,7 @@ export interface A11yPreferences {
 
 export const DEFAULT_A11Y_PREFERENCES: A11yPreferences = {
   textSize: "default",
+  highContrast: false,
   reduceMotion: false,
   reduceTransparency: false,
   emphasizeLinks: false,
@@ -41,7 +43,12 @@ function isTextSize(value: unknown): value is A11yTextSize {
  * Defensive per-field parsing (never a bare `JSON.parse` cast) -- a
  * malformed, partial, or future-shape stored value degrades field-by-field
  * to the default rather than discarding every other still-valid field, or
- * throwing and losing the whole read.
+ * throwing and losing the whole read. This is also what makes the storage
+ * format additive: an object saved before `highContrast` existed simply has
+ * no such key, and `typeof undefined === "boolean"` is false, so it quietly
+ * resolves to the default (`false`) here -- the rest of that user's
+ * preferences are read back unchanged, never discarded for being "old
+ * shape".
  */
 export function parseA11yPreferences(raw: string): A11yPreferences {
   try {
@@ -50,6 +57,7 @@ export function parseA11yPreferences(raw: string): A11yPreferences {
     const value = parsed as Record<string, unknown>;
     return {
       textSize: isTextSize(value.textSize) ? value.textSize : DEFAULT_A11Y_PREFERENCES.textSize,
+      highContrast: typeof value.highContrast === "boolean" ? value.highContrast : DEFAULT_A11Y_PREFERENCES.highContrast,
       reduceMotion: typeof value.reduceMotion === "boolean" ? value.reduceMotion : DEFAULT_A11Y_PREFERENCES.reduceMotion,
       reduceTransparency:
         typeof value.reduceTransparency === "boolean" ? value.reduceTransparency : DEFAULT_A11Y_PREFERENCES.reduceTransparency,
@@ -82,6 +90,7 @@ export function applyA11yDocumentAttributes(preferences: A11yPreferences): void 
   } else {
     root.removeAttribute("data-a11y-text");
   }
+  setBooleanAttribute(root, "data-a11y-high-contrast", preferences.highContrast);
   setBooleanAttribute(root, "data-a11y-reduce-motion", preferences.reduceMotion);
   setBooleanAttribute(root, "data-a11y-reduce-transparency", preferences.reduceTransparency);
   setBooleanAttribute(root, "data-a11y-emphasize-links", preferences.emphasizeLinks);
@@ -103,4 +112,4 @@ export function applyA11yDocumentAttributes(preferences: A11yPreferences): void 
  */
 export const A11Y_INIT_SCRIPT = `(function(){try{var raw=localStorage.getItem(${JSON.stringify(
   A11Y_STORAGE_KEY,
-)});if(!raw)return;var p=JSON.parse(raw);var root=document.documentElement;if(p.textSize==="enlarged"||p.textSize==="xlarge"){root.setAttribute("data-a11y-text",p.textSize);}if(p.reduceMotion===true){root.setAttribute("data-a11y-reduce-motion","true");}if(p.reduceTransparency===true){root.setAttribute("data-a11y-reduce-transparency","true");}if(p.emphasizeLinks===true){root.setAttribute("data-a11y-emphasize-links","true");}}catch(e){}})();`;
+)});if(!raw)return;var p=JSON.parse(raw);var root=document.documentElement;if(p.textSize==="enlarged"||p.textSize==="xlarge"){root.setAttribute("data-a11y-text",p.textSize);}if(p.highContrast===true){root.setAttribute("data-a11y-high-contrast","true");}if(p.reduceMotion===true){root.setAttribute("data-a11y-reduce-motion","true");}if(p.reduceTransparency===true){root.setAttribute("data-a11y-reduce-transparency","true");}if(p.emphasizeLinks===true){root.setAttribute("data-a11y-emphasize-links","true");}}catch(e){}})();`;

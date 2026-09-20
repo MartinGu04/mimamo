@@ -390,6 +390,212 @@
 }
 
 /* ---------------------------------------------------------------------- */
+/* High contrast (Phase 8 accessibility preferences widget) -- an          */
+/* opt-in, `data-a11y-high-contrast="true"` REAL token override, never a   */
+/* `filter: contrast()/invert()/grayscale()` whole-page hack. Every ratio  */
+/* below was computed with the WCAG relative-luminance formula (not       */
+/* eyeballed), comfortably clearing 4.5:1 for text and 3:1 for UI          */
+/* boundaries/focus in both themes -- see the PR description for the full */
+/* table. Deliberately narrow scope: only the neutral/surface/border and   */
+/* primary/sidebar tokens are strengthened. `--accent`, `--success`,       */
+/* `--warning`, `--critical`, and every `--event-*` categorical color are  */
+/* intentionally left untouched -- their specific meaning matters more     */
+/* than raw contrast, and none of them were reported as failing. Never    */
+/* sets `forced-color-adjust` -- OS-level Windows High Contrast Mode via   */
+/* `forced-colors` is a separate mechanism this must never interfere with. */
+/*                                                                          */
+/* The `--hc-light-*`/`--hc-dark-*` variables hold the palette ONCE; the   */
+/* three trigger blocks below just assign real tokens from them for the    */
+/* base/light, system-dark, and explicit-dark cases, mirroring the exact   */
+/* specificity pattern the theme blocks above already use so the manual    */
+/* toggle always composes correctly with the active theme regardless of    */
+/* source order: `:root[attr]` = (0,2,0), `:root[attr1][attr2]` = (0,3,0). */
+/* ---------------------------------------------------------------------- */
+:root {
+  --hc-light-background: #ffffff;
+  --hc-light-foreground: #000000;
+  --hc-light-muted: #333333;
+  --hc-light-muted-2: #2b2b2b;
+  --hc-light-surface-1: #ffffff;
+  --hc-light-surface-2: #f0f0f0;
+  --hc-light-surface-3: #e3e3e3;
+  --hc-light-border: #545454;
+  --hc-light-border-strong: #1f1f1f;
+  --hc-light-overlay-faint: rgba(0, 0, 0, 0.08);
+  --hc-light-overlay-soft: rgba(0, 0, 0, 0.14);
+  --hc-light-overlay-strong: rgba(0, 0, 0, 0.22);
+  --hc-light-primary: #0b3d78;
+  --hc-light-primary-strong: #072a54;
+  --hc-light-primary-foreground: #ffffff;
+  --hc-light-sidebar: #0a0f14;
+  --hc-light-sidebar-foreground: #ffffff;
+  --hc-light-sidebar-muted: #c7cdd3;
+  --hc-light-sidebar-border: rgba(255, 255, 255, 0.25);
+
+  --hc-dark-background: #000000;
+  --hc-dark-foreground: #ffffff;
+  --hc-dark-muted: #d0d0d0;
+  --hc-dark-muted-2: #c4c4c4;
+  --hc-dark-surface-1: #000000;
+  --hc-dark-surface-2: #141414;
+  --hc-dark-surface-3: #222222;
+  --hc-dark-border: #8a8a8a;
+  --hc-dark-border-strong: #f2f2f2;
+  --hc-dark-overlay-faint: rgba(255, 255, 255, 0.1);
+  --hc-dark-overlay-soft: rgba(255, 255, 255, 0.16);
+  --hc-dark-overlay-strong: rgba(255, 255, 255, 0.24);
+  --hc-dark-primary: #7fc0ff;
+  --hc-dark-primary-strong: #9ecbff;
+  --hc-dark-primary-foreground: #001b33;
+  --hc-dark-sidebar: #000000;
+  --hc-dark-sidebar-foreground: #ffffff;
+  --hc-dark-sidebar-muted: #c7cdd3;
+  --hc-dark-sidebar-border: rgba(255, 255, 255, 0.25);
+}
+
+:root[data-a11y-high-contrast="true"] {
+  --background: var(--hc-light-background);
+  --foreground: var(--hc-light-foreground);
+  --muted: var(--hc-light-muted);
+  --muted-2: var(--hc-light-muted-2);
+  --surface-1: var(--hc-light-surface-1);
+  --surface-2: var(--hc-light-surface-2);
+  --surface-3: var(--hc-light-surface-3);
+  --border: var(--hc-light-border);
+  --border-strong: var(--hc-light-border-strong);
+  --overlay-faint: var(--hc-light-overlay-faint);
+  --overlay-soft: var(--hc-light-overlay-soft);
+  --overlay-strong: var(--hc-light-overlay-strong);
+  --primary: var(--hc-light-primary);
+  --primary-strong: var(--hc-light-primary-strong);
+  --primary-foreground: var(--hc-light-primary-foreground);
+  --sidebar: var(--hc-light-sidebar);
+  --sidebar-foreground: var(--hc-light-sidebar-foreground);
+  --sidebar-muted: var(--hc-light-sidebar-muted);
+  --sidebar-border: var(--hc-light-sidebar-border);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-a11y-high-contrast="true"]:not([data-theme="light"]) {
+    --background: var(--hc-dark-background);
+    --foreground: var(--hc-dark-foreground);
+    --muted: var(--hc-dark-muted);
+    --muted-2: var(--hc-dark-muted-2);
+    --surface-1: var(--hc-dark-surface-1);
+    --surface-2: var(--hc-dark-surface-2);
+    --surface-3: var(--hc-dark-surface-3);
+    --border: var(--hc-dark-border);
+    --border-strong: var(--hc-dark-border-strong);
+    --overlay-faint: var(--hc-dark-overlay-faint);
+    --overlay-soft: var(--hc-dark-overlay-soft);
+    --overlay-strong: var(--hc-dark-overlay-strong);
+    --primary: var(--hc-dark-primary);
+    --primary-strong: var(--hc-dark-primary-strong);
+    --primary-foreground: var(--hc-dark-primary-foreground);
+    --sidebar: var(--hc-dark-sidebar);
+    --sidebar-foreground: var(--hc-dark-sidebar-foreground);
+    --sidebar-muted: var(--hc-dark-sidebar-muted);
+    --sidebar-border: var(--hc-dark-sidebar-border);
+  }
+}
+
+:root[data-theme="dark"][data-a11y-high-contrast="true"] {
+  --background: var(--hc-dark-background);
+  --foreground: var(--hc-dark-foreground);
+  --muted: var(--hc-dark-muted);
+  --muted-2: var(--hc-dark-muted-2);
+  --surface-1: var(--hc-dark-surface-1);
+  --surface-2: var(--hc-dark-surface-2);
+  --surface-3: var(--hc-dark-surface-3);
+  --border: var(--hc-dark-border);
+  --border-strong: var(--hc-dark-border-strong);
+  --overlay-faint: var(--hc-dark-overlay-faint);
+  --overlay-soft: var(--hc-dark-overlay-soft);
+  --overlay-strong: var(--hc-dark-overlay-strong);
+  --primary: var(--hc-dark-primary);
+  --primary-strong: var(--hc-dark-primary-strong);
+  --primary-foreground: var(--hc-dark-primary-foreground);
+  --sidebar: var(--hc-dark-sidebar);
+  --sidebar-foreground: var(--hc-dark-sidebar-foreground);
+  --sidebar-muted: var(--hc-dark-sidebar-muted);
+  --sidebar-border: var(--hc-dark-sidebar-border);
+}
+
+/* Additive OS-level support: `prefers-contrast: more` reuses the exact
+   same validated palette, structured the same way. This is a SEPARATE
+   signal from the manual toggle above -- either can apply independently,
+   and neither ever fights the other in the direction of LESS contrast. */
+@media (prefers-contrast: more) {
+  :root {
+    --background: var(--hc-light-background);
+    --foreground: var(--hc-light-foreground);
+    --muted: var(--hc-light-muted);
+    --muted-2: var(--hc-light-muted-2);
+    --surface-1: var(--hc-light-surface-1);
+    --surface-2: var(--hc-light-surface-2);
+    --surface-3: var(--hc-light-surface-3);
+    --border: var(--hc-light-border);
+    --border-strong: var(--hc-light-border-strong);
+    --overlay-faint: var(--hc-light-overlay-faint);
+    --overlay-soft: var(--hc-light-overlay-soft);
+    --overlay-strong: var(--hc-light-overlay-strong);
+    --primary: var(--hc-light-primary);
+    --primary-strong: var(--hc-light-primary-strong);
+    --primary-foreground: var(--hc-light-primary-foreground);
+    --sidebar: var(--hc-light-sidebar);
+    --sidebar-foreground: var(--hc-light-sidebar-foreground);
+    --sidebar-muted: var(--hc-light-sidebar-muted);
+    --sidebar-border: var(--hc-light-sidebar-border);
+  }
+
+  :root[data-theme="dark"] {
+    --background: var(--hc-dark-background);
+    --foreground: var(--hc-dark-foreground);
+    --muted: var(--hc-dark-muted);
+    --muted-2: var(--hc-dark-muted-2);
+    --surface-1: var(--hc-dark-surface-1);
+    --surface-2: var(--hc-dark-surface-2);
+    --surface-3: var(--hc-dark-surface-3);
+    --border: var(--hc-dark-border);
+    --border-strong: var(--hc-dark-border-strong);
+    --overlay-faint: var(--hc-dark-overlay-faint);
+    --overlay-soft: var(--hc-dark-overlay-soft);
+    --overlay-strong: var(--hc-dark-overlay-strong);
+    --primary: var(--hc-dark-primary);
+    --primary-strong: var(--hc-dark-primary-strong);
+    --primary-foreground: var(--hc-dark-primary-foreground);
+    --sidebar: var(--hc-dark-sidebar);
+    --sidebar-foreground: var(--hc-dark-sidebar-foreground);
+    --sidebar-muted: var(--hc-dark-sidebar-muted);
+    --sidebar-border: var(--hc-dark-sidebar-border);
+  }
+}
+
+@media (prefers-color-scheme: dark) and (prefers-contrast: more) {
+  :root:not([data-theme="light"]) {
+    --background: var(--hc-dark-background);
+    --foreground: var(--hc-dark-foreground);
+    --muted: var(--hc-dark-muted);
+    --muted-2: var(--hc-dark-muted-2);
+    --surface-1: var(--hc-dark-surface-1);
+    --surface-2: var(--hc-dark-surface-2);
+    --surface-3: var(--hc-dark-surface-3);
+    --border: var(--hc-dark-border);
+    --border-strong: var(--hc-dark-border-strong);
+    --overlay-faint: var(--hc-dark-overlay-faint);
+    --overlay-soft: var(--hc-dark-overlay-soft);
+    --overlay-strong: var(--hc-dark-overlay-strong);
+    --primary: var(--hc-dark-primary);
+    --primary-strong: var(--hc-dark-primary-strong);
+    --primary-foreground: var(--hc-dark-primary-foreground);
+    --sidebar: var(--hc-dark-sidebar);
+    --sidebar-foreground: var(--hc-dark-sidebar-foreground);
+    --sidebar-muted: var(--hc-dark-sidebar-muted);
+    --sidebar-border: var(--hc-dark-sidebar-border);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
 /* Login canvas -- fixed, theme-independent tokens (login redesign, real  */
 /* production reference). The login route intentionally uses ONE          */
 /* continuous dark branded canvas at every viewport size and in BOTH app  */
@@ -793,6 +999,23 @@ body {
   }
 
   [data-a11y-reduce-transparency="true"] :is(.glass-strong, .glass-medium, .glass-subtle, .glass-scrim) {
+    background-image: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /* High contrast has its OWN independent opacity rule -- structurally
+     identical to "reduce transparency" above, but never coupled to it: a
+     translucent glass surface can make a high-contrast token pairing
+     unreliable, so high contrast makes glass more opaque on its own
+     terms. Both preferences can be on at once (each just re-asserts the
+     same `--glass-alpha-bump: 1` / no-blur result), and neither toggle's
+     own stored state or attribute is touched by the other. */
+  :root[data-a11y-high-contrast="true"] {
+    --glass-alpha-bump: 1;
+  }
+
+  [data-a11y-high-contrast="true"] :is(.glass-strong, .glass-medium, .glass-subtle, .glass-scrim) {
     background-image: none;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;

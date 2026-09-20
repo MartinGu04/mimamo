@@ -108,8 +108,8 @@ function PreferenceSwitchRow({
  * to this trigger on close, and a plain Escape/outside-pointerdown pair
  * closes it -- not `useFocusTrap` (that hook is for genuinely modal
  * surfaces like `MoreSheet`/`CommandPalette`). No `role="menu"` anywhere:
- * every control inside is an ordinary radio/switch/button/link, exactly
- * the "no incorrect ARIA menu pattern" the spec calls for.
+ * the panel uses ordinary pressed buttons / switches / buttons / links,
+ * exactly the "no incorrect ARIA menu pattern" the spec calls for.
  *
  * Fixed at the shell's own physical end/bottom corner (`end-4`/`bottom-*`,
  * i.e. physical LEFT under `dir="rtl"`) -- clear of `BottomNav` (opens
@@ -121,8 +121,15 @@ function PreferenceSwitchRow({
  * `BottomNav` is `lg:hidden`.
  */
 export function AccessibilityPreferencesButton() {
-  const { preferences, setTextSize, setReduceMotion, setReduceTransparency, setEmphasizeLinks, reset } =
-    useA11yPreferences();
+  const {
+    preferences,
+    setTextSize,
+    setHighContrast,
+    setReduceMotion,
+    setReduceTransparency,
+    setEmphasizeLinks,
+    reset,
+  } = useA11yPreferences();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -195,6 +202,11 @@ export function AccessibilityPreferencesButton() {
           </div>
 
           <div className="mt-2 divide-y divide-border px-1">
+            <PreferenceSwitchRow
+              label="ניגודיות מוגברת"
+              checked={preferences.highContrast}
+              onChange={setHighContrast}
+            />
             <PreferenceSwitchRow label="הפחתת תנועה" checked={preferences.reduceMotion} onChange={setReduceMotion} />
             <PreferenceSwitchRow
               label="הפחתת שקיפות"

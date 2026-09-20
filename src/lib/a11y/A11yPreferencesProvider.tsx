@@ -13,6 +13,7 @@ import {
 interface A11yPreferencesContextValue {
   preferences: A11yPreferences;
   setTextSize: (size: A11yTextSize) => void;
+  setHighContrast: (value: boolean) => void;
   setReduceMotion: (value: boolean) => void;
   setReduceTransparency: (value: boolean) => void;
   setEmphasizeLinks: (value: boolean) => void;
@@ -108,6 +109,7 @@ export function A11yPreferencesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setTextSize = useCallback((textSize: A11yTextSize) => update({ textSize }), [update]);
+  const setHighContrast = useCallback((value: boolean) => update({ highContrast: value }), [update]);
   const setReduceMotion = useCallback((value: boolean) => update({ reduceMotion: value }), [update]);
   const setReduceTransparency = useCallback((value: boolean) => update({ reduceTransparency: value }), [update]);
   const setEmphasizeLinks = useCallback((value: boolean) => update({ emphasizeLinks: value }), [update]);
@@ -124,7 +126,7 @@ export function A11yPreferencesProvider({ children }: { children: ReactNode }) {
 
   return (
     <A11yPreferencesContext.Provider
-      value={{ preferences, setTextSize, setReduceMotion, setReduceTransparency, setEmphasizeLinks, reset }}
+      value={{ preferences, setTextSize, setHighContrast, setReduceMotion, setReduceTransparency, setEmphasizeLinks, reset }}
     >
       {children}
     </A11yPreferencesContext.Provider>

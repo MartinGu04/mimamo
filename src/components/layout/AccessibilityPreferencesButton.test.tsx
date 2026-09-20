@@ -42,6 +42,7 @@ afterEach(() => {
   window.localStorage.clear();
   document.documentElement.removeAttribute("data-theme");
   document.documentElement.removeAttribute("data-a11y-text");
+  document.documentElement.removeAttribute("data-a11y-high-contrast");
   document.documentElement.removeAttribute("data-a11y-reduce-motion");
   document.documentElement.removeAttribute("data-a11y-reduce-transparency");
   document.documentElement.removeAttribute("data-a11y-emphasize-links");
@@ -168,6 +169,87 @@ describe("AccessibilityPreferencesButton — text size", () => {
   });
 });
 
+describe("AccessibilityPreferencesButton — high contrast", () => {
+  it("defaults to unchecked with no root attribute set", () => {
+    renderWidget();
+    openPanel();
+    const toggle = screen.getByRole("switch", { name: "ניגודיות מוגברת" });
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    expect(document.documentElement.hasAttribute("data-a11y-high-contrast")).toBe(false);
+  });
+
+  it("enabling sets data-a11y-high-contrast and disabling removes it", () => {
+    renderWidget();
+    openPanel();
+    const toggle = screen.getByRole("switch", { name: "ניגודיות מוגברת" });
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-checked", "true");
+    expect(document.documentElement.getAttribute("data-a11y-high-contrast")).toBe("true");
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    expect(document.documentElement.hasAttribute("data-a11y-high-contrast")).toBe(false);
+  });
+
+  it("persists the choice to localStorage", () => {
+    renderWidget();
+    openPanel();
+    fireEvent.click(screen.getByRole("switch", { name: "ניגודיות מוגברת" }));
+
+    expect(JSON.parse(window.localStorage.getItem(A11Y_STORAGE_KEY) ?? "{}").highContrast).toBe(true);
+  });
+
+  it("initializes checked from a previously-stored preference", () => {
+    window.localStorage.setItem(A11Y_STORAGE_KEY, JSON.stringify({ highContrast: true }));
+    renderWidget();
+    openPanel();
+    expect(screen.getByRole("switch", { name: "ניגודיות מוגברת" })).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("safely defaults to unchecked for an old stored object saved before this field existed", () => {
+    window.localStorage.setItem(
+      A11Y_STORAGE_KEY,
+      JSON.stringify({ textSize: "xlarge", reduceMotion: true, reduceTransparency: false, emphasizeLinks: true }),
+    );
+    renderWidget();
+    openPanel();
+    expect(screen.getByRole("switch", { name: "ניגודיות מוגברת" })).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("button", { name: "מוגדל מאוד" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("is independent of the reduce-transparency preference -- both can be enabled at once", () => {
+    renderWidget();
+    openPanel();
+
+    fireEvent.click(screen.getByRole("switch", { name: "ניגודיות מוגברת" }));
+    fireEvent.click(screen.getByRole("switch", { name: "הפחתת שקיפות" }));
+
+    expect(document.documentElement.getAttribute("data-a11y-high-contrast")).toBe("true");
+    expect(document.documentElement.getAttribute("data-a11y-reduce-transparency")).toBe("true");
+  });
+
+  it("changing the theme never touches data-a11y-high-contrast or its stored value", () => {
+    renderWidget(
+      <div>
+        <ThemeToggleButtons />
+        <AccessibilityPreferencesButton />
+      </div>,
+    );
+    openPanel();
+    fireEvent.click(screen.getByRole("switch", { name: "ניגודיות מוגברת" }));
+    expect(document.documentElement.getAttribute("data-a11y-high-contrast")).toBe("true");
+
+    act(() => {
+      screen.getByText("set-dark-theme").click();
+    });
+
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    expect(document.documentElement.getAttribute("data-a11y-high-contrast")).toBe("true");
+    expect(JSON.parse(window.localStorage.getItem(A11Y_STORAGE_KEY) ?? "{}").highContrast).toBe(true);
+  });
+});
+
 describe("AccessibilityPreferencesButton — reduce motion", () => {
   it("toggles data-a11y-reduce-motion and its own aria-checked state", () => {
     renderWidget();
@@ -215,6 +297,7 @@ describe("AccessibilityPreferencesButton — reset", () => {
     openPanel();
 
     fireEvent.click(screen.getByRole("button", { name: "מוגדל" }));
+    fireEvent.click(screen.getByRole("switch", { name: "ניגודיות מוגברת" }));
     fireEvent.click(screen.getByRole("switch", { name: "הפחתת תנועה" }));
     fireEvent.click(screen.getByRole("switch", { name: "הפחתת שקיפות" }));
     fireEvent.click(screen.getByRole("switch", { name: "הדגשת קישורים" }));
@@ -223,12 +306,27 @@ describe("AccessibilityPreferencesButton — reset", () => {
     fireEvent.click(screen.getByRole("button", { name: "איפוס הגדרות נגישות" }));
 
     expect(screen.getByRole("button", { name: "רגיל" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("switch", { name: "ניגודיות מוגברת" })).toHaveAttribute("aria-checked", "false");
     expect(screen.getByRole("switch", { name: "הפחתת תנועה" })).toHaveAttribute("aria-checked", "false");
     expect(screen.getByRole("switch", { name: "הפחתת שקיפות" })).toHaveAttribute("aria-checked", "false");
     expect(screen.getByRole("switch", { name: "הדגשת קישורים" })).toHaveAttribute("aria-checked", "false");
     expect(document.documentElement.hasAttribute("data-a11y-text")).toBe(false);
+    expect(document.documentElement.hasAttribute("data-a11y-high-contrast")).toBe(false);
     expect(document.documentElement.hasAttribute("data-a11y-reduce-motion")).toBe(false);
     expect(window.localStorage.getItem(A11Y_STORAGE_KEY)).toBeNull();
+  });
+
+  it("reset does not touch the stored theme", () => {
+    window.localStorage.setItem(THEME_STORAGE_KEY, "dark");
+    document.documentElement.setAttribute("data-theme", "dark");
+    renderWidget();
+    openPanel();
+
+    fireEvent.click(screen.getByRole("switch", { name: "ניגודיות מוגברת" }));
+    fireEvent.click(screen.getByRole("button", { name: "איפוס הגדרות נגישות" }));
+
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
   });
 });
 
@@ -236,13 +334,20 @@ describe("AccessibilityPreferencesButton — persistence across reload", () => {
   it("initializes from a previously-stored preference on a fresh render", () => {
     window.localStorage.setItem(
       A11Y_STORAGE_KEY,
-      JSON.stringify({ textSize: "xlarge", reduceMotion: true, reduceTransparency: false, emphasizeLinks: true }),
+      JSON.stringify({
+        textSize: "xlarge",
+        highContrast: true,
+        reduceMotion: true,
+        reduceTransparency: false,
+        emphasizeLinks: true,
+      }),
     );
 
     renderWidget();
     openPanel();
 
     expect(screen.getByRole("button", { name: "מוגדל מאוד" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("switch", { name: "ניגודיות מוגברת" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("switch", { name: "הפחתת תנועה" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("switch", { name: "הפחתת שקיפות" })).toHaveAttribute("aria-checked", "false");
     expect(screen.getByRole("switch", { name: "הדגשת קישורים" })).toHaveAttribute("aria-checked", "true");
