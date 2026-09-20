@@ -149,3 +149,122 @@ describe("globals.css glass materials", () => {
     expect(block).toMatch(/\.glass-ring-none\s*{[^}]*--glass-ring-width:\s*0px/);
   });
 });
+
+/**
+ * `--glass-line-*`/`--glass-nested-bg`/`--glass-base` draw a `.glass-*`
+ * card's own visible edge/nested-surface/opaque-base -- NOT `--border`/
+ * `--surface-*` directly. A high-contrast fix that only strengthens
+ * `--border` leaves this material's real rendered boundary at its
+ * ordinary, low-contrast value. These tests guard the actual override,
+ * plus a real WCAG computation of the resulting edge (not just an
+ * assumption that `--border`'s own already-checked ratio carries over).
+ */
+describe("globals.css glass materials -- high contrast", () => {
+  function srgbToLinear(c: number): number {
+    const v = c / 255;
+    return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  }
+
+  function luminance(hex: string): number {
+    const h = hex.replace("#", "");
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.substring(i, i + 2), 16));
+    const [R, G, B] = [r, g, b].map(srgbToLinear);
+    return 0.2126 * R + 0.7152 * G + 0.0722 * B;
+  }
+
+  /** The WCAG 2.x contrast-ratio formula -- same as the one this project
+   * used to validate every other high-contrast token pair. */
+  function contrastRatio(hex1: string, hex2: string): number {
+    const L1 = luminance(hex1);
+    const L2 = luminance(hex2);
+    const lighter = Math.max(L1, L2);
+    const darker = Math.min(L1, L2);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  function readHexVar(name: string): string {
+    const m = css.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})`));
+    expect(m, `missing ${name}`).not.toBeNull();
+    return (m?.[1] as string).toLowerCase();
+  }
+
+  const GLASS_OVERRIDE_LINES = [
+    "--glass-line-strong: var(--border-strong);",
+    "--glass-line-medium: var(--border);",
+    "--glass-line-subtle: var(--border);",
+    "--glass-nested-bg: var(--surface-1);",
+  ];
+
+  it("overrides the glass edge/nested-surface/base tokens in the manual light high-contrast block", () => {
+    for (const line of GLASS_OVERRIDE_LINES) {
+      expect(css).toContain(line);
+    }
+    const lightGlassBaseOccurrences = (css.match(/--glass-base:\s*var\(--hc-light-glass-base\)/g) ?? []).length;
+    // manual light + prefers-contrast:more light.
+    expect(lightGlassBaseOccurrences).toBe(2);
+  });
+
+  it("overrides the glass edge/nested-surface tokens in every dark high-contrast block (manual system + manual explicit + both OS prefers-contrast blocks)", () => {
+    const darkGlassBaseOccurrences = (css.match(/--glass-base:\s*var\(--hc-dark-glass-base\)/g) ?? []).length;
+    // system-dark manual, explicit-dark manual, prefers-contrast:more
+    // explicit-dark, prefers-color-scheme+prefers-contrast:more system-dark.
+    expect(darkGlassBaseOccurrences).toBe(4);
+
+    for (const line of GLASS_OVERRIDE_LINES) {
+      const occurrences = (css.match(new RegExp(line.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? []).length;
+      // light manual + system-dark manual + explicit-dark manual +
+      // prefers-contrast:more light + prefers-contrast:more explicit-dark +
+      // prefers-color-scheme+prefers-contrast:more system-dark.
+      expect(occurrences, `expected 6 occurrences of "${line}"`).toBe(6);
+    }
+  });
+
+  it("pins --glass-base to the SAME hex as the high-contrast background, not the theme's ordinary (lower-contrast) glass tint", () => {
+    const hcLightBackground = readHexVar("--hc-light-background");
+    const hcDarkBackground = readHexVar("--hc-dark-background");
+
+    const lightGlassBase = css.match(/--hc-light-glass-base:\s*([\d\s]+);/)?.[1]?.trim();
+    const darkGlassBase = css.match(/--hc-dark-glass-base:\s*([\d\s]+);/)?.[1]?.trim();
+    expect(lightGlassBase).toBe("255 255 255");
+    expect(darkGlassBase).toBe("0 0 0");
+
+    // Sanity: those triplets really do decode to the same hex as background.
+    expect(hcLightBackground).toBe("#ffffff");
+    expect(hcDarkBackground).toBe("#000000");
+  });
+
+  it("computes the ACTUAL glass edge contrast (border tokens against the opaque glass base), not just --border against --background in isolation", () => {
+    const hcLightBorder = readHexVar("--hc-light-border");
+    const hcLightBorderStrong = readHexVar("--hc-light-border-strong");
+    const hcLightBackground = readHexVar("--hc-light-background");
+    const hcDarkBorder = readHexVar("--hc-dark-border");
+    const hcDarkBorderStrong = readHexVar("--hc-dark-border-strong");
+    const hcDarkBackground = readHexVar("--hc-dark-background");
+
+    // --glass-line-medium/-subtle resolve to var(--border); --glass-line-strong
+    // to var(--border-strong); --glass-base is pinned to --background above --
+    // so these ARE the real rendered glass edge ratios, comfortably above the
+    // 3:1 WCAG non-text/UI-boundary minimum in both themes.
+    expect(contrastRatio(hcLightBorder, hcLightBackground)).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(hcLightBorderStrong, hcLightBackground)).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(hcDarkBorder, hcDarkBackground)).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(hcDarkBorderStrong, hcDarkBackground)).toBeGreaterThanOrEqual(3);
+  });
+
+  it("gives prefers-contrast: more the same opaque, no-blur glass treatment as the manual toggle", () => {
+    const block = glassSupportsBlock();
+    const match = block.match(/@media \(prefers-contrast: more\) {([\s\S]*?)\n  }/);
+    expect(match, "missing the @supports-nested prefers-contrast: more rule").not.toBeNull();
+    const inner = match?.[1] ?? "";
+
+    expect(inner).toMatch(/--glass-alpha-bump:\s*1/);
+    for (const level of [...GLASS_LEVELS, "glass-scrim"]) {
+      expect(inner).toContain(`.${level}`);
+    }
+    expect(inner).toMatch(/backdrop-filter:\s*none/);
+  });
+
+  it("never sets forced-color-adjust as an actual declaration (comment mentions of the term are fine)", () => {
+    expect(css).not.toMatch(/forced-color-adjust\s*:/);
+  });
+});

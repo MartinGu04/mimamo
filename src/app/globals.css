@@ -396,13 +396,21 @@
 /* below was computed with the WCAG relative-luminance formula (not       */
 /* eyeballed), comfortably clearing 4.5:1 for text and 3:1 for UI          */
 /* boundaries/focus in both themes -- see the PR description for the full */
-/* table. Deliberately narrow scope: only the neutral/surface/border and   */
-/* primary/sidebar tokens are strengthened. `--accent`, `--success`,       */
+/* table. Deliberately narrow scope: only the neutral/surface/border,      */
+/* primary/sidebar, and (see below) the `.glass-*` material's own edge/    */
+/* nested-surface/base tokens are strengthened. `--accent`, `--success`,   */
 /* `--warning`, `--critical`, and every `--event-*` categorical color are  */
 /* intentionally left untouched -- their specific meaning matters more     */
 /* than raw contrast, and none of them were reported as failing. Never    */
 /* sets `forced-color-adjust` -- OS-level Windows High Contrast Mode via   */
 /* `forced-colors` is a separate mechanism this must never interfere with. */
+/*                                                                          */
+/* `--glass-line-*`/`--glass-nested-bg`/`--glass-base` are covered too --  */
+/* a `.glass-*` card's visible hairline/nested-surface/opaque-base color   */
+/* is drawn from THESE tokens, not `--border`/`--surface-*` directly, so   */
+/* they need their own overrides (derived from the same validated values  */
+/* above) or the app's glass material would keep its ordinary low-contrast */
+/* edge even while this preference is on. */
 /*                                                                          */
 /* The `--hc-light-*`/`--hc-dark-*` variables hold the palette ONCE; the   */
 /* three trigger blocks below just assign real tokens from them for the    */
@@ -431,6 +439,11 @@
   --hc-light-sidebar-foreground: #ffffff;
   --hc-light-sidebar-muted: #c7cdd3;
   --hc-light-sidebar-border: rgba(255, 255, 255, 0.25);
+  /* `--glass-base` is a raw "R G B" triplet (consumed as `rgb(var(--glass-base) / a)`),
+     not a hex string -- pinned to the SAME color as `--hc-light-background`
+     so an opaque glass surface under high contrast is provably the
+     validated tone, not this theme's ordinary (lower-contrast) glass tint. */
+  --hc-light-glass-base: 255 255 255;
 
   --hc-dark-background: #000000;
   --hc-dark-foreground: #ffffff;
@@ -451,6 +464,11 @@
   --hc-dark-sidebar-foreground: #ffffff;
   --hc-dark-sidebar-muted: #c7cdd3;
   --hc-dark-sidebar-border: rgba(255, 255, 255, 0.25);
+  /* Pinned to `--hc-dark-background` -- the theme's ordinary dark
+     `--glass-base` (18 25 34, a dark navy) is NOT pure black, so without
+     this an opaque high-contrast glass surface would render at an
+     unvalidated tone instead of the actual checked background. */
+  --hc-dark-glass-base: 0 0 0;
 }
 
 :root[data-a11y-high-contrast="true"] {
@@ -473,6 +491,17 @@
   --sidebar-foreground: var(--hc-light-sidebar-foreground);
   --sidebar-muted: var(--hc-light-sidebar-muted);
   --sidebar-border: var(--hc-light-sidebar-border);
+  /* The app's `.glass-*` material draws its own edge/nested-surface via
+     these tokens, NOT `--border`/`--surface-*` -- without overriding them
+     too, a glass card's visible boundary would stay at its ordinary
+     low-contrast value even while high contrast is on (see PR discussion).
+     Derived from the SAME validated tokens above, so the same computed
+     ratios cover the real rendered edge, not just `--border` in isolation. */
+  --glass-line-strong: var(--border-strong);
+  --glass-line-medium: var(--border);
+  --glass-line-subtle: var(--border);
+  --glass-nested-bg: var(--surface-1);
+  --glass-base: var(--hc-light-glass-base);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -496,6 +525,11 @@
     --sidebar-foreground: var(--hc-dark-sidebar-foreground);
     --sidebar-muted: var(--hc-dark-sidebar-muted);
     --sidebar-border: var(--hc-dark-sidebar-border);
+    --glass-line-strong: var(--border-strong);
+    --glass-line-medium: var(--border);
+    --glass-line-subtle: var(--border);
+    --glass-nested-bg: var(--surface-1);
+    --glass-base: var(--hc-dark-glass-base);
   }
 }
 
@@ -519,6 +553,11 @@
   --sidebar-foreground: var(--hc-dark-sidebar-foreground);
   --sidebar-muted: var(--hc-dark-sidebar-muted);
   --sidebar-border: var(--hc-dark-sidebar-border);
+  --glass-line-strong: var(--border-strong);
+  --glass-line-medium: var(--border);
+  --glass-line-subtle: var(--border);
+  --glass-nested-bg: var(--surface-1);
+  --glass-base: var(--hc-dark-glass-base);
 }
 
 /* Additive OS-level support: `prefers-contrast: more` reuses the exact
@@ -546,6 +585,11 @@
     --sidebar-foreground: var(--hc-light-sidebar-foreground);
     --sidebar-muted: var(--hc-light-sidebar-muted);
     --sidebar-border: var(--hc-light-sidebar-border);
+    --glass-line-strong: var(--border-strong);
+    --glass-line-medium: var(--border);
+    --glass-line-subtle: var(--border);
+    --glass-nested-bg: var(--surface-1);
+    --glass-base: var(--hc-light-glass-base);
   }
 
   :root[data-theme="dark"] {
@@ -568,6 +612,11 @@
     --sidebar-foreground: var(--hc-dark-sidebar-foreground);
     --sidebar-muted: var(--hc-dark-sidebar-muted);
     --sidebar-border: var(--hc-dark-sidebar-border);
+    --glass-line-strong: var(--border-strong);
+    --glass-line-medium: var(--border);
+    --glass-line-subtle: var(--border);
+    --glass-nested-bg: var(--surface-1);
+    --glass-base: var(--hc-dark-glass-base);
   }
 }
 
@@ -592,6 +641,11 @@
     --sidebar-foreground: var(--hc-dark-sidebar-foreground);
     --sidebar-muted: var(--hc-dark-sidebar-muted);
     --sidebar-border: var(--hc-dark-sidebar-border);
+    --glass-line-strong: var(--border-strong);
+    --glass-line-medium: var(--border);
+    --glass-line-subtle: var(--border);
+    --glass-nested-bg: var(--surface-1);
+    --glass-base: var(--hc-dark-glass-base);
   }
 }
 
@@ -1019,6 +1073,29 @@ body {
     background-image: none;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+
+  /* `prefers-contrast: more` gets the identical opaque, no-blur glass
+     treatment as the manual toggle above, for the same reason: a
+     translucent surface makes the strengthened token/boundary contrast
+     unreliable. If this couldn't be done cleanly it would be dropped
+     rather than shipped half-working -- but it reuses the exact same
+     validated tokens/rule shape, so there is nothing OS-specific left
+     to get wrong. The manual "ניגודיות מוגברת" toggle above is unaffected
+     either way and always keeps working on its own. */
+  @media (prefers-contrast: more) {
+    :root {
+      --glass-alpha-bump: 1;
+    }
+
+    .glass-strong,
+    .glass-medium,
+    .glass-subtle,
+    .glass-scrim {
+      background-image: none;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
   }
 }
 
