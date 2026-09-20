@@ -1,19 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { APP_NAME } from "@/lib/config/productName";
 import AccessibilityStatementPage, { metadata } from "./page";
 
 afterEach(() => {
   cleanup();
-  vi.useRealTimers();
-});
-
-beforeEach(() => {
-  vi.useFakeTimers();
-  // 2026-09-19T21:20:07Z is well after midnight in Asia/Jerusalem (UTC+3).
-  vi.setSystemTime(new Date("2026-09-19T21:20:07.000Z"));
 });
 
 /**
@@ -143,9 +136,9 @@ describe("AccessibilityStatementPage — real contact email, no invented title/p
 });
 
 describe("AccessibilityStatementPage — update date", () => {
-  it('shows a real, current-looking "עודכן לאחרונה" date, not a stale hardcoded example', () => {
+  it('shows the fixed statement-content-revision date (2026-09-20), formatted with the Hebrew date helper -- not the current render/request date', () => {
     render(<AccessibilityStatementPage />);
-    expect(screen.getByText(/עודכן לאחרונה: .*2026/)).toBeInTheDocument();
+    expect(screen.getByText("עודכן לאחרונה: 20 בספטמבר 2026")).toBeInTheDocument();
   });
 });
 

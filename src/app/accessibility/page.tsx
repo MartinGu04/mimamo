@@ -4,19 +4,21 @@ import { Panel } from "@/components/ui/Panel";
 import { APP_NAME } from "@/lib/config/productName";
 import { parseCalendarDate } from "@/lib/domain/dutyBlocks";
 import { formatHebrewDayAndMonth } from "@/lib/presentation/hebrewDate";
-import { getJerusalemLocalNow } from "@/lib/time/jerusalemClock";
-
-/**
- * The "עודכן לאחרונה" line must reflect the real current date, not a date
- * frozen at whatever moment `next build` ran -- same reasoning as
- * `/login`'s own `dynamic = "force-dynamic"`.
- */
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: `הצהרת נגישות | ${APP_NAME}`,
   description: `הצהרת הנגישות של ${APP_NAME}: התקנים שבבסיס העבודה, ההתאמות שבוצעו עד כה ודרכי פנייה בנושאי נגישות.`,
 };
+
+/**
+ * The date the statement's content was actually last revised -- NOT the
+ * page's render/request time. "עודכן לאחרונה" must only change when this
+ * constant is bumped alongside a real content edit, never on every page
+ * load (that would misrepresent an unchanged statement as freshly
+ * reviewed). Update this value, in "YYYY-MM-DD", whenever this page's
+ * content changes.
+ */
+const ACCESSIBILITY_STATEMENT_UPDATED_DATE = "2026-09-20";
 
 /**
  * The one real, published accessibility contact -- supplied directly by
@@ -80,10 +82,11 @@ const IMPLEMENTED_FEATURES = [
  * one, rather than inventing a placeholder.
  */
 export default function AccessibilityStatementPage() {
-  const localNow = getJerusalemLocalNow();
-  const parsedDate = parseCalendarDate(localNow.date);
+  const parsedDate = parseCalendarDate(ACCESSIBILITY_STATEMENT_UPDATED_DATE);
   const updatedLabel =
-    parsedDate !== null ? `${formatHebrewDayAndMonth(localNow.date)} ${parsedDate.year}` : localNow.date;
+    parsedDate !== null
+      ? `${formatHebrewDayAndMonth(ACCESSIBILITY_STATEMENT_UPDATED_DATE)} ${parsedDate.year}`
+      : ACCESSIBILITY_STATEMENT_UPDATED_DATE;
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
