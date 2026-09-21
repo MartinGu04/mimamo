@@ -165,18 +165,32 @@ export async function getPushSubscriptionStatusAction(endpoint: string | null): 
  * unauthenticated caller, an unknown endpoint, a revoked device, and a
  * transport failure all return the same `{ ok: false }` and must never
  * surface as an error in the UI.
+ *
+ * It also carries this device's coarse descriptor, which backfills
+ * LEGACY rows that predate device metadata -- filling ONLY the columns
+ * still NULL, never overwriting one that already has a value (the
+ * `coalesce` in `touch_push_subscription` is what guarantees that, not
+ * this action). The descriptor is re-validated here against the same
+ * closed enums as an explicit enable, so a raw User-Agent cannot reach
+ * the database through the heartbeat either. It is a repair riding on a
+ * call that was already happening, never a second request -- see
+ * `PushDeviceProvider`, which owns the one-per-app-open deduplication.
  */
 export interface PushHeartbeatResult {
   ok: boolean;
 }
 
-export async function heartbeatPushSubscriptionAction(endpoint: string): Promise<PushHeartbeatResult> {
+export async function heartbeatPushSubscriptionAction(
+  endpoint: string,
+  rawDescriptor?: unknown,
+): Promise<PushHeartbeatResult> {
   const identity = await getAuthenticatedIdentity();
   if (identity.status !== "authenticated") return { ok: false };
   if (typeof endpoint !== "string" || endpoint.length === 0) return { ok: false };
 
+  const descriptor = rawDescriptor === undefined ? UNKNOWN_DEVICE_DESCRIPTOR : parseDeviceDescriptor(rawDescriptor);
   try {
-    return { ok: await touchPushSubscriptionForCurrentUser(endpoint) };
+    return { ok: await touchPushSubscriptionForCurrentUser(endpoint, descriptor) };
   } catch {
     return { ok: false };
   }

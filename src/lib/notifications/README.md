@@ -42,10 +42,32 @@ rather than beside them. Five connected pieces, all additive:
   the passive intent, so an old client still open mid-rollout keeps
   working without being able to bypass the gate.
 - **Heartbeat.** `touch_push_subscription` is the narrowest write in the
-  schema: `last_seen_at` only, only on the caller's own non-revoked row.
-  It can never create, reassign, or revive anything. Called once per app
-  open, and at most once per 30 minutes of foreground activity -- no
-  timer, no polling (`components/pwa/PushDeviceProvider.tsx`).
+  schema: `last_seen_at` and still-NULL descriptor columns only, only on
+  the caller's own non-revoked row. It can never create, reassign, or
+  revive anything. Called once per app open, and at most once per 30
+  minutes of foreground activity -- no timer, no polling
+  (`components/pwa/PushDeviceProvider.tsx`).
+- **Legacy metadata backfill**, riding on that same heartbeat. Rows that
+  predate device metadata have no descriptor, so they can only be called
+  "מכשיר". They are repaired progressively and naturally: when that exact
+  installation is opened again, its heartbeat carries the coarse
+  descriptor and `coalesce(<column>, <argument>)` fills ONLY the columns
+  still missing -- a value already stored always wins, so this is a
+  repair path and never a second way to write device metadata. It rides
+  on the heartbeat rather than getting a call of its own precisely
+  because the heartbeat has already established every precondition a
+  backfill needs (a local subscription exists, the endpoint is
+  server-verified as this user's, the row is active) and is already
+  deduplicated to once per app open. A revoked row is skipped entirely,
+  like every other heartbeat write.
+- **Legacy devices in the UI.** Rows that still cannot be named are
+  grouped under a collapsed "מכשירים ישנים (N)" section so they cannot
+  bury the devices a user recognizes. Grouping is presentational only:
+  nothing is deleted, each row keeps its own "הסר מכשיר", and age is
+  never consulted. A `last_seen_at` of 28 days does not mean a device is
+  dead -- it usually means a second PC used occasionally, and pruning it
+  would silently stop notifications someone still expects. The CURRENT
+  device is never grouped, even before its own backfill lands.
 - **Device management** (`deviceTypes.ts`, `deviceLabel.ts`, plus
   `lib/push/deviceDescriptor.ts`). "המכשירים שלי" receives an opaque
   `deviceRef` handle and coarse enum metadata -- never an endpoint, key,

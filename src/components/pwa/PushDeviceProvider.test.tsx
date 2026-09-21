@@ -153,15 +153,58 @@ describe("PushDeviceProvider -- the subscription heartbeat", () => {
       <PushDeviceProvider userId={TEST_USER_ID}>
         <PushStateProbe label="mobile-bell" />
         <PushStateProbe label="desktop-bell" />
+        <PushStateProbe label="global-banner" />
+      </PushDeviceProvider>,
+    );
+    await act(async () => {});
+
+    // Three consumers, ONE heartbeat -- adding the legacy-metadata
+    // backfill to this call must not turn it back into a per-consumer
+    // request, which is the exact problem this provider exists to
+    // prevent.
+    await waitFor(() => expect(heartbeatPushSubscriptionAction).toHaveBeenCalledTimes(1));
+    expect(heartbeatPushSubscriptionAction.mock.calls[0][0]).toBe(LIVE_ENDPOINT);
+  });
+
+  it("carries this device's COARSE descriptor, so a legacy row's missing metadata is backfilled by the call that was already happening", async () => {
+    vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+    );
+    installBrowserPushEnvironment(new FakePushSubscription(LIVE_ENDPOINT));
+
+    render(
+      <PushDeviceProvider userId={TEST_USER_ID}>
+        <PushStateProbe label="probe" />
       </PushDeviceProvider>,
     );
     await act(async () => {});
 
     await waitFor(() => expect(heartbeatPushSubscriptionAction).toHaveBeenCalledTimes(1));
-    expect(heartbeatPushSubscriptionAction).toHaveBeenCalledWith(LIVE_ENDPOINT);
+    const [, descriptor] = heartbeatPushSubscriptionAction.mock.calls[0] as [string, Record<string, unknown>];
+    expect(descriptor).toEqual({ type: "desktop", platform: "windows", browser: "chrome", standalone: false });
+    // The raw User-Agent never leaves the browser -- only the few bits
+    // above do.
+    expect(JSON.stringify(descriptor)).not.toContain("Mozilla");
+    expect(JSON.stringify(descriptor)).not.toContain("537.36");
   });
 
-  it("does NOT check in for a device that is not actually subscribed -- a heartbeat can never create or revive anything", async () => {
+  it("sends NO descriptor fields it cannot determine, rather than guessing -- an unknown device must never clear stored metadata", async () => {
+    vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue("");
+    installBrowserPushEnvironment(new FakePushSubscription(LIVE_ENDPOINT));
+
+    render(
+      <PushDeviceProvider userId={TEST_USER_ID}>
+        <PushStateProbe label="probe" />
+      </PushDeviceProvider>,
+    );
+    await act(async () => {});
+
+    await waitFor(() => expect(heartbeatPushSubscriptionAction).toHaveBeenCalledTimes(1));
+    const [, descriptor] = heartbeatPushSubscriptionAction.mock.calls[0] as [string, Record<string, unknown>];
+    expect(descriptor).toMatchObject({ type: null, platform: null, browser: null });
+  });
+
+  it("does NOT check in (and therefore does NOT backfill) for a REVOKED device -- metadata enrichment must never touch a tombstone", async () => {
     installBrowserPushEnvironment(new FakePushSubscription(LIVE_ENDPOINT));
     getPushSubscriptionStatusAction.mockResolvedValue({ subscribed: false, revoked: true, endpointDead: false });
 
@@ -176,7 +219,7 @@ describe("PushDeviceProvider -- the subscription heartbeat", () => {
     expect(heartbeatPushSubscriptionAction).not.toHaveBeenCalled();
   });
 
-  it("does NOT check in with no browser subscription at all", async () => {
+  it("does NOT check in (and therefore does NOT backfill) with no browser subscription at all", async () => {
     installBrowserPushEnvironment(null);
 
     render(

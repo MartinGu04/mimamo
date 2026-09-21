@@ -406,26 +406,81 @@ revoke all on function public.upsert_push_subscription(text, text, text, timesta
 grant execute on function public.upsert_push_subscription(text, text, text, timestamptz) to authenticated;
 
 -- ---------------------------------------------------------------------
--- touch_push_subscription -- the subscription heartbeat.
+-- touch_push_subscription -- the subscription heartbeat, and the ONE
+-- place legacy device metadata is backfilled.
 --
 -- Turns `last_seen_at` into a real "this installation was actually
 -- opened and is still holding this exact subscription" signal, instead
 -- of only ever being a side effect of registration.
 --
 -- Deliberately the narrowest possible write in this schema. It can ONLY
--- bump `last_seen_at`, ONLY on a row that is ALREADY owned by the
--- calling user (`user_id = auth.uid()`, derived server-side), and ONLY
--- while that row is not revoked. It therefore can never create a row,
--- never reassign ownership, never revive a revoked device, and never
--- touch another user's row -- an unknown or foreign endpoint is
--- indistinguishable from a revoked one in the return value (`false`),
--- so it is not an endpoint-existence oracle either.
+-- bump `last_seen_at` and FILL descriptor columns that are still NULL,
+-- ONLY on a row that is ALREADY owned by the calling user (`user_id =
+-- auth.uid()`, derived server-side), and ONLY while that row is not
+-- revoked. It therefore can never create a row, never reassign
+-- ownership, never revive a revoked device, never clear `revoked_at`,
+-- and never touch another user's row -- an unknown, foreign or revoked
+-- endpoint is indistinguishable in the return value (`false`), so it is
+-- not an endpoint-existence oracle either.
+--
+-- LEGACY METADATA BACKFILL. Every row registered before this migration
+-- has NULL `device_type`/`device_platform`/`device_browser`/
+-- `device_standalone`, so "המכשירים שלי" can only call it "מכשיר".
+-- Those rows are corrected progressively and naturally: when that exact
+-- installation is opened again, its own heartbeat carries the coarse
+-- descriptor the client already computed, and the `coalesce(<column>,
+-- <argument>)` writes below fill ONLY the columns still missing.
+--
+-- `coalesce(existing, incoming)` is the whole safety property, and the
+-- argument order is load-bearing: a column that already holds a value
+-- keeps it, always. A device whose platform was recorded as `windows`
+-- but whose browser is NULL gets only the browser filled -- a client can
+-- never use the heartbeat to rewrite metadata that is already there,
+-- which is what keeps this a repair path rather than a second write API.
+--
+-- One honest imprecision that follows from first-write-wins: on desktop
+-- Chromium an installed PWA and an ordinary tab share one Service Worker
+-- registration, and therefore ONE push endpoint and one row. Whichever
+-- launch mode heartbeats first is the `device_standalone` that sticks.
+-- That is accepted deliberately -- the alternative is letting the
+-- heartbeat overwrite stored metadata, which is exactly the property
+-- this design refuses to give up for a cosmetic label. Both labels name
+-- the same real device either way.
+--
+-- Piggy-backing on the heartbeat rather than adding a request of its own
+-- is deliberate: the heartbeat already fires exactly once per app open
+-- (deduplicated and throttled by the single shared `PushDeviceProvider`,
+-- see its docstring) and already runs only once the endpoint has been
+-- server-verified as this user's active subscription -- which is
+-- precisely the precondition a backfill needs. A separate call would
+-- have re-introduced the duplicate-status-machine problem that provider
+-- exists to prevent.
+--
+-- `updated_at` is deliberately NOT bumped: the heartbeat's own field is
+-- `last_seen_at`, and filling in metadata that was always meant to be
+-- there is a repair of the record, not a change to the subscription.
 --
 -- SECURITY DEFINER because `push_subscriptions` deliberately grants
 -- `authenticated` no UPDATE policy at all (see the PR #29 migration):
 -- every write goes through a narrow, auditable function instead.
 -- ---------------------------------------------------------------------
-create or replace function public.touch_push_subscription(p_endpoint text)
+
+-- The single-argument shape this function had earlier in this PR's own
+-- history. Dropped explicitly because `create or replace` with a
+-- DIFFERENT argument list creates an overload rather than replacing, and
+-- two `touch_push_subscription` functions would make PostgREST's
+-- by-argument-name resolution ambiguous. A no-op on a fresh database;
+-- this function ships for the first time in this migration, so there is
+-- no deployed caller of the old shape anywhere.
+drop function if exists public.touch_push_subscription(text);
+
+create or replace function public.touch_push_subscription(
+  p_endpoint text,
+  p_device_type text,
+  p_device_platform text,
+  p_device_browser text,
+  p_device_standalone boolean
+)
 returns boolean
 language plpgsql
 security definer
@@ -433,13 +488,34 @@ set search_path to ''
 as $$
 declare
   touched integer;
+  v_type text;
+  v_platform text;
+  v_browser text;
 begin
   if auth.uid() is null then
     return false;
   end if;
 
+  -- The SAME closed-enum normalization `upsert_push_subscription_v2`
+  -- applies, for the same reason: anything outside these sets becomes
+  -- NULL rather than being stored, so a raw User-Agent (or any other
+  -- free text) can never reach these columns through this path either.
+  v_type := case when p_device_type in ('phone', 'tablet', 'desktop') then p_device_type else null end;
+  v_platform := case
+    when p_device_platform in ('ios', 'ipados', 'android', 'windows', 'macos', 'linux', 'other') then p_device_platform
+    else null
+  end;
+  v_browser := case
+    when p_device_browser in ('safari', 'chrome', 'edge', 'firefox', 'samsung', 'other') then p_device_browser
+    else null
+  end;
+
   update public.push_subscriptions
-    set last_seen_at = now()
+    set last_seen_at = now(),
+        device_type = coalesce(device_type, v_type),
+        device_platform = coalesce(device_platform, v_platform),
+        device_browser = coalesce(device_browser, v_browser),
+        device_standalone = coalesce(device_standalone, p_device_standalone)
     where endpoint = p_endpoint
       and user_id = auth.uid()
       and revoked_at is null;
@@ -449,8 +525,8 @@ begin
 end;
 $$;
 
-revoke all on function public.touch_push_subscription(text) from public;
-grant execute on function public.touch_push_subscription(text) to authenticated;
+revoke all on function public.touch_push_subscription(text, text, text, text, boolean) from public;
+grant execute on function public.touch_push_subscription(text, text, text, text, boolean) to authenticated;
 
 -- ---------------------------------------------------------------------
 -- revoke_push_subscription -- "הסר מכשיר" / "כבה התראות".

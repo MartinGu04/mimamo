@@ -7,7 +7,11 @@ import {
   removeNotificationDeviceAction,
 } from "@/lib/notifications/actions";
 import type { OwnedPushDevice } from "@/lib/notifications/deviceTypes";
-import { buildPushDeviceLabel } from "@/lib/notifications/deviceLabel";
+import {
+  LEGACY_DEVICE_LABEL,
+  buildPushDeviceLabel,
+  groupPushDevicesForDisplay,
+} from "@/lib/notifications/deviceLabel";
 import { formatRecentChangeRelativeTime } from "@/lib/presentation/relativeChangeTime";
 import { EXPAND_HIT_AREA_CLASS } from "@/components/ui/hitArea";
 import { usePushDevice } from "./PushDeviceProvider";
@@ -67,6 +71,12 @@ export function NotificationDevicesSection() {
   const [devices, setDevices] = useState<OwnedPushDevice[]>([]);
   const [pendingRef, setPendingRef] = useState<string | null>(null);
   const listId = useId();
+
+  // Purely presentational: rows whose metadata predates this feature
+  // cannot be named, and a run of identical "מכשיר" entries would bury
+  // the devices the user actually recognizes. Nothing is dropped, and
+  // age is never consulted -- see `groupPushDevicesForDisplay`.
+  const grouped = groupPushDevicesForDisplay(devices);
 
   // `.then()/.catch()` rather than async/await + try/catch, and no
   // synchronous `setStatus("loading")` before the first await -- the same
@@ -162,16 +172,29 @@ export function NotificationDevicesSection() {
           ) : null}
 
           {status === "ready" && devices.length > 0 ? (
-            <ul className="space-y-2">
-              {devices.map((device) => (
-                <DeviceRow
-                  key={device.deviceRef}
-                  device={device}
-                  pending={pendingRef === device.deviceRef}
+            <>
+              {grouped.identified.length > 0 ? (
+                <ul className="space-y-2">
+                  {grouped.identified.map((device) => (
+                    <DeviceRow
+                      key={device.deviceRef}
+                      device={device}
+                      pending={pendingRef === device.deviceRef}
+                      onRemove={handleRemove}
+                    />
+                  ))}
+                </ul>
+              ) : null}
+
+              {grouped.legacy.length > 0 ? (
+                <LegacyDeviceGroup
+                  devices={grouped.legacy}
+                  pendingRef={pendingRef}
                   onRemove={handleRemove}
+                  className={grouped.identified.length > 0 ? "mt-2" : undefined}
                 />
-              ))}
-            </ul>
+              ) : null}
+            </>
           ) : null}
         </div>
       ) : null}
@@ -191,12 +214,25 @@ function DeviceRow({
   device,
   pending,
   onRemove,
+  legacy = false,
 }: {
   device: OwnedPushDevice;
   pending: boolean;
   onRemove: (device: OwnedPushDevice) => void;
+  /**
+   * Render this row as an unidentified legacy entry ("מכשיר ישן")
+   * instead of deriving a name from its descriptor.
+   *
+   * Passed explicitly by `LegacyDeviceGroup` rather than re-derived from
+   * the descriptor here, for one specific case: the CURRENT device is
+   * never grouped, and until its own backfill lands it has no descriptor
+   * either -- but calling the device in your hand "old" would be wrong.
+   * It keeps the plain "מכשיר" fallback instead, which is merely
+   * incomplete rather than misleading.
+   */
+  legacy?: boolean;
 }) {
-  const label = buildPushDeviceLabel(device.descriptor);
+  const label = legacy ? { primary: LEGACY_DEVICE_LABEL, secondary: null } : buildPushDeviceLabel(device.descriptor);
   const now = new Date();
 
   return (
@@ -235,5 +271,68 @@ function DeviceRow({
         {device.isCurrent ? "כבה במכשיר הזה" : "הסר מכשיר"}
       </button>
     </li>
+  );
+}
+
+/**
+ * The collapsed "מכשירים ישנים (N)" section.
+ *
+ * Collapsed by DEFAULT but never hidden: every row inside keeps its own
+ * "הסר מכשיר" control, because an unidentifiable device is exactly the
+ * kind a user may most want to remove -- they just cannot tell which one
+ * it is from a name. Grouping is the only concession made to them; they
+ * are never deleted, never pruned by age, and never dropped from the
+ * count.
+ *
+ * Used whenever at least one legacy row exists, including when there is
+ * exactly one: a lone "מכשיר ישן" row sitting among named devices reads
+ * as a broken entry, whereas the same row under a labelled group reads
+ * as what it is.
+ */
+function LegacyDeviceGroup({
+  devices,
+  pendingRef,
+  onRemove,
+  className,
+}: {
+  devices: OwnedPushDevice[];
+  pendingRef: string | null;
+  onRemove: (device: OwnedPushDevice) => void;
+  className?: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const groupId = useId();
+
+  return (
+    <div className={className}>
+      <button
+        type="button"
+        onClick={() => setExpanded((previous) => !previous)}
+        aria-expanded={expanded}
+        aria-controls={groupId}
+        className={`relative flex w-full items-center justify-between gap-2 rounded-lg px-1 py-1 text-start text-[11px] font-medium text-muted transition-colors duration-150 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${EXPAND_HIT_AREA_CLASS}`}
+      >
+        <span>מכשירים ישנים ({devices.length})</span>
+        {expanded ? (
+          <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" strokeWidth={2} />
+        ) : (
+          <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" strokeWidth={2} />
+        )}
+      </button>
+
+      {expanded ? (
+        <ul id={groupId} className="mt-1.5 space-y-2">
+          {devices.map((device) => (
+            <DeviceRow
+              key={device.deviceRef}
+              device={device}
+              pending={pendingRef === device.deviceRef}
+              onRemove={onRemove}
+              legacy
+            />
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }

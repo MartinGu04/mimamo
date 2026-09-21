@@ -1,5 +1,6 @@
 import { APP_NAME } from "@/lib/config/productName";
 import type { PushDeviceDescriptor } from "@/lib/push/deviceDescriptor";
+import type { OwnedPushDevice } from "./deviceTypes";
 
 /**
  * Turns a coarse `PushDeviceDescriptor` into the two-part Hebrew label
@@ -95,4 +96,67 @@ export function buildPushDeviceLabel(descriptor: PushDeviceDescriptor): PushDevi
 export function formatPushDeviceLabel(descriptor: PushDeviceDescriptor): string {
   const label = buildPushDeviceLabel(descriptor);
   return label.secondary === null ? label.primary : `${label.primary} · ${label.secondary}`;
+}
+
+/**
+ * Whether we know ANYTHING nameable about this device.
+ *
+ * `false` means every descriptor field that could produce a name
+ * (`type`/`platform`/`browser`) is absent -- which in practice means a
+ * LEGACY row: a subscription registered before device metadata existed,
+ * whose owner has not opened that installation again since (the
+ * heartbeat backfills those columns the moment they do -- see
+ * `touch_push_subscription`).
+ *
+ * `standalone` deliberately does NOT count. On its own it says how the
+ * app was launched, not what the device is, and `buildPushDeviceLabel`
+ * can produce nothing better than "מכשיר" from it -- so treating it as
+ * identifying would put an unnameable row in the main list under a label
+ * indistinguishable from the legacy ones.
+ */
+export function isIdentifiableDevice(descriptor: PushDeviceDescriptor): boolean {
+  return descriptor.type !== null || descriptor.platform !== null || descriptor.browser !== null;
+}
+
+/** What an unidentified legacy row is called. Deliberately NOT a guessed browser/platform -- "old device" is the only thing that is actually true about it. */
+export const LEGACY_DEVICE_LABEL = "מכשיר ישן";
+
+export interface GroupedPushDevices {
+  /** Rendered normally, in order. Always includes the CURRENT device, whether or not it is identifiable yet. */
+  identified: OwnedPushDevice[];
+  /** Unidentified legacy rows, collapsed behind a count so they cannot crowd out the devices the user can actually recognize. */
+  legacy: OwnedPushDevice[];
+}
+
+/**
+ * Splits "המכשירים שלי" into the devices a user can recognize and the
+ * legacy rows they cannot.
+ *
+ * The problem this solves is presentational only: an account can carry
+ * many active subscriptions that predate device metadata, and a list
+ * where eight identical "מכשיר" rows bury the one iPhone you were
+ * looking for is worse than useless. It is explicitly NOT a cleanup
+ * mechanism -- nothing is deleted, nothing is hidden permanently, and
+ * age is never consulted. A `last_seen_at` of 28 days does not mean a
+ * device is dead; it means someone uses their second PC occasionally,
+ * and pruning it would silently stop notifications they still expect.
+ *
+ * The CURRENT device is never grouped, even before its own backfill has
+ * landed: it is the one row a user is most likely to want to act on, and
+ * burying the device you are holding behind a collapsed "old devices"
+ * section would be actively confusing.
+ *
+ * Order is preserved within each group -- the caller already sorted by
+ * `last_seen_at`.
+ */
+export function groupPushDevicesForDisplay(devices: readonly OwnedPushDevice[]): GroupedPushDevices {
+  const identified: OwnedPushDevice[] = [];
+  const legacy: OwnedPushDevice[] = [];
+
+  for (const device of devices) {
+    if (device.isCurrent || isIdentifiableDevice(device.descriptor)) identified.push(device);
+    else legacy.push(device);
+  }
+
+  return { identified, legacy };
 }

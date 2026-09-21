@@ -93,7 +93,14 @@ describe.skipIf(!databaseAvailable)("push reliability RPCs -- real PostgreSQL ex
   }
 
   /** The EXPLICIT enable -- a user pressing "הפעל התראות" on that device. */
-  async function explicitEnable(endpoint: string, keys = KEYS, descriptor = ["phone", "ios", "safari", true]) {
+  async function explicitEnable(
+    endpoint: string,
+    keys = KEYS,
+    // Widened so a test can pass all-nulls to reproduce a LEGACY row --
+    // exactly what a subscription registered before device metadata
+    // existed looks like.
+    descriptor: (string | boolean | null)[] = ["phone", "ios", "safari", true],
+  ) {
     const result = await db.query(
       "select * from public.upsert_push_subscription_v2($1,$2,$3,$4,true,$5,$6,$7,$8)",
       [endpoint, keys.p256dh, keys.auth, null, ...descriptor],
@@ -426,7 +433,7 @@ describe.skipIf(!databaseAvailable)("push reliability RPCs -- real PostgreSQL ex
       const before = await rowFor("https://push.example/a");
 
       const result = await actingAs(USER_A, () =>
-        db.query("select public.touch_push_subscription($1) as ok", ["https://push.example/a"]),
+        db.query("select public.touch_push_subscription($1,null,null,null,null) as ok", ["https://push.example/a"]),
       );
 
       expect(result.rows[0].ok).toBe(true);
@@ -442,7 +449,7 @@ describe.skipIf(!databaseAvailable)("push reliability RPCs -- real PostgreSQL ex
       );
 
       const result = await actingAs(USER_A, () =>
-        db.query("select public.touch_push_subscription($1) as ok", ["https://push.example/a"]),
+        db.query("select public.touch_push_subscription($1,null,null,null,null) as ok", ["https://push.example/a"]),
       );
 
       expect(result.rows[0].ok).toBe(false);
@@ -451,7 +458,9 @@ describe.skipIf(!databaseAvailable)("push reliability RPCs -- real PostgreSQL ex
 
     it("CANNOT create a row for an endpoint that does not exist", async () => {
       const result = await actingAs(USER_A, () =>
-        db.query("select public.touch_push_subscription($1) as ok", ["https://push.example/never-registered"]),
+        db.query("select public.touch_push_subscription($1,null,null,null,null) as ok", [
+          "https://push.example/never-registered",
+        ]),
       );
 
       expect(result.rows[0].ok).toBe(false);
@@ -464,10 +473,10 @@ describe.skipIf(!databaseAvailable)("push reliability RPCs -- real PostgreSQL ex
       const before = await rowFor("https://push.example/a-device");
 
       const foreign = await actingAs(USER_B, () =>
-        db.query("select public.touch_push_subscription($1) as ok", ["https://push.example/a-device"]),
+        db.query("select public.touch_push_subscription($1,null,null,null,null) as ok", ["https://push.example/a-device"]),
       );
       const unknown = await actingAs(USER_B, () =>
-        db.query("select public.touch_push_subscription($1) as ok", ["https://push.example/nothing-here"]),
+        db.query("select public.touch_push_subscription($1,null,null,null,null) as ok", ["https://push.example/nothing-here"]),
       );
 
       // Same answer for "someone else's device" and "no such device".
@@ -481,7 +490,7 @@ describe.skipIf(!databaseAvailable)("push reliability RPCs -- real PostgreSQL ex
       const before = await rowFor("https://push.example/a");
 
       const result = await actingAsAnonymous(() =>
-        db.query("select public.touch_push_subscription($1) as ok", ["https://push.example/a"]),
+        db.query("select public.touch_push_subscription($1,null,null,null,null) as ok", ["https://push.example/a"]),
       );
 
       expect(result.rows[0].ok).toBe(false);
@@ -490,9 +499,220 @@ describe.skipIf(!databaseAvailable)("push reliability RPCs -- real PostgreSQL ex
 
     it("never changes ownership", async () => {
       await actingAs(USER_A, () => explicitEnable("https://push.example/a"));
-      await actingAs(USER_B, () => db.query("select public.touch_push_subscription($1)", ["https://push.example/a"]));
+      await actingAs(USER_B, () => db.query("select public.touch_push_subscription($1,null,null,null,null)", ["https://push.example/a"]));
 
       expect((await rowFor("https://push.example/a")).user_id).toBe(USER_A);
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // Legacy metadata backfill (rides on the heartbeat)
+  // -------------------------------------------------------------------
+
+  describe("legacy device metadata backfill", () => {
+    /** Exactly what a production row registered before this migration looks like: active, owned, and with no descriptor at all. */
+    async function legacyRow(endpoint: string, keys = KEYS) {
+      const row = await actingAs(USER_A, () => explicitEnable(endpoint, keys, [null, null, null, null]));
+      expect(row.device_type).toBeNull();
+      expect(row.device_platform).toBeNull();
+      expect(row.device_browser).toBeNull();
+      expect(row.device_standalone).toBeNull();
+      return row;
+    }
+
+    async function heartbeat(
+      userId: string,
+      endpoint: string,
+      descriptor: (string | boolean | null)[] = ["desktop", "windows", "chrome", false],
+    ) {
+      return actingAs(userId, () =>
+        db.query("select public.touch_push_subscription($1,$2,$3,$4,$5) as ok", [endpoint, ...descriptor]),
+      );
+    }
+
+    it("fills EVERY missing descriptor field when the real device opens again", async () => {
+      await legacyRow("https://push.example/legacy");
+
+      const result = await heartbeat(USER_A, "https://push.example/legacy");
+      expect(result.rows[0].ok).toBe(true);
+
+      const row = await rowFor("https://push.example/legacy");
+      expect(row.device_type).toBe("desktop");
+      expect(row.device_platform).toBe("windows");
+      expect(row.device_browser).toBe("chrome");
+      expect(row.device_standalone).toBe(false);
+    });
+
+    it("fills ONLY the missing fields when some metadata is already recorded", async () => {
+      await actingAs(USER_A, () =>
+        explicitEnable("https://push.example/partial", KEYS, [null, "windows", null, null]),
+      );
+
+      await heartbeat(USER_A, "https://push.example/partial", ["desktop", "macos", "firefox", true]);
+
+      const row = await rowFor("https://push.example/partial");
+      // The already-recorded platform WINS -- the heartbeat is a repair
+      // path, never a way to rewrite metadata that is already there.
+      expect(row.device_platform).toBe("windows");
+      expect(row.device_type).toBe("desktop");
+      expect(row.device_browser).toBe("firefox");
+      expect(row.device_standalone).toBe(true);
+    });
+
+    it("NEVER overwrites a fully-identified device, however different the incoming descriptor", async () => {
+      await actingAs(USER_A, () =>
+        explicitEnable("https://push.example/identified", KEYS, ["phone", "ios", "safari", true]),
+      );
+
+      await heartbeat(USER_A, "https://push.example/identified", ["desktop", "linux", "edge", false]);
+
+      const row = await rowFor("https://push.example/identified");
+      expect(row.device_type).toBe("phone");
+      expect(row.device_platform).toBe("ios");
+      expect(row.device_browser).toBe("safari");
+      expect(row.device_standalone).toBe(true);
+    });
+
+    it("an all-null descriptor clears nothing -- a device we cannot describe leaves existing metadata alone", async () => {
+      await actingAs(USER_A, () =>
+        explicitEnable("https://push.example/identified", KEYS, ["phone", "ios", "safari", true]),
+      );
+
+      await heartbeat(USER_A, "https://push.example/identified", [null, null, null, null]);
+
+      const row = await rowFor("https://push.example/identified");
+      expect(row.device_type).toBe("phone");
+      expect(row.device_platform).toBe("ios");
+      expect(row.device_browser).toBe("safari");
+      expect(row.device_standalone).toBe(true);
+    });
+
+    it("discards an out-of-enum value (a raw User-Agent) instead of storing it -- the CHECK constraint is never even reached", async () => {
+      await legacyRow("https://push.example/legacy");
+
+      await heartbeat(USER_A, "https://push.example/legacy", [
+        "desktop",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/129.0.0.0",
+        "chrome",
+        false,
+      ]);
+
+      const row = await rowFor("https://push.example/legacy");
+      expect(row.device_type).toBe("desktop");
+      expect(row.device_browser).toBe("chrome");
+      expect(row.device_platform).toBeNull();
+    });
+
+    it("does NOT backfill a REVOKED legacy device, and does not clear its revocation", async () => {
+      const row = await legacyRow("https://push.example/legacy");
+      await actingAs(USER_A, () =>
+        db.query("select public.revoke_push_subscription($1,$2)", [row.device_ref, "user_removed"]),
+      );
+
+      const result = await heartbeat(USER_A, "https://push.example/legacy");
+      expect(result.rows[0].ok).toBe(false);
+
+      const after = await rowFor("https://push.example/legacy");
+      expect(after.device_type).toBeNull();
+      expect(after.device_platform).toBeNull();
+      expect(after.revoked_at).not.toBeNull();
+      expect(after.revoked_reason).toBe("user_removed");
+    });
+
+    it("does NOT backfill a 404/410 tombstone either, and that tombstone still cannot be revived passively", async () => {
+      await legacyRow("https://push.example/dead");
+      await db.query(
+        "update public.push_subscriptions set revoked_at = now(), revoked_reason = 'permanent_push_failure' where endpoint = $1",
+        ["https://push.example/dead"],
+      );
+
+      expect((await heartbeat(USER_A, "https://push.example/dead")).rows[0].ok).toBe(false);
+      await expect(actingAs(USER_A, () => passiveRestore("https://push.example/dead"))).rejects.toThrow(/revoked/);
+
+      const after = await rowFor("https://push.example/dead");
+      expect(after.device_type).toBeNull();
+      expect(after.revoked_reason).toBe("permanent_push_failure");
+    });
+
+    it("does NOT backfill ANOTHER user's device -- ownership is re-derived server-side, not taken from the caller", async () => {
+      await legacyRow("https://push.example/a-device");
+
+      const result = await heartbeat(USER_B, "https://push.example/a-device");
+      expect(result.rows[0].ok).toBe(false);
+
+      const row = await rowFor("https://push.example/a-device");
+      expect(row.device_type).toBeNull();
+      expect(row.device_platform).toBeNull();
+      expect(row.user_id).toBe(USER_A);
+    });
+
+    it("does NOT create a row for an endpoint that does not exist, however complete the descriptor", async () => {
+      const result = await heartbeat(USER_A, "https://push.example/never-registered");
+
+      expect(result.rows[0].ok).toBe(false);
+      const count = await db.query("select count(*)::int as n from public.push_subscriptions");
+      expect(count.rows[0].n).toBe(0);
+    });
+
+    it("does nothing at all for an unauthenticated caller", async () => {
+      await legacyRow("https://push.example/legacy");
+
+      const result = await actingAsAnonymous(() =>
+        db.query("select public.touch_push_subscription($1,$2,$3,$4,$5) as ok", [
+          "https://push.example/legacy",
+          "desktop",
+          "windows",
+          "chrome",
+          false,
+        ]),
+      );
+
+      expect(result.rows[0].ok).toBe(false);
+      expect((await rowFor("https://push.example/legacy")).device_type).toBeNull();
+    });
+
+    it("is idempotent -- repeated heartbeats after a backfill change nothing further", async () => {
+      await legacyRow("https://push.example/legacy");
+      await heartbeat(USER_A, "https://push.example/legacy");
+      const afterFirst = await rowFor("https://push.example/legacy");
+
+      await heartbeat(USER_A, "https://push.example/legacy", ["phone", "ios", "safari", true]);
+      const afterSecond = await rowFor("https://push.example/legacy");
+
+      expect(afterSecond.device_type).toBe(afterFirst.device_type);
+      expect(afterSecond.device_platform).toBe(afterFirst.device_platform);
+      expect(afterSecond.device_browser).toBe(afterFirst.device_browser);
+      expect(afterSecond.device_standalone).toBe(afterFirst.device_standalone);
+    });
+
+    it("leaves the subscription itself completely untouched -- endpoint, keys, owner, device_ref and receipt history all unchanged", async () => {
+      const before = await legacyRow("https://push.example/legacy");
+      await db.query("update public.push_subscriptions set last_received_at = now() where endpoint = $1", [
+        "https://push.example/legacy",
+      ]);
+      const seeded = await rowFor("https://push.example/legacy");
+
+      await heartbeat(USER_A, "https://push.example/legacy");
+
+      const after = await rowFor("https://push.example/legacy");
+      expect(after.id).toBe(before.id);
+      expect(after.endpoint).toBe(before.endpoint);
+      expect(after.p256dh).toBe(before.p256dh);
+      expect(after.auth).toBe(before.auth);
+      expect(after.user_id).toBe(before.user_id);
+      expect(after.device_ref).toBe(before.device_ref);
+      expect(after.last_received_at).toEqual(seeded.last_received_at);
+    });
+
+    it("an identified device stays an active delivery target throughout -- the backfill never changes targeting", async () => {
+      await legacyRow("https://push.example/legacy");
+      await heartbeat(USER_A, "https://push.example/legacy");
+
+      const active = await db.query(
+        "select count(*)::int as n from public.push_subscriptions where user_id = $1 and revoked_at is null",
+        [USER_A],
+      );
+      expect(active.rows[0].n).toBe(1);
     });
   });
 
@@ -511,7 +731,7 @@ describe.skipIf(!databaseAvailable)("push reliability RPCs -- real PostgreSQL ex
       );
       await db.query("update public.push_subscriptions set last_seen_at = now() - interval '30 days'");
 
-      await actingAs(USER_A, () => db.query("select public.touch_push_subscription($1)", ["https://push.example/iphone"]));
+      await actingAs(USER_A, () => db.query("select public.touch_push_subscription($1,null,null,null,null)", ["https://push.example/iphone"]));
 
       const rows = await db.query(
         "select endpoint, last_seen_at from public.push_subscriptions where revoked_at is null order by endpoint",

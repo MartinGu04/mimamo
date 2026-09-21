@@ -287,28 +287,64 @@ describe("findPushSubscriptionForCurrentUser", () => {
 });
 
 describe("touchPushSubscriptionForCurrentUser (the heartbeat)", () => {
-  it("goes through the narrow touch_push_subscription RPC with only the endpoint -- never a user id, never a direct table update", async () => {
+  function heartbeatClient(result: { data: unknown; error: unknown }) {
     const client = makeFakeSupabaseClient();
     client.rpc = (fn: string, params: Record<string, unknown>) => {
       rpcMock(fn, params);
-      return Promise.resolve({ data: true, error: null }) as never;
+      return Promise.resolve(result) as never;
     };
-    createSupabaseServerClient.mockResolvedValueOnce(client);
+    return client;
+  }
 
-    const result = await touchPushSubscriptionForCurrentUser("https://push.example/e1");
+  it("goes through the narrow touch_push_subscription RPC, addressed only by endpoint -- never a user id, never a direct table update", async () => {
+    createSupabaseServerClient.mockResolvedValueOnce(heartbeatClient({ data: true, error: null }));
+
+    const result = await touchPushSubscriptionForCurrentUser("https://push.example/e1", UNKNOWN_DEVICE_DESCRIPTOR);
 
     expect(result).toBe(true);
-    expect(rpcMock).toHaveBeenCalledWith("touch_push_subscription", { p_endpoint: "https://push.example/e1" });
-    const [, params] = rpcMock.mock.calls.at(-1)!;
+    const [fn, params] = rpcMock.mock.calls.at(-1)! as [string, Record<string, unknown>];
+    expect(fn).toBe("touch_push_subscription");
+    expect(params.p_endpoint).toBe("https://push.example/e1");
     expect(params).not.toHaveProperty("p_user_id");
   });
 
-  it("reports false (never throws) when the RPC errors -- a heartbeat must never be able to break the app", async () => {
-    const client = makeFakeSupabaseClient();
-    client.rpc = () => Promise.resolve({ data: null, error: { message: "boom" } }) as never;
-    createSupabaseServerClient.mockResolvedValueOnce(client);
+  it("carries this device's coarse descriptor, which is what backfills a legacy row's missing metadata", async () => {
+    createSupabaseServerClient.mockResolvedValueOnce(heartbeatClient({ data: true, error: null }));
 
-    expect(await touchPushSubscriptionForCurrentUser("https://push.example/e1")).toBe(false);
+    await touchPushSubscriptionForCurrentUser("https://push.example/e1", {
+      type: "desktop",
+      platform: "windows",
+      browser: "chrome",
+      standalone: false,
+    });
+
+    expect(rpcMock).toHaveBeenCalledWith("touch_push_subscription", {
+      p_endpoint: "https://push.example/e1",
+      p_device_type: "desktop",
+      p_device_platform: "windows",
+      p_device_browser: "chrome",
+      p_device_standalone: false,
+    });
+  });
+
+  it("sends nulls for an unknown descriptor -- a device we cannot describe must never clear metadata already stored", async () => {
+    createSupabaseServerClient.mockResolvedValueOnce(heartbeatClient({ data: true, error: null }));
+
+    await touchPushSubscriptionForCurrentUser("https://push.example/e1", UNKNOWN_DEVICE_DESCRIPTOR);
+
+    const [, params] = rpcMock.mock.calls.at(-1)! as [string, Record<string, unknown>];
+    // `coalesce(<column>, null)` keeps whatever the column already held,
+    // so an unknown descriptor is a guaranteed no-op on metadata.
+    expect(params.p_device_type).toBeNull();
+    expect(params.p_device_platform).toBeNull();
+    expect(params.p_device_browser).toBeNull();
+    expect(params.p_device_standalone).toBeNull();
+  });
+
+  it("reports false (never throws) when the RPC errors -- a heartbeat must never be able to break the app", async () => {
+    createSupabaseServerClient.mockResolvedValueOnce(heartbeatClient({ data: null, error: { message: "boom" } }));
+
+    expect(await touchPushSubscriptionForCurrentUser("https://push.example/e1", UNKNOWN_DEVICE_DESCRIPTOR)).toBe(false);
   });
 });
 

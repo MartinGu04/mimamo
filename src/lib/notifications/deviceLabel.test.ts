@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { APP_NAME } from "@/lib/config/productName";
 import { UNKNOWN_DEVICE_DESCRIPTOR, type PushDeviceDescriptor } from "@/lib/push/deviceDescriptor";
-import { buildPushDeviceLabel, formatPushDeviceLabel } from "./deviceLabel";
+import type { OwnedPushDevice } from "./deviceTypes";
+import {
+  buildPushDeviceLabel,
+  formatPushDeviceLabel,
+  groupPushDevicesForDisplay,
+  isIdentifiableDevice,
+} from "./deviceLabel";
 
 function descriptor(overrides: Partial<PushDeviceDescriptor> = {}): PushDeviceDescriptor {
   return { ...UNKNOWN_DEVICE_DESCRIPTOR, ...overrides };
@@ -85,5 +91,102 @@ describe("formatPushDeviceLabel", () => {
 
   it("omits the separator entirely when there is no second part", () => {
     expect(formatPushDeviceLabel(UNKNOWN_DEVICE_DESCRIPTOR)).toBe("מכשיר");
+  });
+});
+
+describe("isIdentifiableDevice", () => {
+  it("is true as soon as ANY nameable field is present", () => {
+    expect(isIdentifiableDevice(descriptor({ type: "phone" }))).toBe(true);
+    expect(isIdentifiableDevice(descriptor({ platform: "windows" }))).toBe(true);
+    expect(isIdentifiableDevice(descriptor({ browser: "chrome" }))).toBe(true);
+  });
+
+  it("is false for a legacy row with no descriptor at all", () => {
+    expect(isIdentifiableDevice(UNKNOWN_DEVICE_DESCRIPTOR)).toBe(false);
+  });
+
+  it("does NOT count `standalone` alone -- it says how the app launched, not what the device is", () => {
+    // `buildPushDeviceLabel` can produce nothing better than "מכשיר"
+    // from it, so treating it as identifying would put an unnameable row
+    // in the main list under a label indistinguishable from the legacy
+    // ones.
+    expect(isIdentifiableDevice(descriptor({ standalone: true }))).toBe(false);
+    expect(buildPushDeviceLabel(descriptor({ standalone: true })).primary).toBe("מכשיר");
+  });
+});
+
+describe("groupPushDevicesForDisplay", () => {
+  function device(overrides: Partial<OwnedPushDevice> & Pick<OwnedPushDevice, "deviceRef">): OwnedPushDevice {
+    return {
+      descriptor: UNKNOWN_DEVICE_DESCRIPTOR,
+      lastSeenAt: "2026-09-01T00:00:00.000Z",
+      lastReceivedAt: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      isCurrent: false,
+      ...overrides,
+    };
+  }
+
+  const iphone = device({
+    deviceRef: "iphone",
+    descriptor: { type: "phone", platform: "ios", browser: "safari", standalone: true },
+  });
+  const windows = device({
+    deviceRef: "windows",
+    descriptor: { type: "desktop", platform: "windows", browser: "chrome", standalone: false },
+  });
+  const legacyA = device({ deviceRef: "legacy-a" });
+  const legacyB = device({ deviceRef: "legacy-b" });
+
+  it("keeps identified devices in the main list", () => {
+    const grouped = groupPushDevicesForDisplay([iphone, windows]);
+    expect(grouped.identified.map((d) => d.deviceRef)).toEqual(["iphone", "windows"]);
+    expect(grouped.legacy).toEqual([]);
+  });
+
+  it("moves unidentified legacy rows into their own group", () => {
+    const grouped = groupPushDevicesForDisplay([iphone, legacyA, windows, legacyB]);
+    expect(grouped.identified.map((d) => d.deviceRef)).toEqual(["iphone", "windows"]);
+    expect(grouped.legacy.map((d) => d.deviceRef)).toEqual(["legacy-a", "legacy-b"]);
+  });
+
+  it("NEVER groups the current device, even before its own backfill has landed", () => {
+    const currentLegacy = device({ deviceRef: "current", isCurrent: true });
+    const grouped = groupPushDevicesForDisplay([currentLegacy, legacyA]);
+
+    expect(grouped.identified.map((d) => d.deviceRef)).toEqual(["current"]);
+    expect(grouped.legacy.map((d) => d.deviceRef)).toEqual(["legacy-a"]);
+  });
+
+  it("loses nothing -- every input device appears in exactly one group", () => {
+    const all = [iphone, legacyA, windows, legacyB, device({ deviceRef: "current", isCurrent: true })];
+    const grouped = groupPushDevicesForDisplay(all);
+
+    const refs = [...grouped.identified, ...grouped.legacy].map((d) => d.deviceRef).sort();
+    expect(refs).toEqual(all.map((d) => d.deviceRef).sort());
+  });
+
+  it("never consults age -- an old but identified device stays in the main list, and an old legacy one is grouped rather than dropped", () => {
+    const ancientButNamed = device({
+      deviceRef: "ancient-pc",
+      descriptor: { type: "desktop", platform: "macos", browser: "firefox", standalone: false },
+      lastSeenAt: "2020-01-01T00:00:00.000Z",
+    });
+    const ancientLegacy = device({ deviceRef: "ancient-legacy", lastSeenAt: "2020-01-01T00:00:00.000Z" });
+
+    const grouped = groupPushDevicesForDisplay([ancientButNamed, ancientLegacy]);
+
+    expect(grouped.identified.map((d) => d.deviceRef)).toEqual(["ancient-pc"]);
+    expect(grouped.legacy.map((d) => d.deviceRef)).toEqual(["ancient-legacy"]);
+  });
+
+  it("preserves the caller's ordering within each group", () => {
+    const grouped = groupPushDevicesForDisplay([legacyB, windows, legacyA, iphone]);
+    expect(grouped.identified.map((d) => d.deviceRef)).toEqual(["windows", "iphone"]);
+    expect(grouped.legacy.map((d) => d.deviceRef)).toEqual(["legacy-b", "legacy-a"]);
+  });
+
+  it("handles an empty list", () => {
+    expect(groupPushDevicesForDisplay([])).toEqual({ identified: [], legacy: [] });
   });
 });

@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useEffect, useRef, type ReactNode } from "react";
 import { heartbeatPushSubscriptionAction } from "@/lib/notifications/actions";
+import { isStandaloneDisplayMode } from "@/lib/pwa/installState";
+import { readCurrentDeviceDescriptor } from "@/lib/push/deviceDescriptor";
 import { usePushSubscription, type PushSubscriptionState } from "./usePushSubscription";
 
 /**
@@ -66,7 +68,8 @@ const PushDeviceContext = createContext<PushDeviceContextValue | null>(null);
 const HEARTBEAT_THROTTLE_MS = 30 * 60 * 1000;
 
 /**
- * Sends the subscription heartbeat for this installation.
+ * Sends the subscription heartbeat for this installation -- and, riding
+ * along on it, the one-time LEGACY METADATA BACKFILL.
  *
  * Deliberately NOT a timer/interval: there is no recurring poll here and
  * none is wanted. It fires once when an authenticated shell first
@@ -79,10 +82,31 @@ const HEARTBEAT_THROTTLE_MS = 30 * 60 * 1000;
  * is recreated checks in again immediately rather than being suppressed
  * by the previous endpoint's timestamp.
  *
+ * THE BACKFILL rides on this exact call rather than getting one of its
+ * own, which is the whole reason it is safe. Everything a backfill must
+ * prove is already proven by the time this runs:
+ *   * a local browser `PushSubscription` exists (there is an endpoint),
+ *   * the server has verified that endpoint belongs to the CURRENT
+ *     authenticated user and is not revoked (`state === "enabled"`, and
+ *     re-derived server-side inside the RPC regardless),
+ *   * and it happens once per app open, already deduplicated across
+ *     every consumer by this provider.
+ * A separate request would have re-introduced exactly the duplicate
+ * status-machine problem this provider exists to prevent -- and would
+ * have had to re-establish the same preconditions to be correct.
+ *
+ * The descriptor is read HERE, inside the effect (never during render),
+ * so `navigator`/`matchMedia` are guaranteed present -- the same
+ * placement `usePushSubscription.enable()` uses for its own read. The
+ * raw User-Agent never leaves the browser; only the coarse closed-enum
+ * descriptor is sent, and the server re-validates it anyway.
+ *
  * Fails silently and completely: `heartbeatPushSubscriptionAction`
  * already swallows its own errors, and this adds a `catch` on top. A
  * heartbeat must never surface in the UI, never block anything, and
- * never be able to break the app.
+ * never be able to break the app -- which applies to the backfill
+ * equally: a device that stays labelled "מכשיר" is a cosmetic outcome,
+ * never a reason to break startup or Push.
  */
 function useSubscriptionHeartbeat(enabled: boolean, endpoint: string | null, userId?: string): void {
   const lastHeartbeatRef = useRef<{ key: string; at: number } | null>(null);
@@ -106,7 +130,14 @@ function useSubscriptionHeartbeat(enabled: boolean, endpoint: string | null, use
       // "a heartbeat must never break the app" has to hold for every
       // failure mode, not just the one that returns a promise.
       try {
-        void Promise.resolve(heartbeatPushSubscriptionAction(activeEndpoint)).catch(() => {});
+        void Promise.resolve(
+          // The descriptor is what backfills a legacy row's missing
+          // device metadata. The RPC fills only columns that are still
+          // NULL (`coalesce(<column>, <argument>)`), so sending it on
+          // every heartbeat is harmless for an already-identified
+          // device and never overwrites anything.
+          heartbeatPushSubscriptionAction(activeEndpoint, readCurrentDeviceDescriptor(isStandaloneDisplayMode())),
+        ).catch(() => {});
       } catch {
         // Intentionally ignored -- see above.
       }

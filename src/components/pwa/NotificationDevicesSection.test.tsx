@@ -92,6 +92,18 @@ const OTHER_PC: OwnedPushDevice = {
   isCurrent: false,
 };
 
+/** A row registered before device metadata existed, whose owner has not opened that installation again since -- so nothing about it can be named. */
+function legacyDevice(ref: string, daysSinceSeen = 28): OwnedPushDevice {
+  return {
+    deviceRef: ref,
+    descriptor: { type: null, platform: null, browser: null, standalone: null },
+    lastSeenAt: new Date(Date.now() - daysSinceSeen * 24 * 60 * 60 * 1000).toISOString(),
+    lastReceivedAt: null,
+    createdAt: new Date(Date.now() - 200 * 24 * 60 * 60 * 1000).toISOString(),
+    isCurrent: false,
+  };
+}
+
 async function renderSection() {
   render(
     <PushDeviceProvider userId={TEST_USER_ID}>
@@ -254,5 +266,134 @@ describe("NotificationDevicesSection -- turning the CURRENT device off", () => {
     // and still remembering "enabled".
     expect(removeNotificationDeviceAction).not.toHaveBeenCalled();
     await waitFor(() => expect(readPushPreference(TEST_USER_ID)).toBe("disabled"));
+  });
+});
+
+describe("NotificationDevicesSection -- unidentified legacy devices", () => {
+  it("groups them behind a collapsed section with an accurate count, instead of letting them bury the named devices", async () => {
+    listNotificationDevicesAction.mockResolvedValue({
+      devices: [IPHONE_PWA, WINDOWS_PC, ...Array.from({ length: 8 }, (_, i) => legacyDevice(`ref-legacy-${i}`))],
+    });
+
+    await openSection();
+
+    await waitFor(() => expect(screen.getByText("iPhone")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: /מכשירים ישנים \(8\)/ })).toBeInTheDocument();
+    // Collapsed by default: only the two identified devices are listed.
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    expect(screen.queryByText("מכשיר ישן")).toBeNull();
+  });
+
+  it("identified devices keep rendering normally alongside the group", async () => {
+    listNotificationDevicesAction.mockResolvedValue({ devices: [IPHONE_PWA, WINDOWS_PC, legacyDevice("ref-legacy")] });
+
+    await openSection();
+
+    await waitFor(() => expect(screen.getByText("iPhone")).toBeInTheDocument());
+    expect(screen.getByText(`· ${APP_NAME}`)).toBeInTheDocument();
+    expect(screen.getByText("Chrome")).toBeInTheDocument();
+    expect(screen.getByText("· Windows")).toBeInTheDocument();
+  });
+
+  it("expanding the group exposes each legacy entry with the truthful information we DO have, and its own removal control", async () => {
+    listNotificationDevicesAction.mockResolvedValue({ devices: [IPHONE_PWA, legacyDevice("ref-legacy", 28)] });
+
+    await openSection();
+    await waitFor(() => expect(screen.getByText("iPhone")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: /מכשירים ישנים/ }));
+
+    await waitFor(() => expect(screen.getByText("מכשיר ישן")).toBeInTheDocument());
+    expect(screen.getByText(/נראה לאחרונה: לפני 28 ימים/)).toBeInTheDocument();
+    expect(screen.getByText("התראה התקבלה לאחרונה: טרם")).toBeInTheDocument();
+    // Removal stays available per device -- an unidentifiable device is
+    // exactly the kind a user may most want to remove.
+    expect(screen.getAllByRole("button", { name: "הסר מכשיר" })).toHaveLength(1);
+  });
+
+  it("invents no browser/platform/device name for a legacy row", async () => {
+    listNotificationDevicesAction.mockResolvedValue({ devices: [legacyDevice("ref-legacy")] });
+
+    await openSection();
+    fireEvent.click(await screen.findByRole("button", { name: /מכשירים ישנים/ }));
+    await waitFor(() => expect(screen.getByText("מכשיר ישן")).toBeInTheDocument());
+
+    const markup = document.body.innerHTML;
+    for (const invented of ["Chrome", "Safari", "Firefox", "Edge", "Windows", "iPhone", "iPad", "Mac", "Android"]) {
+      expect(markup).not.toContain(invented);
+    }
+  });
+
+  it("removing ONE legacy device revokes only that device", async () => {
+    listNotificationDevicesAction
+      .mockResolvedValueOnce({ devices: [IPHONE_PWA, legacyDevice("ref-legacy-1"), legacyDevice("ref-legacy-2")] })
+      .mockResolvedValue({ devices: [IPHONE_PWA, legacyDevice("ref-legacy-2")] });
+
+    await openSection();
+    fireEvent.click(await screen.findByRole("button", { name: /מכשירים ישנים \(2\)/ }));
+    await waitFor(() => expect(screen.getAllByText("מכשיר ישן")).toHaveLength(2));
+
+    fireEvent.click(screen.getAllByRole("button", { name: "הסר מכשיר" })[0]);
+
+    await waitFor(() => expect(removeNotificationDeviceAction).toHaveBeenCalledWith("ref-legacy-1"));
+    expect(removeNotificationDeviceAction).toHaveBeenCalledTimes(1);
+    expect(disablePushNotificationsAction).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByRole("button", { name: /מכשירים ישנים \(1\)/ })).toBeInTheDocument());
+  });
+
+  it("NEVER hides the current device in the group, even before its own metadata backfill has landed", async () => {
+    const currentLegacy: OwnedPushDevice = { ...legacyDevice("ref-current", 0), isCurrent: true };
+    listNotificationDevicesAction.mockResolvedValue({ devices: [currentLegacy, legacyDevice("ref-legacy")] });
+
+    await openSection();
+
+    // The current device is listed directly, badged, and NOT called "old".
+    await waitFor(() => expect(screen.getByText("המכשיר הזה")).toBeInTheDocument());
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    expect(screen.getByText("מכשיר")).toBeInTheDocument();
+    expect(screen.queryByText("מכשיר ישן")).toBeNull();
+    expect(screen.getByRole("button", { name: /מכשירים ישנים \(1\)/ })).toBeInTheDocument();
+  });
+
+  it("renders no group at all when every device is identified", async () => {
+    listNotificationDevicesAction.mockResolvedValue({ devices: [IPHONE_PWA, WINDOWS_PC] });
+
+    await openSection();
+
+    await waitFor(() => expect(screen.getByText("iPhone")).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: /מכשירים ישנים/ })).toBeNull();
+  });
+
+  it("groups even a single legacy device -- one unnamed row among named ones reads as a broken entry", async () => {
+    listNotificationDevicesAction.mockResolvedValue({ devices: [IPHONE_PWA, legacyDevice("ref-legacy")] });
+
+    await openSection();
+
+    await waitFor(() => expect(screen.getByRole("button", { name: /מכשירים ישנים \(1\)/ })).toBeInTheDocument());
+  });
+
+  it("leaks no endpoint, key, or raw User-Agent for legacy rows either -- expanded or collapsed", async () => {
+    listNotificationDevicesAction.mockResolvedValue({ devices: [legacyDevice("ref-legacy-a"), legacyDevice("ref-legacy-b")] });
+
+    await openSection();
+    fireEvent.click(await screen.findByRole("button", { name: /מכשירים ישנים/ }));
+    await waitFor(() => expect(screen.getAllByText("מכשיר ישן")).toHaveLength(2));
+
+    const markup = document.body.innerHTML;
+    expect(markup).not.toContain(CURRENT_ENDPOINT);
+    expect(markup).not.toContain("push.example");
+    expect(markup).not.toContain("Mozilla");
+    expect(markup).not.toContain("p256dh");
+    expect(markup).not.toContain("ref-legacy-a");
+  });
+
+  it("never prunes by age -- a device untouched for a year is still listed and still removable", async () => {
+    listNotificationDevicesAction.mockResolvedValue({ devices: [legacyDevice("ref-ancient", 365)] });
+
+    await openSection();
+    fireEvent.click(await screen.findByRole("button", { name: /מכשירים ישנים \(1\)/ }));
+
+    await waitFor(() => expect(screen.getByText("מכשיר ישן")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "הסר מכשיר" })).toBeInTheDocument();
   });
 });

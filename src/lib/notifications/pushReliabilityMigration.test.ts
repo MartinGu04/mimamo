@@ -122,7 +122,9 @@ describe("push reliability migration -- SECURITY DEFINER hardening", () => {
   ];
 
   it.each(definerFunctions)("%s pins its search_path to the EMPTY form", (name) => {
-    const body = sql.slice(sql.indexOf(`function public.${name}(`));
+    // `create or replace function ...` specifically -- `touch_push_subscription`
+    // is also named by a preceding `drop function if exists` line.
+    const body = sql.slice(sql.indexOf(`create or replace function public.${name}(`));
     const header = body.slice(0, body.indexOf("as $$"));
     expect(header).toMatch(/security definer/i);
     // `to ''`, not `= public` -- the form
@@ -181,16 +183,68 @@ describe("push reliability migration -- SECURITY DEFINER hardening", () => {
   });
 });
 
-describe("push reliability migration -- the heartbeat can only ever do one thing", () => {
-  it("touches only last_seen_at, only for the caller's own NON-revoked row", () => {
-    const body = sql.slice(sql.indexOf("function public.touch_push_subscription("));
-    const statement = body.slice(0, body.indexOf("get diagnostics"));
-    expect(statement).toMatch(/set last_seen_at = now\(\)/i);
-    expect(statement).toMatch(/user_id = auth\.uid\(\)/i);
-    expect(statement).toMatch(/revoked_at is null/i);
-    // No insert, no ownership change, no un-revoking.
-    expect(statement).not.toMatch(/insert into/i);
-    expect(statement).not.toMatch(/set user_id/i);
+describe("push reliability migration -- the heartbeat can only ever do two things", () => {
+  const heartbeatBody = sql.slice(sql.indexOf("create or replace function public.touch_push_subscription("));
+  const heartbeatStatement = heartbeatBody.slice(0, heartbeatBody.indexOf("get diagnostics"));
+
+  it("bumps last_seen_at, only for the caller's own NON-revoked row", () => {
+    expect(heartbeatStatement).toMatch(/set last_seen_at = now\(\)/i);
+    expect(heartbeatStatement).toMatch(/user_id = auth\.uid\(\)/i);
+    expect(heartbeatStatement).toMatch(/revoked_at is null/i);
+  });
+
+  it("can never create a row, reassign ownership, or clear a revocation", () => {
+    expect(heartbeatStatement).not.toMatch(/insert into/i);
+    expect(heartbeatStatement).not.toMatch(/set user_id/i);
+    expect(heartbeatStatement).not.toMatch(/revoked_at\s*=\s*null/i);
+    expect(heartbeatStatement).not.toMatch(/revoked_reason\s*=/i);
+  });
+
+  it("backfills legacy metadata with coalesce(<column>, <argument>) -- the argument order that makes an existing value win", () => {
+    // Reversed (`coalesce(<argument>, <column>)`) this would silently
+    // become an overwrite API for anything a client chose to send.
+    for (const column of ["device_type", "device_platform", "device_browser", "device_standalone"]) {
+      expect(heartbeatStatement).toMatch(new RegExp(`${column}\\s*=\\s*coalesce\\(${column},`, "i"));
+    }
+  });
+
+  it("touches NOTHING else on the row -- not the endpoint, not the keys, not device_ref", () => {
+    // Every column assigned inside the UPDATE's SET clause, read from
+    // the statement itself rather than trusted from the diff.
+    const setClause = heartbeatStatement.slice(
+      heartbeatStatement.indexOf("update public.push_subscriptions"),
+      heartbeatStatement.indexOf("where endpoint = p_endpoint"),
+    );
+    const assignments = (setClause.match(/^\s*(?:set\s+)?(\w+)\s*=/gim) ?? []).map((line) =>
+      line.trim().replace(/^set\s+/i, "").replace(/\s*=$/, ""),
+    );
+    expect(new Set(assignments)).toEqual(
+      new Set(["last_seen_at", "device_type", "device_platform", "device_browser", "device_standalone"]),
+    );
+  });
+
+  it("normalizes the incoming descriptor against the same closed enums as an explicit enable", () => {
+    expect(heartbeatStatement).toMatch(
+      /v_type := case when p_device_type in \('phone', 'tablet', 'desktop'\) then p_device_type else null end/i,
+    );
+    expect(heartbeatStatement).toMatch(/v_platform := case/i);
+    expect(heartbeatStatement).toMatch(/v_browser := case/i);
+  });
+
+  it("drops the earlier single-argument shape rather than leaving a PostgREST-ambiguous overload behind", () => {
+    expect(executableSql).toMatch(/drop function if exists public\.touch_push_subscription\(text\);/i);
+    const grantLines = executableSql.match(/^grant execute on function public\.touch_push_subscription.*$/gim) ?? [];
+    expect(grantLines).toHaveLength(1);
+    expect(grantLines[0]).toMatch(/\(text, text, text, text, boolean\)/i);
+  });
+
+  it("introduces no age-based cleanup anywhere in the migration", () => {
+    // A stale `last_seen_at` never proves a device is dead -- someone
+    // may use a second PC only occasionally -- so nothing here may
+    // delete or revoke on age.
+    expect(executableSql).not.toMatch(/interval\s+'/i);
+    expect(executableSql).not.toMatch(/last_seen_at\s*<[^=]/i);
+    expect(executableSql).not.toMatch(/delete\s+from\s+public\.push_subscriptions/i);
   });
 });
 

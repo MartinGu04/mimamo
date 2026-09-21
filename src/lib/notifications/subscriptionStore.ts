@@ -176,10 +176,31 @@ export async function findPushSubscriptionForCurrentUser(endpoint: string): Prom
  * avoid pointless retries -- `false` covers "no such endpoint",
  * "belongs to a different account", and "revoked" identically, which is
  * also why it is not an endpoint-existence oracle.
+ *
+ * `descriptor` additionally backfills LEGACY metadata. Every row
+ * registered before device metadata existed has NULL
+ * type/platform/browser/standalone, so the device list can only call it
+ * "מכשיר". The RPC fills each of those columns with `coalesce(<column>,
+ * <argument>)`, so a column that already holds a value keeps it and only
+ * the genuinely missing ones are filled -- this is a repair path, never
+ * a second way to write device metadata. Passing the descriptor here
+ * rather than from a call of its own is deliberate: the heartbeat
+ * already fires once per app open and already runs only after the
+ * endpoint has been server-verified as this user's ACTIVE subscription,
+ * which is exactly the precondition a backfill needs.
  */
-export async function touchPushSubscriptionForCurrentUser(endpoint: string): Promise<boolean> {
+export async function touchPushSubscriptionForCurrentUser(
+  endpoint: string,
+  descriptor: PushDeviceDescriptor,
+): Promise<boolean> {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc("touch_push_subscription", { p_endpoint: endpoint });
+  const { data, error } = await supabase.rpc("touch_push_subscription", {
+    p_endpoint: endpoint,
+    p_device_type: descriptor.type,
+    p_device_platform: descriptor.platform,
+    p_device_browser: descriptor.browser,
+    p_device_standalone: descriptor.standalone,
+  });
   if (error) return false;
   return data === true;
 }

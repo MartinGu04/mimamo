@@ -237,7 +237,55 @@ describe("heartbeatPushSubscriptionAction", () => {
 
   it("touches only the given endpoint, never passing any user id of its own", async () => {
     expect(await heartbeatPushSubscriptionAction("https://push.example/e1")).toEqual({ ok: true });
-    expect(touchPushSubscriptionForCurrentUser).toHaveBeenCalledWith("https://push.example/e1");
+    expect(touchPushSubscriptionForCurrentUser).toHaveBeenCalledWith("https://push.example/e1", {
+      type: null,
+      platform: null,
+      browser: null,
+      standalone: null,
+    });
+  });
+
+  it("forwards this device's coarse descriptor so a legacy row's missing metadata can be backfilled", async () => {
+    await heartbeatPushSubscriptionAction("https://push.example/e1", {
+      type: "desktop",
+      platform: "windows",
+      browser: "chrome",
+      standalone: false,
+    });
+
+    expect(touchPushSubscriptionForCurrentUser.mock.calls[0][1]).toEqual({
+      type: "desktop",
+      platform: "windows",
+      browser: "chrome",
+      standalone: false,
+    });
+  });
+
+  it("re-validates the descriptor against the same closed enums as an explicit enable -- a raw User-Agent can never reach the database through the heartbeat either", async () => {
+    await heartbeatPushSubscriptionAction("https://push.example/e1", {
+      type: "desktop",
+      platform: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/129.0.0.0",
+      browser: "chrome",
+      standalone: false,
+    });
+
+    expect(touchPushSubscriptionForCurrentUser.mock.calls[0][1]).toEqual({
+      type: "desktop",
+      platform: null,
+      browser: "chrome",
+      standalone: false,
+    });
+  });
+
+  it("degrades to an all-null descriptor when none is supplied -- an omitted descriptor must never clear stored metadata", async () => {
+    await heartbeatPushSubscriptionAction("https://push.example/e1");
+
+    expect(touchPushSubscriptionForCurrentUser.mock.calls[0][1]).toEqual({
+      type: null,
+      platform: null,
+      browser: null,
+      standalone: null,
+    });
   });
 
   it("reports ok:false rather than throwing when the store fails -- a heartbeat must never break the app", async () => {
