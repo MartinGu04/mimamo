@@ -25,6 +25,57 @@ boundary) and `lib/auth` (identity).
 for best-effort logout cleanup of the current device's subscription --
 see that file's own docstring for why cleanup can never block sign-out.
 
+## Push reliability + device management
+
+The reliability upgrade, layered on top of the PR #29 primitives above
+rather than beside them. Five connected pieces, all additive:
+
+- **Revocation, not deletion.** `push_subscriptions.revoked_at`/
+  `revoked_reason` turn removing a device into a real tombstone. Deleting
+  a row was never enough: the device still holds a browser
+  `PushSubscription` AND a device-local `"enabled"` preference, so
+  `usePushSubscription`'s silent auto-restore simply recreated it on the
+  next open. The database refuses a PASSIVE upsert against a revoked row
+  (`upsert_push_subscription_v2`'s `p_explicit` gate), so only an
+  explicit "הפעל התראות" on that device can bring it back. The original
+  four-argument `upsert_push_subscription` still exists and is wired to
+  the passive intent, so an old client still open mid-rollout keeps
+  working without being able to bypass the gate.
+- **Heartbeat.** `touch_push_subscription` is the narrowest write in the
+  schema: `last_seen_at` only, only on the caller's own non-revoked row.
+  It can never create, reassign, or revive anything. Called once per app
+  open, and at most once per 30 minutes of foreground activity -- no
+  timer, no polling (`components/pwa/PushDeviceProvider.tsx`).
+- **Device management** (`deviceTypes.ts`, `deviceLabel.ts`, plus
+  `lib/push/deviceDescriptor.ts`). "המכשירים שלי" receives an opaque
+  `deviceRef` handle and coarse enum metadata -- never an endpoint, key,
+  row id, or raw User-Agent. Removing ANOTHER device revokes it;
+  removing THIS device reuses the existing local disable flow, because
+  revoking the row while leaving the browser subscribed and the local
+  preference saying "enabled" is exactly the inconsistent state this
+  work exists to eliminate.
+- **Delivery receipts** (`receiptToken.ts`, `receiptStore.ts`,
+  `src/app/internal/notifications/receipt/route.ts`).
+  `notification_deliveries.received_at` records that the target Service
+  Worker actually received and displayed the push -- strictly stronger
+  than `status = 'sent'` (the provider accepted the request) and never a
+  read receipt. A receipt also promotes a `failed_transient` delivery to
+  terminal `sent`, which is what stops the worker duplicate-sending a
+  push the device really did receive.
+- **404/410, unchanged in meaning.** A permanently-invalid endpoint still
+  leaves the active delivery set immediately -- `getActiveSubscriptionsForUser`
+  filters `revoked_at is null` -- but as a tombstone rather than a
+  delete, which breaks the 404 -> delete -> silent re-register -> 404
+  loop. The revocation reason is what lets the next explicit enable know
+  to unsubscribe and create a genuinely new browser subscription instead
+  of reusing the dead one.
+
+The one remaining DELETE path is `lib/auth/actions.ts`'s sign-out
+cleanup, and it is deliberately scoped to non-revoked rows: signing out
+is not a removal (the same user's remembered preference is expected to
+restore push on next sign-in), but it must not destroy a tombstone
+either.
+
 ## Notification preferences -- intended future extension point
 
 This PR only supports a single global on/off per device (no per-category

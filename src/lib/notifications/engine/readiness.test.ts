@@ -16,7 +16,16 @@ function makeFakeSupabase(
       },
     },
     from: vi.fn(() => ({
-      select: vi.fn(async () => ({ data: subscriptionUserIds.map((user_id) => ({ user_id })), error: null })),
+      // `.select(...).is("revoked_at", null)` -- readiness must ask the
+      // SAME "active devices only" question the delivery worker's own
+      // targeting asks, so a person whose only device was removed or
+      // permanently failed reads as `no_push_subscription`.
+      select: vi.fn(() => ({
+        is: vi.fn(async () => ({
+          data: subscriptionUserIds.map((user_id) => ({ user_id })),
+          error: null,
+        })),
+      })),
     })),
   };
 }

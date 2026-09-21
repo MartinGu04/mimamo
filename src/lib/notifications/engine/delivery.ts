@@ -1,13 +1,14 @@
 import "server-only";
 import { buildNotificationPayload } from "@/lib/push/payload";
 import { sendPush } from "@/lib/push/sendPush";
+import { deriveDeliveryReceiptToken, hashReceiptToken } from "@/lib/notifications/receiptToken";
 import {
+  beginDeliveryAttempt,
   claimDueNotificationJobs,
-  deletePushSubscriptionById,
   ensureDeliveryRows,
   getActiveSubscriptionsForUser,
   getDeliveriesForJob,
-  incrementDeliveryAttempts,
+  revokePushSubscriptionById,
   setJobStatus,
   updateDeliveryOutcome,
   type ClaimedNotificationJob,
@@ -22,6 +23,7 @@ export interface DeliverySummary {
   deliveriesSucceeded: number;
   deliveriesFailedPermanent: number;
   deliveriesFailedTransient: number;
+  /** Devices taken out of the active delivery set this run by a permanent (404/410) push failure. Historical field name -- the row is now REVOKED rather than deleted (see `revokePushSubscriptionById`); the count, and the worker's PII-safe response shape, are unchanged. */
   subscriptionsRemoved: number;
 }
 
@@ -106,24 +108,50 @@ async function processJob(job: ClaimedNotificationJob): Promise<JobOutcome> {
     // notification must never receive it twice just because another
     // device on the same job is still failing transiently.
     if (delivery.status === "sent" || delivery.status === "failed_permanent") continue;
+    // A genuine Service Worker receipt is stronger evidence than the
+    // HTTP outcome of the send that produced it. A delivery the device
+    // ACTUALLY acknowledged is never re-sent, even if this server only
+    // ever recorded a transient failure for it -- that is the whole
+    // point of receipts, and the one case `status` alone gets wrong.
+    // `updateDeliveryOutcome` normally promotes such a row to 'sent'
+    // already; this check is what covers the window where the ACK landed
+    // after that write, within the same job.
+    if (delivery.receivedAt) continue;
 
     const subscription = subscriptionById.get(delivery.pushSubscriptionId);
     if (!subscription) continue;
 
-    await incrementDeliveryAttempts(delivery.id, delivery.attempts);
+    // Derived per delivery and STABLE across retries (see
+    // `receiptToken.ts`), so a late ACK for an earlier attempt still
+    // matches. `null` = no worker secret configured, in which case the
+    // push simply carries no receipt token and nothing downstream
+    // changes.
+    const receiptToken = deriveDeliveryReceiptToken(delivery.id);
+    await beginDeliveryAttempt(
+      delivery.id,
+      delivery.attempts,
+      receiptToken === null ? null : hashReceiptToken(receiptToken),
+    );
     const result = await sendPush(
       { endpoint: subscription.endpoint, p256dh: subscription.p256dh, auth: subscription.auth },
-      payload,
+      // The ONLY per-device variation in an otherwise shared payload.
+      // Each device receives a token that can acknowledge exactly its
+      // own delivery row and nothing else, so one device's payload can
+      // never be replayed to mutate another device's delivery.
+      receiptToken === null ? payload : { ...payload, receiptToken },
     );
 
     if (result.ok) {
       await updateDeliveryOutcome(delivery.id, "sent");
       succeeded++;
     } else if (result.permanent) {
-      // Reuses PR #29's exact permanent-failure classification and
-      // cleanup behavior (404/410 -> delete the stale subscription).
+      // Reuses PR #29's exact permanent-failure classification (404/410),
+      // but the cleanup is now a REVOCATION rather than a delete -- see
+      // `revokePushSubscriptionById` for the resurrection loop that
+      // deleting caused. The semantic guarantee is unchanged: this
+      // endpoint is out of the active delivery set immediately.
       await updateDeliveryOutcome(delivery.id, "failed_permanent", result.message);
-      await deletePushSubscriptionById(subscription.id);
+      await revokePushSubscriptionById(subscription.id);
       failedPermanent++;
       subscriptionsRemoved++;
     } else {
@@ -135,9 +163,13 @@ async function processJob(job: ClaimedNotificationJob): Promise<JobOutcome> {
   }
 
   const finalDeliveries = await getDeliveriesForJob(job.id);
-  const anySucceeded = finalDeliveries.some((delivery) => delivery.status === "sent");
+  // A device that acknowledged receipt counts as succeeded, and is never
+  // outstanding, regardless of what HTTP status this server recorded for
+  // the send -- the receipt is the stronger fact (see the skip above).
+  const anySucceeded = finalDeliveries.some((delivery) => delivery.status === "sent" || Boolean(delivery.receivedAt));
   const anyOutstanding = finalDeliveries.some(
-    (delivery) => delivery.status === "pending" || delivery.status === "failed_transient",
+    (delivery) =>
+      !delivery.receivedAt && (delivery.status === "pending" || delivery.status === "failed_transient"),
   );
 
   // Retries are bounded at the JOB level (attempts vs. max_attempts,

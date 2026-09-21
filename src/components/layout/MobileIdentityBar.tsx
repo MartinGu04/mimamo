@@ -9,7 +9,7 @@ interface MobileIdentityBarProps {
   isManager: boolean;
   /** Presentation-only Google account photo -- see `lib/auth/currentUser.ts`. `null` falls back to initials. */
   avatarUrl: string | null;
-  /** Authenticated Supabase user id, threaded through to `NotificationBell`'s `usePushSubscription` (see `AppShell`'s own docstring) and, since Privacy Phase 9B, to `MobileProfileMenu`'s sign-out cleanup. */
+  /** Authenticated Supabase user id, threaded through to `NotificationBell` (which keys this device's per-account install-prompt dismissal by it) and, since Privacy Phase 9B, to `MobileProfileMenu`'s sign-out cleanup. Push state itself now comes from `AppShell`'s shared `PushDeviceProvider`, not from the bell. */
   userId: string;
 }
 
@@ -50,14 +50,16 @@ export function MobileIdentityBar({ name, isManager, avatarUrl, userId }: Mobile
       <div className="flex shrink-0 items-center gap-1.5">
         <SearchTriggerButton variant="mobile" />
         <MobileTopBarThemeAction />
-        {/* `key={userId}` forces a fresh `NotificationBell` (and its
-            `usePushSubscription`) instance whenever the authenticated user
-            changes -- this codebase's established idiom for "reset all
-            internal state when an identity prop changes" (see
-            `NotificationScheduleSection`'s `key={editingItem?.id ?? "new"}`) --
-            so an account switch on a shared device can never let the
-            previous user's Push UI state linger, even for a single
-            frame. */}
+        {/* `key={userId}` forces a fresh `NotificationBell` instance
+            whenever the authenticated user changes -- this codebase's
+            established idiom for "reset all internal state when an
+            identity prop changes" (see `NotificationScheduleSection`'s
+            `key={editingItem?.id ?? "new"}`) -- so an account switch on a
+            shared device can never let the previous user's per-account
+            bell state (its install-prompt dismissal) linger, even for a
+            single frame. The PUSH state it renders is no longer this
+            component's: `AppShell` applies the same idiom one level up,
+            to the single shared `PushDeviceProvider`. */}
         <NotificationBell key={userId} variant="mobile" userId={userId} />
         <MobileProfileMenu name={name} isManager={isManager} avatarUrl={avatarUrl} userId={userId} />
       </div>

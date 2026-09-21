@@ -7,7 +7,9 @@ import type { NotificationInboxItem } from "@/lib/readModels/notificationInboxTy
 import { formatRecentChangeRelativeTime } from "@/lib/presentation/relativeChangeTime";
 import { APP_NAME } from "@/lib/config/productName";
 import { EXPAND_HIT_AREA_CLASS, EXPAND_HIT_AREA_VERTICAL_CLASS } from "@/components/ui/hitArea";
-import { usePushSubscription } from "./usePushSubscription";
+import { usePushDevice } from "./PushDeviceProvider";
+import type { PushUiState, TestPushStatus } from "./usePushSubscription";
+import { NotificationDevicesSection } from "./NotificationDevicesSection";
 import { useNotificationInbox } from "./useNotificationInbox";
 import { type InstallPromptOutcome, usePwaInstall } from "./PwaInstallProvider";
 import { type BellOnboardingCard, type InstallGuidance, deriveBellOnboardingCard, deriveInstallGuidance } from "./bellOnboarding";
@@ -22,9 +24,11 @@ interface NotificationBellProps {
   /** Only affects the trigger button's own visual treatment -- the popover panel's CONTENT looks identical in every context; only its anchor side (see `PANEL_POSITION_CLASSES`) varies by variant. */
   variant: "sidebar" | "mobile" | "shell";
   /**
-   * Authenticated Supabase user id, passed straight through to
-   * `usePushSubscription` to key the per-user/per-device Push preference
-   * -- see that hook's own docstring. `undefined` only on the (never
+   * Authenticated Supabase user id, used here ONLY to key this device's
+   * per-account install-prompt dismissal (`installPromptPreference.ts`).
+   * Push state is no longer derived per bell at all -- it comes from the
+   * shell's one shared `PushDeviceProvider`, which owns the per-user
+   * Push preference keying instead. `undefined` only on the (never
    * actually reached in real usage) no-`person` shell render path.
    */
   userId?: string;
@@ -137,7 +141,13 @@ export function NotificationBell({ variant, userId }: NotificationBellProps) {
   // `aria-modal="true"`).
   useRevealFocus({ revealed: open, onRevealFocusRef: panelRef, fallbackFocusRef: triggerRef });
 
-  const { state, errorMessage, testStatus, enable, disable, sendTest } = usePushSubscription(userId);
+  // The app shell's ONE shared push-device state (`PushDeviceProvider`),
+  // never a per-bell `usePushSubscription()` call. Both bells
+  // (`MobileIdentityBar` and `ShellUtilityBar`) are mounted at the same
+  // time -- one of them merely CSS-hidden -- so a hook call here would
+  // mean two independent status machines, two server round trips, and two
+  // racing auto-restore attempts on every authenticated page load.
+  const { state, errorMessage, testStatus, enable, disable, sendTest } = usePushDevice();
   const { status: inboxStatus, items, unreadCount, refresh, markRead, markAllRead, clear } = useNotificationInbox();
   const { isReady: isInstallStateReady, isStandalone, canPromptInstall, isIos, installCompleted, promptInstall } = usePwaInstall();
 
@@ -441,9 +451,9 @@ function SettingsView({
 }: {
   headingId: string;
   onBack: () => void;
-  state: ReturnType<typeof usePushSubscription>["state"];
+  state: PushUiState;
   errorMessage: string | null;
-  testStatus: ReturnType<typeof usePushSubscription>["testStatus"];
+  testStatus: TestPushStatus;
   onEnable: () => void;
   onDisable: () => void;
   onSendTest: () => void;
@@ -516,6 +526,15 @@ function SettingsView({
             ) : null}
           </div>
         ) : null}
+
+        {/* "המכשירים שלי" -- deliberately a compact, collapsed-by-default
+            subsection of the EXISTING settings view rather than a new
+            screen or a second popover: this panel is a small surface and
+            must not turn into an admin dashboard. It reads the shared
+            push-device state itself (for the current device's endpoint
+            and the local disable flow), so nothing new is threaded
+            through `SettingsView`'s props. */}
+        <NotificationDevicesSection />
       </div>
     </div>
   );

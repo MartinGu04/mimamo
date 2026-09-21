@@ -191,7 +191,12 @@ export function filterManagerRecipients(
  */
 export async function fetchAllSubscribedUserIds(): Promise<string[]> {
   const supabase = getNotificationServiceClient();
-  const { data, error } = await supabase.from("push_subscriptions").select("user_id");
+  // `revoked_at is null` mirrors `getActiveSubscriptionsForUser`'s own
+  // filter exactly -- the manager-facing readiness view must answer the
+  // same question the worker's targeting actually asks, so a person
+  // whose only device was removed/permanently failed reads as
+  // `no_push_subscription` rather than a misleading `ready`.
+  const { data, error } = await supabase.from("push_subscriptions").select("user_id").is("revoked_at", null);
   if (error) throw error;
 
   const userIds = new Set<string>();

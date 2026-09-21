@@ -41,6 +41,10 @@ function loadServiceWorker() {
   const fakeRegistration = {
     showNotification: vi.fn().mockResolvedValue(undefined),
   };
+  // The delivery-receipt ACK's transport. A real Service Worker always
+  // has `fetch`; providing it here keeps the sandbox faithful rather
+  // than accidentally testing a no-fetch fallback path.
+  const fakeFetch = vi.fn().mockResolvedValue({ ok: true });
   const fakeSelf = {
     addEventListener(type: string, handler: (event: unknown) => unknown) {
       const existing = listeners.get(type) ?? [];
@@ -53,7 +57,7 @@ function loadServiceWorker() {
     skipWaiting: vi.fn(),
   };
 
-  const context = vm.createContext({ self: fakeSelf, URL, console });
+  const context = vm.createContext({ self: fakeSelf, URL, console, fetch: fakeFetch });
   vm.runInContext(SW_SOURCE, context, { filename: "sw.js" });
 
   function dispatch(type: string, event: unknown) {
@@ -61,7 +65,7 @@ function loadServiceWorker() {
     for (const handler of handlers) handler(event);
   }
 
-  return { listeners, fakeSelf, fakeClients, fakeRegistration, dispatch };
+  return { listeners, fakeSelf, fakeClients, fakeRegistration, fakeFetch, dispatch };
 }
 
 describe("public/sw.js (PR #28)", () => {
@@ -144,6 +148,17 @@ describe("public/sw.js (PR #28)", () => {
       expect(fakeRegistration.showNotification).not.toHaveBeenCalled();
     });
 
+    it("does NOT acknowledge a push that carries no receipt token -- receipts degrade silently", async () => {
+      const { listeners, fakeFetch } = loadServiceWorker();
+      let captured: Promise<unknown> | undefined;
+      listeners.get("push")?.[0]?.({
+        data: { json: () => ({ title: "t", body: "b" }) },
+        waitUntil: (p: Promise<unknown>) => (captured = p),
+      });
+      await captured;
+      expect(fakeFetch).not.toHaveBeenCalled();
+    });
+
     it("an absolute external URL in the payload path is rejected, not carried into the notification's data", async () => {
       const { listeners, fakeRegistration } = loadServiceWorker();
       let captured: Promise<unknown> | undefined;
@@ -154,6 +169,90 @@ describe("public/sw.js (PR #28)", () => {
       await captured;
       const [, options] = fakeRegistration.showNotification.mock.calls[0] as [string, Record<string, unknown>];
       expect((options.data as { path: string }).path).toBe("/");
+    });
+  });
+
+
+  describe("delivery receipt ACK", () => {
+    const TOKEN = "a".repeat(64);
+
+    function pushWithToken(token: unknown) {
+      const worker = loadServiceWorker();
+      let captured: Promise<unknown> | undefined;
+      worker.listeners.get("push")?.[0]?.({
+        data: { json: () => ({ title: "t", body: "b", path: "/schedule", receiptToken: token }) },
+        waitUntil: (p: Promise<unknown>) => (captured = p),
+      });
+      return { ...worker, captured };
+    }
+
+    it("POSTs the token to the narrow same-origin receipt endpoint AFTER showNotification resolves", async () => {
+      const { fakeFetch, fakeRegistration, captured } = pushWithToken(TOKEN);
+      await captured;
+
+      expect(fakeRegistration.showNotification).toHaveBeenCalledTimes(1);
+      expect(fakeFetch).toHaveBeenCalledTimes(1);
+      const [url, init] = fakeFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/internal/notifications/receipt");
+      expect(init.method).toBe("POST");
+      expect(JSON.parse(init.body as string)).toEqual({ token: TOKEN });
+    });
+
+    it("sends NO credentials -- the receipt token is the only authority, so a closed PWA with an expired session still acknowledges", async () => {
+      const { fakeFetch, captured } = pushWithToken(TOKEN);
+      await captured;
+
+      const [, init] = fakeFetch.mock.calls[0] as [string, RequestInit];
+      expect(init.credentials).toBe("omit");
+      expect(init.cache).toBe("no-store");
+    });
+
+    it("never puts the token in the notification's own data, where notificationclick could read it later", async () => {
+      const { fakeRegistration, captured } = pushWithToken(TOKEN);
+      await captured;
+
+      const [, options] = fakeRegistration.showNotification.mock.calls[0] as [string, Record<string, unknown>];
+      expect(options.data).toEqual({ path: "/schedule" });
+      expect(JSON.stringify(options)).not.toContain(TOKEN);
+    });
+
+    it("does NOT acknowledge when showNotification fails -- a receipt must only ever follow a real display", async () => {
+      const worker = loadServiceWorker();
+      worker.fakeRegistration.showNotification.mockRejectedValue(new Error("display failed"));
+      let captured: Promise<unknown> | undefined;
+      worker.listeners.get("push")?.[0]?.({
+        data: { json: () => ({ title: "t", receiptToken: TOKEN }) },
+        waitUntil: (p: Promise<unknown>) => (captured = p),
+      });
+
+      await expect(captured).rejects.toThrow("display failed");
+      expect(worker.fakeFetch).not.toHaveBeenCalled();
+    });
+
+    const malformedTokens: { label: string; token: unknown }[] = [
+      { label: "empty", token: "" },
+      { label: "malformed", token: "not-a-token" },
+      { label: "non-string", token: 42 },
+      { label: "null", token: null },
+      { label: "non-hex", token: "A".repeat(64) },
+    ];
+
+    it.each(malformedTokens)("ignores a $label receipt token without a network request", async ({ token }) => {
+      const { fakeFetch, captured } = pushWithToken(token);
+      await captured;
+      expect(fakeFetch).not.toHaveBeenCalled();
+    });
+
+    it("a failed ACK never rejects the push event -- the notification was already shown", async () => {
+      const worker = loadServiceWorker();
+      worker.fakeFetch.mockRejectedValue(new Error("offline"));
+      let captured: Promise<unknown> | undefined;
+      worker.listeners.get("push")?.[0]?.({
+        data: { json: () => ({ title: "t", receiptToken: TOKEN }) },
+        waitUntil: (p: Promise<unknown>) => (captured = p),
+      });
+
+      await expect(captured).resolves.not.toThrow();
     });
   });
 
