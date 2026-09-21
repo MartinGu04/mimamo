@@ -121,11 +121,34 @@ describe("push reliability migration -- SECURITY DEFINER hardening", () => {
     "record_notification_delivery_receipt",
   ];
 
-  it.each(definerFunctions)("%s pins its search_path", (name) => {
+  it.each(definerFunctions)("%s pins its search_path to the EMPTY form", (name) => {
     const body = sql.slice(sql.indexOf(`function public.${name}(`));
     const header = body.slice(0, body.indexOf("as $$"));
     expect(header).toMatch(/security definer/i);
-    expect(header).toMatch(/set search_path\s*=\s*public/i);
+    // `to ''`, not `= public` -- the form
+    // `20260913214946_harden_aggregate_notification_rpc_search_path.sql`
+    // established for this project. Nothing resolves implicitly, so no
+    // schema a caller controls can shadow a referenced object.
+    expect(header).toMatch(/set search_path\s+to\s+''/i);
+    expect(header).not.toMatch(/set search_path\s*=\s*public/i);
+  });
+
+  it("the security-invoker wrapper pins its search_path the same way -- no mixed convention in one file", () => {
+    const body = sql.slice(sql.indexOf("function public.upsert_push_subscription(\n"));
+    const header = body.slice(0, body.indexOf("as $$"));
+    expect(header).toMatch(/set search_path\s+to\s+''/i);
+  });
+
+  it("every application object inside a function is schema-qualified -- the precondition an empty search_path depends on", () => {
+    // With `search_path to ''` nothing but `pg_catalog` resolves
+    // implicitly, so an unqualified application table would fail at RUN
+    // time, not at CREATE time. Executed for real in
+    // `pushReliabilityRpc.integration.test.ts`; this catches it at the
+    // text level too, where the diff is being read.
+    for (const table of ["push_subscriptions", "notification_deliveries"]) {
+      const unqualified = new RegExp(`(from|into|update|join)\\s+${table}\\b`, "gi");
+      expect(executableSql).not.toMatch(unqualified);
+    }
   });
 
   it.each(definerFunctions)("%s revokes EXECUTE from public before granting it", (name) => {
@@ -249,12 +272,15 @@ describe("push reliability migration -- device metadata is coarse by constructio
 
   it("gives each row an opaque device_ref distinct from its primary key, generated with core Postgres (never pgcrypto, which Supabase installs outside `public`)", () => {
     expect(sql).toMatch(/device_ref/);
-    expect(sql).toMatch(/replace\(gen_random_uuid\(\)::text, '-', ''\)/i);
+    // Schema-qualified: pgcrypto ships its own `gen_random_uuid`, and a
+    // column DEFAULT stores the RESOLVED function, so a bare call could
+    // bind the default to the extension's copy instead of the core one.
+    expect(sql).toMatch(/replace\(pg_catalog\.gen_random_uuid\(\)::text, '-', ''\)/i);
     expect(executableSql).not.toMatch(/gen_random_bytes/i);
   });
 
   it("does not depend on pgcrypto's digest() -- hashing happens in Node, so no SECURITY DEFINER search_path has to be widened", () => {
     expect(executableSql).not.toMatch(/\bdigest\s*\(/i);
-    expect(executableSql).not.toMatch(/search_path\s*=\s*[^;\n]*extensions/i);
+    expect(executableSql).not.toMatch(/search_path[^;\n]*extensions/i);
   });
 });

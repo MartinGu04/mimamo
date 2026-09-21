@@ -62,17 +62,28 @@ comment on column public.push_subscriptions.last_received_at is
 comment on column public.push_subscriptions.device_ref is
   'Opaque per-row handle the device-management UI addresses a device by. Deliberately NOT the row''s primary key and never derived from the endpoint/keys, so no internal identifier is exposed to the client.';
 
--- `gen_random_uuid()` is core Postgres (13+), unlike pgcrypto's
--- `gen_random_bytes` -- which on a real Supabase project lives in the
--- `extensions` schema and would therefore NOT resolve under a pinned
--- `search_path = public`. This is a fresh random value per row, entirely
+-- `gen_random_uuid()` is core Postgres (13+, in `pg_catalog`), unlike
+-- pgcrypto's `gen_random_bytes` -- which on a real Supabase project lives
+-- in the `extensions` schema and would therefore NOT resolve inside a
+-- function whose `search_path` is pinned to `''` (see the hardening
+-- convention note below). This is a fresh random value per row, entirely
 -- independent of the row's own `id`.
+--
+-- Written `pg_catalog.gen_random_uuid()` rather than bare: pgcrypto also
+-- ships a `gen_random_uuid`, and `create extension pgcrypto` WITHOUT a
+-- schema (as the PR #29 migration does) puts it in whichever schema the
+-- session resolves to -- `public` on a vanilla Postgres. A column DEFAULT
+-- is parsed once and stores the resolved function, so a bare call could
+-- bind that default to pgcrypto's copy and make the column silently
+-- depend on the extension staying installed there. Qualifying it removes
+-- the ambiguity for good; on a real Supabase project (pgcrypto in
+-- `extensions`) it was always going to be the core one anyway.
 update public.push_subscriptions
-  set device_ref = replace(gen_random_uuid()::text, '-', '')
+  set device_ref = replace(pg_catalog.gen_random_uuid()::text, '-', '')
   where device_ref is null;
 
 alter table public.push_subscriptions
-  alter column device_ref set default replace(gen_random_uuid()::text, '-', '');
+  alter column device_ref set default replace(pg_catalog.gen_random_uuid()::text, '-', '');
 
 alter table public.push_subscriptions
   alter column device_ref set not null;
@@ -148,6 +159,32 @@ create unique index if not exists notification_deliveries_receipt_token_hash_key
   where receipt_token_hash is not null;
 
 -- ---------------------------------------------------------------------
+-- SEARCH_PATH CONVENTION for every function below.
+--
+-- All five are declared `set search_path to ''` -- an EMPTY search_path,
+-- matching `20260913214946_harden_aggregate_notification_rpc_search_path.sql`,
+-- which is the form this project settled on for pinning. Four of the five
+-- are SECURITY DEFINER, which is exactly the case where an attacker-
+-- controlled schema earlier in the path would be worth exploiting, so the
+-- strictest form is the right default here rather than `= public`.
+--
+-- What that requires, and what it buys:
+--   * Every application object is written schema-qualified
+--     (`public.push_subscriptions`, `public.notification_deliveries`,
+--     `auth.uid()`), so nothing resolves implicitly and nothing can be
+--     shadowed. `pg_catalog` stays implicitly searched, so `now()`,
+--     `coalesce`, `gen_random_uuid()` and the base types keep working.
+--   * It also rules out reaching anything in the `extensions` schema
+--     (pgcrypto's `digest`/`gen_random_bytes`), which is why the receipt
+--     token's sha256 is computed in Node and handed in already hashed --
+--     see `src/lib/notifications/receiptToken.ts`.
+--
+-- `pushReliabilityRpc.integration.test.ts` executes all of these against
+-- a real PostgreSQL after applying every migration in this directory, so
+-- the empty search_path is exercised rather than merely declared.
+-- ---------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------
 -- upsert_push_subscription_v2 -- supersedes the PR #29 four-argument
 -- `upsert_push_subscription` (which is REDEFINED below as a
 -- revocation-safe wrapper rather than dropped, so an old deployed client
@@ -204,7 +241,7 @@ create or replace function public.upsert_push_subscription_v2(
 returns public.push_subscriptions
 language plpgsql
 security definer
-set search_path = public
+set search_path to ''
 as $$
 declare
   existing public.push_subscriptions;
@@ -348,7 +385,7 @@ create or replace function public.upsert_push_subscription(
 returns public.push_subscriptions
 language plpgsql
 security invoker
-set search_path = public
+set search_path to ''
 as $$
 declare
   result public.push_subscriptions;
@@ -392,7 +429,7 @@ create or replace function public.touch_push_subscription(p_endpoint text)
 returns boolean
 language plpgsql
 security definer
-set search_path = public
+set search_path to ''
 as $$
 declare
   touched integer;
@@ -438,7 +475,7 @@ create or replace function public.revoke_push_subscription(
 returns boolean
 language plpgsql
 security definer
-set search_path = public
+set search_path to ''
 as $$
 declare
   v_reason text;
@@ -521,7 +558,7 @@ create or replace function public.record_notification_delivery_receipt(p_token_h
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path to ''
 as $$
 declare
   v_subscription_id uuid;

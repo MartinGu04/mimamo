@@ -745,6 +745,29 @@ describe.skipIf(!databaseAvailable)("push reliability RPCs -- real PostgreSQL ex
       }
     });
 
+    it("every new function carries an EMPTY pinned search_path at runtime, matching the project's hardening convention", async () => {
+      const result = await db.query(`
+        select p.proname, coalesce(array_to_string(p.proconfig, ','), '') as config
+          from pg_proc p
+          join pg_namespace n on n.oid = p.pronamespace
+         where n.nspname = 'public'
+           and p.proname in ('upsert_push_subscription', 'upsert_push_subscription_v2',
+                             'touch_push_subscription', 'revoke_push_subscription',
+                             'record_notification_delivery_receipt')
+         order by p.proname
+      `);
+
+      expect(result.rows).toHaveLength(5);
+      for (const row of result.rows) {
+        // Postgres stores `set search_path to ''` as `search_path=""`.
+        // Every scenario above already ran against these exact functions,
+        // so this asserts the setting is present on the same definitions
+        // the rest of this suite just exercised -- the empty search_path
+        // is proven to work, not merely declared.
+        expect(row.config).toBe('search_path=""');
+      }
+    });
+
     it("`authenticated` still has no direct INSERT/UPDATE on push_subscriptions -- every write goes through a function", async () => {
       for (const privilege of ["insert", "update"]) {
         const result = await db.query("select has_table_privilege('authenticated', $1, $2) as granted", [

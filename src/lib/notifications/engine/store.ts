@@ -535,7 +535,7 @@ export async function upsertPendingReminderJob(job: NewNotificationJob): Promise
  * `dedupeKey` identifies a whole logical EPISODE of an ongoing problem
  * (e.g. `weapon_qualification_summary:<managerUserId>`), never one tick's
  * content -- see `weaponQualification.ts`'s own docs and this function's
- * migration (`20260902130000_add_aggregate_notification_episode_dedupe.sql`)
+ * migration (`20260913214805_add_aggregate_notification_episode_dedupe.sql`)
  * for the exact "episode" semantics this exists to serve (spec: fix a
  * production notification-spam incident where 38 -> 40 -> 44 mismatches
  * produced three separate Notification Center entries and three pushes

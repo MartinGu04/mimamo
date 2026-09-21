@@ -76,6 +76,36 @@ is not a removal (the same user's remembered preference is expected to
 restore push on next sign-in), but it must not destroy a tombstone
 either.
 
+### `search_path` on every function in `supabase/migrations/`
+
+Every function this feature adds is declared `set search_path to ''` --
+an EMPTY search_path, the form
+`20260913214946_harden_aggregate_notification_rpc_search_path.sql`
+established for this project (that migration pinned the two aggregate-
+episode RPCs the same way, via `ALTER FUNCTION`, after they shipped
+without one). Four of the five new functions are SECURITY DEFINER, which
+is exactly the case where a schema the caller controls sitting earlier in
+the path would be worth exploiting, so the strictest form is the right
+default rather than `= public`.
+
+Two consequences worth knowing before adding to these files:
+
+- Every application object must be written schema-qualified
+  (`public.push_subscriptions`, `auth.uid()`). Only `pg_catalog` is
+  still searched implicitly, so `now()`/`coalesce()`/base types keep
+  working. An unqualified table fails at RUN time, not at CREATE time.
+- Nothing in the `extensions` schema is reachable. That is why the
+  delivery-receipt verifier is hashed in Node and handed to the RPC
+  already hashed, rather than calling pgcrypto's `digest()` -- see
+  `receiptToken.ts`. For the same reason `gen_random_uuid()` is written
+  `pg_catalog.gen_random_uuid()` where it is stored in a column DEFAULT:
+  pgcrypto ships its own, and a DEFAULT stores the RESOLVED function.
+
+Both properties are executed, not just asserted: the two real-Postgres
+suites apply every migration in `supabase/migrations/` in order and then
+call the functions, one of them from a session whose `search_path` points
+at a decoy schema holding a same-named table.
+
 ## Notification preferences -- intended future extension point
 
 This PR only supports a single global on/off per device (no per-category
