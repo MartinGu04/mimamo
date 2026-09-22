@@ -1162,7 +1162,7 @@ describe("CalendarGrid", () => {
         />,
       );
       const chip = screen.getByText('רס"ר').parentElement;
-      expect(chip?.className).toMatch(/bg-overlay-soft/);
+      expect(chip?.className).toMatch(/bg-\[var\(--calendar-chip-bg\)\]/);
       expect(chip?.className).not.toMatch(/bg-event-/);
     });
 

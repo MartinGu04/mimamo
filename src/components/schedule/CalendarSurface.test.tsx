@@ -198,7 +198,7 @@ describe("mobile grid declutter (borders + chip chrome are sm:+ only)", () => {
     render(<IndicatorChip emoji="☀️" label="יום" />);
     const chip = screen.getByText("יום").parentElement as HTMLElement;
     const tokens = chip.className.split(" ").filter(Boolean);
-    expect(tokens).not.toContain("bg-overlay-soft");
-    expect(tokens).toContain("sm:bg-overlay-soft");
+    expect(tokens).not.toContain("bg-[var(--calendar-chip-bg)]");
+    expect(tokens).toContain("sm:bg-[var(--calendar-chip-bg)]");
   });
 });

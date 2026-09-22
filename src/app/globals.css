@@ -68,19 +68,68 @@
      never touches). Consumed by the `.glass-subtle.calendar-surface`
      override near the bottom of this file, and by `CalendarSurface.tsx`'s
      cell/border classes. */
-  --calendar-surface: #e3e9ee;
-  --calendar-surface-border: #a9b9c8;
+  --calendar-surface: #dbe2e9;
+  --calendar-surface-border: #9caebe;
   --calendar-surface-bg-image: none;
   --calendar-surface-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.7),
     0 0 0 1px var(--calendar-surface-border),
-    0 16px 32px -18px rgba(31, 45, 61, 0.25),
-    0 4px 10px -4px rgba(31, 45, 61, 0.12);
+    0 18px 36px -16px rgba(31, 45, 61, 0.28),
+    0 5px 12px -4px rgba(31, 45, 61, 0.14);
   /* Cells sit as light chips inside the tray above -- opaque white, a real
      step lighter than `--calendar-surface`, so the grid itself is
      immediately readable rather than one flat wash. */
   --calendar-cell-bg: #ffffff;
   --calendar-cell-border: #c3cfda;
+  /* One more level up from a cell: the compact day/night status chip
+     inside it (`IndicatorChip`'s own default, uncategorized background --
+     never the personal calendar's per-event-type COLOR tint, which is its
+     own separate, already-legible signal and untouched here). Visual-
+     polish follow-up -- the plain `--overlay-soft` neutral wash this used
+     to fall back to (5% dark tint) was nearly invisible against an opaque
+     white cell; this is a real, distinctly-toned steel-blue chip instead,
+     with its own thin ring so it reads as its own small surface without
+     turning into a heavy pill. */
+  --calendar-chip-bg: #e5eaf0;
+  --calendar-chip-border: #c9d3dc;
+  /* A plain personnel/assignment row (`AssignmentRow` in
+     `EveryoneSelectedDayPanel`/`ManagerCoverageSection`) had NO background
+     of its own before this pass -- just text sitting directly on the
+     panel/card's own white surface, one layer too flat once the calendar
+     around it gained real depth. A light steel tint + thin ring, same
+     restrained language as the chip above, never a heavy pill. */
+  --calendar-row-bg: #eef1f5;
+  --calendar-row-border: #dbe1e8;
+  /* The padding that turns a plain row into a small surface only exists in
+     light mode -- `0px` in dark keeps that row's BOX SIZE (not just its
+     color) exactly as it was before this pass, since a real padding value
+     would shift every row/line below it even with a transparent
+     background/ring. */
+  --calendar-row-px: 0.5rem;
+  --calendar-row-py: 0.25rem;
+  /* Same idea, compact scale -- the manager day card's own smaller
+     `text-xs` rows (`ManagerCoverageSection`), which need less padding to
+     avoid overwhelming an already-dense card. */
+  --calendar-row-px-compact: 0.375rem;
+  --calendar-row-py-compact: 0.125rem;
+  /* A shadow/handover row's existing pill, just a shade more present than
+     the plain row above (it already carried its own badge/ring; this only
+     strengthens the surface it sits on, never its badge/text). */
+  --calendar-shadow-row-bg: #e6eaf0;
+  --calendar-shadow-row-border: #c7d0d9;
+  /* A role's coverage note -- strengthened the SAME way, background/ring
+     only. The note's own text stays on the existing semantic
+     warning/critical/muted color tokens untouched (see `RoleNote`) -- a
+     "חסר טכנאי" message must read exactly as urgent as before, just from
+     a slightly more legible surface. */
+  --calendar-note-bg: #eef1f4;
+  --calendar-note-border: #dde3e8;
+  /* An out-of-month padding cell used to sit directly on the tray's own
+     (now stronger) background with no lightening of its own, which read
+     as a heavy, dense gray block spanning up to two whole rows. A
+     semi-opaque white wash over the tray keeps it visibly distinct from a
+     real in-month cell while looking airy rather than solid. */
+  --calendar-out-of-month-bg: rgba(255, 255, 255, 0.55);
 
   --card: var(--surface-1);
   --card-foreground: var(--foreground);
@@ -244,6 +293,22 @@
       var(--glass-depth-subtle);
     --calendar-cell-bg: transparent;
     --calendar-cell-border: var(--border);
+    /* Visual-polish follow-up tokens (chip/row/note/out-of-month surfaces)
+       -- every one re-points at whatever that element already rendered
+       BEFORE this pass in dark mode, so none of it changes here. */
+    --calendar-chip-bg: var(--overlay-soft);
+    --calendar-chip-border: transparent;
+    --calendar-row-bg: transparent;
+    --calendar-row-border: transparent;
+    --calendar-row-px: 0px;
+    --calendar-row-py: 0px;
+    --calendar-row-px-compact: 0px;
+    --calendar-row-py-compact: 0px;
+    --calendar-shadow-row-bg: var(--overlay-soft);
+    --calendar-shadow-row-border: var(--border-strong);
+    --calendar-note-bg: var(--overlay-faint);
+    --calendar-note-border: var(--border);
+    --calendar-out-of-month-bg: transparent;
 
     --sidebar: #111b25;
     --sidebar-foreground: #edf1f4;
@@ -379,6 +444,21 @@
     var(--glass-depth-subtle);
   --calendar-cell-bg: transparent;
   --calendar-cell-border: var(--border);
+  /* Visual-polish follow-up tokens: identical to the `prefers-color-scheme:
+     dark` block above, same reason. */
+  --calendar-chip-bg: var(--overlay-soft);
+  --calendar-chip-border: transparent;
+  --calendar-row-bg: transparent;
+  --calendar-row-border: transparent;
+  --calendar-row-px: 0px;
+  --calendar-row-py: 0px;
+  --calendar-row-px-compact: 0px;
+  --calendar-row-py-compact: 0px;
+  --calendar-shadow-row-bg: var(--overlay-soft);
+  --calendar-shadow-row-border: var(--border-strong);
+  --calendar-note-bg: var(--overlay-faint);
+  --calendar-note-border: var(--border);
+  --calendar-out-of-month-bg: transparent;
 
   --sidebar: #111b25;
   --sidebar-foreground: #edf1f4;

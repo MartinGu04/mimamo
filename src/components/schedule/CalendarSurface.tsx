@@ -100,8 +100,8 @@ export function IndicatorChip({
   statusDotClassName,
   /**
    * When set (e.g. `eventColorBgClassName`, `lib/presentation/eventColor.ts`),
-   * replaces the chip's default neutral `bg-overlay-soft` with a semantic
-   * soft color tint, from `sm:` up -- used only by `CalendarGrid`'s
+   * replaces the chip's default neutral `--calendar-chip-bg` tint with a
+   * semantic soft color tint, from `sm:` up -- used only by `CalendarGrid`'s
    * single-person "הלוח שלי" indicators, never by `EveryoneMonthGrid` (which
    * never passes this prop, so its chips are completely unaffected). Always
    * a single Tailwind class (see `EVENT_COLOR_SOFT_BG_CLASS`), safe to
@@ -119,10 +119,14 @@ export function IndicatorChip({
   categoryBgClassName?: string;
   className?: string;
 }) {
-  const bgClassName = categoryBgClassName ? `sm:${categoryBgClassName}` : "sm:bg-overlay-soft";
+  const bgClassName = categoryBgClassName ? `sm:${categoryBgClassName}` : "sm:bg-[var(--calendar-chip-bg)]";
+  // Only the uncategorized default gets the extra ring -- a per-event-type
+  // COLOR chip (personal calendar) already reads clearly on its own tinted
+  // background and keeps its existing borderless look untouched.
+  const ringClassName = categoryBgClassName ? "" : "sm:ring-1 sm:ring-[var(--calendar-chip-border)]";
   return (
     <span
-      className={`flex min-w-0 items-center gap-1 sm:rounded ${bgClassName} px-0 sm:px-1 text-[10px] leading-[14px] sm:text-xs sm:leading-4 lg:text-[13px] lg:leading-5 ${toneClassName} ${className}`}
+      className={`flex min-w-0 items-center gap-1 sm:rounded ${bgClassName} ${ringClassName} px-0 sm:px-1 text-[10px] leading-[14px] sm:text-xs sm:leading-4 lg:text-[13px] lg:leading-5 ${toneClassName} ${className}`}
     >
       {statusDotClassName ? (
         <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full sm:hidden ${statusDotClassName}`} />
@@ -209,14 +213,25 @@ interface OutOfMonthCellProps {
   isFirstRow: boolean;
 }
 
-/** A non-interactive, dimmed adjacent-month cell, participating in the same bordered grid geometry as a real day cell. Shared so leading/trailing padding can never look like a "detached, disabled card" in one surface but not the other. */
+/**
+ * A non-interactive, dimmed adjacent-month cell, participating in the same
+ * bordered grid geometry as a real day cell. Shared so leading/trailing
+ * padding can never look like a "detached, disabled card" in one surface
+ * but not the other.
+ *
+ * Non-weekend out-of-month cells sit on `--calendar-out-of-month-bg` -- a
+ * semi-opaque white wash over the calendar's own (light-mode) tray, so a
+ * whole leading/trailing padding row reads as an airy, lightened area
+ * rather than a heavy solid-gray block, while staying visibly muted next
+ * to a real white in-month cell (dark mode: transparent, unchanged).
+ */
 export function OutOfMonthCell({ cell, columnIndex, isFirstRow }: OutOfMonthCellProps) {
   const isWeekend = isWeekendColumn(columnIndex);
   return (
     <div
       aria-hidden="true"
       className={`flex ${CALENDAR_CELL_HEIGHT_CLASSES} items-start justify-start p-1 sm:p-1.5 ${cellBorderClasses(columnIndex, isFirstRow)} ${
-        isWeekend ? "bg-weekend-tint" : ""
+        isWeekend ? "bg-weekend-tint" : "bg-[var(--calendar-out-of-month-bg)]"
       }`}
     >
       <span className="text-xs font-medium text-muted-2 opacity-40 sm:text-sm lg:text-base">

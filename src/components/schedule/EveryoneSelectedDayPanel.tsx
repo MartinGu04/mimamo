@@ -48,7 +48,7 @@ function AssignmentRow({
 }) {
   const label = allDay || !periodLabel ? ROLE_LABEL[role] : `${ROLE_LABEL[role]} ${periodLabel}`;
   return (
-    <li className="flex flex-wrap items-center gap-1.5 text-sm">
+    <li className="flex flex-wrap items-center gap-1.5 rounded-md bg-[var(--calendar-row-bg)] px-[var(--calendar-row-px)] py-[var(--calendar-row-py)] text-sm ring-1 ring-[var(--calendar-row-border)]">
       <span aria-hidden="true">{ROLE_EMOJI[role]}</span>
       <span className="font-medium text-muted-2">{label}</span>
       <span aria-hidden="true" className="text-muted-2">
@@ -68,7 +68,7 @@ function AssignmentRow({
  */
 function ShadowRow({ role, name }: { role: RoleName; name: string }) {
   return (
-    <li className="flex flex-wrap items-center gap-1.5 rounded-md bg-overlay-soft px-2 py-1 text-sm ring-1 ring-border-strong">
+    <li className="flex flex-wrap items-center gap-1.5 rounded-md bg-[var(--calendar-shadow-row-bg)] px-2 py-1 text-sm ring-1 ring-[var(--calendar-shadow-row-border)]">
       <span aria-hidden="true">🌘</span>
       <Badge tone="neutral">צל</Badge>
       <span className="font-medium text-muted-2">{ROLE_LABEL[role]}</span>
@@ -84,7 +84,10 @@ function ShadowRow({ role, name }: { role: RoleName; name: string }) {
  * A role's non-"full" coverage message (missing/partial/not_evaluable) --
  * always its own headed, bordered note block, never a bare paragraph sitting
  * directly under a person's name where it could look like it belongs to
- * them instead of describing the role's remaining gap.
+ * them instead of describing the role's remaining gap. Only the SURFACE
+ * (background/ring) follows the calendar's light-mode-polish tokens -- the
+ * message's own warning/critical/muted text color is untouched, so a
+ * "חסר טכנאי" note reads exactly as urgent as before.
  */
 function RoleNote({
   role,
@@ -97,7 +100,7 @@ function RoleNote({
 }) {
   const toneClassName = status === "missing" ? "text-critical" : status === "partial" ? "text-warning" : "text-muted";
   return (
-    <li className="rounded-md bg-overlay-faint px-2.5 py-1.5 ring-1 ring-border">
+    <li className="rounded-md bg-[var(--calendar-note-bg)] px-2.5 py-1.5 ring-1 ring-[var(--calendar-note-border)]">
       <p className="flex items-center gap-1.5 text-xs font-medium text-muted-2">
         <span aria-hidden="true">📝</span>
         {ROLE_LABEL[role]} · הערה
