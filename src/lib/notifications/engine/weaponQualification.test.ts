@@ -30,7 +30,7 @@ const { runWeaponQualificationCheck } = await import("./weaponQualification");
  * relevant slice, mirroring the EXACT episode semantics
  * `upsert_aggregate_notification_job`/`resolve_aggregate_notification_job`
  * implement in Postgres (see the migration
- * `20260902130000_add_aggregate_notification_episode_dedupe.sql`): ONE row
+ * `20260913214805_add_aggregate_notification_episode_dedupe.sql`): ONE row
  * per `dedupeKey`, ever: a fresh/reopened episode (no row yet, or the
  * existing row is resolved) replaces the row and reports `true`; an
  * already-open episode is content-refreshed in place and reports `false`.

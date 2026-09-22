@@ -5,6 +5,7 @@ import { APP_NAME } from "@/lib/config/productName";
 import { readPushPreference } from "@/lib/notifications/pushPreference";
 import { INSTALL_PROMPT_COOLDOWN_MS } from "@/lib/pwa/installPromptPreference";
 import { NotificationBell } from "./NotificationBell";
+import { PushDeviceProvider } from "./PushDeviceProvider";
 import { PwaInstallProvider } from "./PwaInstallProvider";
 
 const TEST_USER_ID = "user-test-1";
@@ -13,13 +14,37 @@ const enablePushNotificationsAction = vi.fn();
 const disablePushNotificationsAction = vi.fn();
 const getPushSubscriptionStatusAction = vi.fn();
 const sendTestNotificationAction = vi.fn();
+const heartbeatPushSubscriptionAction = vi.fn();
+const listNotificationDevicesAction = vi.fn();
+const removeNotificationDeviceAction = vi.fn();
 
 vi.mock("@/lib/notifications/actions", () => ({
   enablePushNotificationsAction: (...args: unknown[]) => enablePushNotificationsAction(...args),
   disablePushNotificationsAction: (...args: unknown[]) => disablePushNotificationsAction(...args),
   getPushSubscriptionStatusAction: (...args: unknown[]) => getPushSubscriptionStatusAction(...args),
   sendTestNotificationAction: (...args: unknown[]) => sendTestNotificationAction(...args),
+  heartbeatPushSubscriptionAction: (...args: unknown[]) => heartbeatPushSubscriptionAction(...args),
+  listNotificationDevicesAction: (...args: unknown[]) => listNotificationDevicesAction(...args),
+  removeNotificationDeviceAction: (...args: unknown[]) => removeNotificationDeviceAction(...args),
 }));
+
+/**
+ * The bell no longer owns its own push state -- it reads the app shell's
+ * one shared `PushDeviceProvider` (see that module's docstring for why
+ * two simultaneously-mounted bells must not each run their own state
+ * machine). These tests therefore render a REAL provider around a REAL
+ * `usePushSubscription`, with only the server actions and the browser
+ * push environment faked, exactly as they did before -- nothing about
+ * what they exercise changes, only where the hook is called from.
+ */
+function renderBell(props: { variant?: "sidebar" | "mobile" | "shell"; userId?: string } = {}) {
+  const { variant = "mobile", userId = TEST_USER_ID } = props;
+  return render(
+    <PushDeviceProvider userId={userId}>
+      <NotificationBell variant={variant} userId={userId} />
+    </PushDeviceProvider>,
+  );
+}
 
 vi.mock("@/lib/push/publicConfig", () => ({ getVapidPublicKey: () => "test-public-key" }));
 
@@ -99,7 +124,7 @@ function removeBrowserPushEnvironment() {
 }
 
 async function openPanel(variant: "sidebar" | "mobile" | "shell" = "mobile") {
-  render(<NotificationBell variant={variant} userId={TEST_USER_ID} />);
+  renderBell({ variant });
   await act(async () => {});
   fireEvent.click(screen.getByRole("button", { name: /התראות/ }));
 }
@@ -128,8 +153,11 @@ beforeEach(() => {
   window.localStorage.clear();
   enablePushNotificationsAction.mockResolvedValue({ ok: true });
   disablePushNotificationsAction.mockResolvedValue({ ok: true });
-  getPushSubscriptionStatusAction.mockResolvedValue({ subscribed: false });
+  getPushSubscriptionStatusAction.mockResolvedValue({ subscribed: false, revoked: false, endpointDead: false });
   sendTestNotificationAction.mockResolvedValue({ ok: true });
+  heartbeatPushSubscriptionAction.mockResolvedValue({ ok: true });
+  listNotificationDevicesAction.mockResolvedValue({ devices: [] });
+  removeNotificationDeviceAction.mockResolvedValue({ ok: true });
   getNotificationInboxAction.mockResolvedValue({ items: [], unreadCount: 0 });
   markNotificationReadAction.mockResolvedValue({ ok: true });
   markAllNotificationsReadAction.mockResolvedValue({ ok: true });
@@ -186,7 +214,7 @@ describe("NotificationBell — inbox is the primary view", () => {
 describe("NotificationBell — unread badge", () => {
   it("shows no badge when unreadCount is 0", async () => {
     getNotificationInboxAction.mockResolvedValue({ items: [inboxItem({ isRead: true })], unreadCount: 0 });
-    render(<NotificationBell variant="mobile" userId={TEST_USER_ID} />);
+    renderBell();
     await waitFor(() => expect(getNotificationInboxAction).toHaveBeenCalled());
     expect(screen.queryByText("0")).toBeNull();
     expect(screen.getByRole("button", { name: "התראות" })).toBeInTheDocument();
@@ -197,7 +225,7 @@ describe("NotificationBell — unread badge", () => {
       items: [inboxItem({ id: "a" }), inboxItem({ id: "b" })],
       unreadCount: 2,
     });
-    render(<NotificationBell variant="mobile" userId={TEST_USER_ID} />);
+    renderBell();
     await waitFor(() => expect(screen.getByText("2")).toBeInTheDocument());
     expect(screen.getByRole("button", { name: "התראות, 2 שלא נקראו" })).toBeInTheDocument();
   });
@@ -207,7 +235,7 @@ describe("NotificationBell — unread badge", () => {
       items: Array.from({ length: 12 }, (_, i) => inboxItem({ id: `j${i}` })),
       unreadCount: 12,
     });
-    render(<NotificationBell variant="mobile" userId={TEST_USER_ID} />);
+    renderBell();
     await waitFor(() => expect(screen.getByText("9+")).toBeInTheDocument());
   });
 });
@@ -215,7 +243,7 @@ describe("NotificationBell — unread badge", () => {
 describe("NotificationBell — badge freshness while the shell stays mounted (never requires opening the bell first)", () => {
   it("re-fetches and updates the badge when AppRevalidator's revalidate event fires, with the popover still closed", async () => {
     getNotificationInboxAction.mockResolvedValue({ items: [], unreadCount: 0 });
-    render(<NotificationBell variant="mobile" userId={TEST_USER_ID} />);
+    renderBell();
     await waitFor(() => expect(getNotificationInboxAction).toHaveBeenCalled());
     expect(screen.queryByText("3")).toBeNull();
 
@@ -233,7 +261,7 @@ describe("NotificationBell — badge freshness while the shell stays mounted (ne
 
   it("stops listening once unmounted -- no further fetch after the revalidate event", async () => {
     getNotificationInboxAction.mockResolvedValue({ items: [], unreadCount: 0 });
-    const { unmount } = render(<NotificationBell variant="mobile" userId={TEST_USER_ID} />);
+    const { unmount } = renderBell();
     await waitFor(() => expect(getNotificationInboxAction).toHaveBeenCalled());
     const callsBeforeUnmount = getNotificationInboxAction.mock.calls.length;
 
@@ -342,7 +370,7 @@ describe("NotificationBell — סמן הכל כנקרא / נקה התראות", 
 
 describe("NotificationBell — touch-target hardening (Phase 6)", () => {
   it.each(["sidebar", "mobile", "shell"] as const)("the %s trigger keeps its visible size and gets a vertical-only expanded hit area", async (variant) => {
-    render(<NotificationBell variant={variant} userId={TEST_USER_ID} />);
+    renderBell({ variant });
     await act(async () => {});
     const trigger = screen.getByRole("button", { name: /התראות/ });
     // Never expanded sideways -- this trigger always sits in a tight
@@ -484,7 +512,44 @@ describe("NotificationBell — enabling", () => {
 
     await waitFor(() => expect(screen.getByText("סטטוס: פעיל")).toBeInTheDocument());
     expect(pushManager.subscribe).not.toHaveBeenCalled();
-    expect(enablePushNotificationsAction).toHaveBeenCalledWith(existing.toJSON());
+    // Persisted with `explicit: true` -- a user's own click is the one
+    // intent allowed to clear a revocation -- plus this device's coarse
+    // descriptor. The descriptor is deliberately low-entropy enum values
+    // only; the raw User-Agent never leaves the browser.
+    expect(enablePushNotificationsAction).toHaveBeenCalledWith(existing.toJSON(), true, expect.any(Object));
+  });
+
+  it("recreates the browser subscription on an explicit enable when the server knows this endpoint is permanently dead (404/410)", async () => {
+    const dead = new FakePushSubscription("https://push.example/dead-endpoint");
+    const { pushManager } = installBrowserPushEnvironment({ existingSubscription: dead });
+    getPushSubscriptionStatusAction.mockResolvedValue({ subscribed: false, revoked: true, endpointDead: true });
+
+    await openSettings();
+    fireEvent.click(await screen.findByRole("button", { name: "הפעל התראות" }));
+
+    await waitFor(() => expect(dead.unsubscribe).toHaveBeenCalled());
+    // Without this, "הפעל התראות" would re-register the SAME dead
+    // endpoint, which would 404/410 again on the next send and be
+    // revoked again -- an endless stale-subscription loop.
+    await waitFor(() => expect(pushManager.subscribe).toHaveBeenCalledTimes(1));
+    const [persisted] = enablePushNotificationsAction.mock.calls.at(-1)! as [{ endpoint: string }];
+    expect(persisted.endpoint).not.toBe(dead.endpoint);
+  });
+
+  it("does NOT silently auto-restore a remotely-revoked device, even though this device still remembers 'enabled'", async () => {
+    const existing = new FakePushSubscription("https://push.example/removed-elsewhere");
+    installBrowserPushEnvironment({ existingSubscription: existing });
+    // @ts-expect-error -- test-only global stub simulating already-granted permission.
+    window.Notification.permission = "granted";
+    window.localStorage.setItem(`mi-ma-mo:push-preference:${TEST_USER_ID}`, "enabled");
+    getPushSubscriptionStatusAction.mockResolvedValue({ subscribed: false, revoked: true, endpointDead: false });
+
+    await openSettings();
+
+    await waitFor(() => expect(screen.getByText("סטטוס: כבוי")).toBeInTheDocument());
+    // The auto-restore path must not even be attempted; the device comes
+    // back only when someone explicitly presses "הפעל התראות" on it.
+    expect(enablePushNotificationsAction).not.toHaveBeenCalled();
   });
 
   it("pressing enable twice in a row never creates two server rows or two browser subscriptions", async () => {
@@ -507,7 +572,7 @@ describe("NotificationBell — status derivation (shared-device safety)", () => 
   it("a browser subscription that exists locally but has no matching server row for the current user is treated as NOT enabled", async () => {
     const leftover = new FakePushSubscription("https://push.example/previous-user");
     installBrowserPushEnvironment({ existingSubscription: leftover });
-    getPushSubscriptionStatusAction.mockResolvedValue({ subscribed: false });
+    getPushSubscriptionStatusAction.mockResolvedValue({ subscribed: false, revoked: false, endpointDead: false });
 
     await openSettings();
 
@@ -518,7 +583,7 @@ describe("NotificationBell — status derivation (shared-device safety)", () => 
   it("shows enabled immediately when the server confirms a matching subscription for the current user", async () => {
     const existing = new FakePushSubscription("https://push.example/mine");
     installBrowserPushEnvironment({ existingSubscription: existing });
-    getPushSubscriptionStatusAction.mockResolvedValue({ subscribed: true });
+    getPushSubscriptionStatusAction.mockResolvedValue({ subscribed: true, revoked: false, endpointDead: false });
 
     await openSettings();
 
@@ -548,7 +613,7 @@ describe("NotificationBell — disable", () => {
   it("still ends in a disabled state locally even if the server-side delete fails (best-effort, never blocks)", async () => {
     await enableFirst();
     disablePushNotificationsAction.mockResolvedValue({ ok: false });
-    getPushSubscriptionStatusAction.mockResolvedValue({ subscribed: false });
+    getPushSubscriptionStatusAction.mockResolvedValue({ subscribed: false, revoked: false, endpointDead: false });
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "כבה התראות" }));
@@ -590,8 +655,8 @@ describe("NotificationBell — per-user/per-device Push preference persistence (
     // A different authenticated user renders on this same device/browser --
     // this leftover subscription is not theirs, so the server reports
     // not-subscribed for them.
-    getPushSubscriptionStatusAction.mockResolvedValue({ subscribed: false });
-    render(<NotificationBell variant="mobile" userId="a-different-user" />);
+    getPushSubscriptionStatusAction.mockResolvedValue({ subscribed: false, revoked: false, endpointDead: false });
+    renderBell({ userId: "a-different-user" });
     fireEvent.click(screen.getByRole("button", { name: /התראות/ }));
     fireEvent.click(await screen.findByRole("button", { name: "הגדרות התראות" }));
 
@@ -664,7 +729,7 @@ describe("NotificationBell — popover anchor side (header polish follow-up)", (
   it.each(["sidebar", "mobile", "shell"] as const)(
     "the %s variant's open panel is anchored with end-0 (RTL: pins the panel's physical LEFT edge, growing rightward/inward) -- never start-0, which grows further left and off-screen for a trigger near the physical left edge",
     async (variant) => {
-      render(<NotificationBell variant={variant} userId={TEST_USER_ID} />);
+      renderBell({ variant });
       await act(async () => {});
       fireEvent.click(screen.getByRole("button", { name: /התראות/ }));
 
@@ -717,7 +782,9 @@ function stubIosDevice() {
 async function renderBellWithInstall(userId = TEST_USER_ID) {
   render(
     <PwaInstallProvider>
-      <NotificationBell variant="mobile" userId={userId} />
+      <PushDeviceProvider userId={userId}>
+        <NotificationBell variant="mobile" userId={userId} />
+      </PushDeviceProvider>
     </PwaInstallProvider>,
   );
   await act(async () => {});

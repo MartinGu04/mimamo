@@ -25,6 +25,15 @@ any future automated notification type.
   `notificationPath.test.ts`. Used when BUILDING an outgoing payload, so
   the server never even sends an unsafe destination -- defense in depth
   alongside the Service Worker's own check at display time.
+- `deviceDescriptor.ts` (client-safe, pure) -- the COARSE, closed-enum
+  description of one Push-capable installation (phone/tablet/desktop,
+  iOS/Windows/..., Safari/Chrome/..., standalone yes/no) that backs
+  "המכשירים שלי"'s labels. Explicitly NOT fingerprinting: the raw
+  `navigator.userAgent` is read once in the browser, collapsed to a few
+  bits, and discarded -- it never reaches the server, and the server
+  re-validates whatever it is sent against the same closed sets
+  (`parseDeviceDescriptor`), so an unrecognized value becomes `null`
+  rather than free text. No version strings, no IP address, no probing.
 - `payload.ts` (server-only) -- `NotificationPayload`, the one shape every
   Push send in this app goes through (`buildNotificationPayload`,
   `serializeNotificationPayload`), plus `TEST_NOTIFICATION_PAYLOAD` (PR
@@ -45,6 +54,21 @@ any future automated notification type.
   classifies; the caller (`lib/notifications`) decides whether to remove
   a subscription. Never logs an endpoint, encryption key, or payload
   body/title -- only a generic outcome label and status code.
+
+## Delivery receipts
+
+`NotificationPayload.receiptToken` is the one field `buildNotificationPayload`
+never sets: it is added PER DEVICE at send time by
+`lib/notifications/engine/delivery.ts`, because a token shared across a
+job's devices could let one device's payload acknowledge another's
+delivery. The token is derived (never random, never stored) so it stays
+stable across retries -- see `lib/notifications/receiptToken.ts` -- and
+`public/sw.js` POSTs it back to `/internal/notifications/receipt` after
+`showNotification()` resolves. That receipt is what
+`notification_deliveries.received_at` records, and it is strictly
+stronger than `status = 'sent'` (which only ever meant "the push
+provider accepted the request") and strictly weaker than "the user read
+it", which this app does not track at all.
 
 ## Generating VAPID keys
 

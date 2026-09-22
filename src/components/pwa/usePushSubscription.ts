@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getPwaCapabilities } from "@/lib/pwa/capabilities";
+import { isStandaloneDisplayMode } from "@/lib/pwa/installState";
 import { urlBase64ToUint8Array } from "@/lib/push/base64url";
 import { getVapidPublicKey } from "@/lib/push/publicConfig";
+import { readCurrentDeviceDescriptor } from "@/lib/push/deviceDescriptor";
 import {
   disablePushNotificationsAction,
   enablePushNotificationsAction,
@@ -14,6 +16,7 @@ import {
   markPushPreferenceDisabled,
   markPushPreferenceEnabled,
   readPushPreference,
+  type PushPreference,
 } from "@/lib/notifications/pushPreference";
 
 export type PushUiState =
@@ -42,18 +45,7 @@ async function getCurrentSubscription(): Promise<PushSubscription | null> {
   return registration.pushManager.getSubscription();
 }
 
-/**
- * Gets the current browser subscription, reusing it if present -- creates
- * a new one otherwise. Shared by the explicit `enable()` action and the
- * silent auto-restore path (`recheckStatus`) so both follow the exact same
- * "reuse, never duplicate" rule. Never calls `Notification.requestPermission()`
- * itself -- callers only ever reach this once permission is already
- * `"granted"`.
- */
-async function getOrCreateSubscription(): Promise<PushSubscription> {
-  const registration = await navigator.serviceWorker.ready;
-  const existing = await registration.pushManager.getSubscription();
-  if (existing) return existing;
+function subscribeBrowser(registration: ServiceWorkerRegistration): Promise<PushSubscription> {
   return registration.pushManager.subscribe({
     userVisibleOnly: true,
     // `lib.dom`'s `PushSubscriptionOptionsInit.applicationServerKey` wants
@@ -67,6 +59,57 @@ async function getOrCreateSubscription(): Promise<PushSubscription> {
 }
 
 /**
+ * Gets the current browser subscription, reusing it if present -- creates
+ * a new one otherwise. Used by the silent auto-restore path.
+ * Never calls `Notification.requestPermission()` itself -- callers only
+ * ever reach this once permission is already `"granted"`.
+ */
+async function getOrCreateSubscription(): Promise<PushSubscription> {
+  const registration = await navigator.serviceWorker.ready;
+  const existing = await registration.pushManager.getSubscription();
+  if (existing) return existing;
+  return subscribeBrowser(registration);
+}
+
+/**
+ * The EXPLICIT-enable variant of the above, and the reason it exists is
+ * the 404/410 resurrection loop.
+ *
+ * Once the push service has told the server an endpoint is permanently
+ * gone (and the server has revoked it as `permanent_push_failure`), the
+ * browser may STILL hand back that same dead `PushSubscription` object
+ * from `getSubscription()` forever. Blindly reusing it would re-register
+ * a known-dead endpoint, which would fail 404/410 on the next send, get
+ * revoked again, and so on -- the user pressing "הפעל התראות" would
+ * appear to succeed while nothing could ever be delivered.
+ *
+ * So on an explicit enable, an existing subscription is first checked
+ * against the server: a device the server knows is permanently dead is
+ * unsubscribed locally and replaced with a genuinely new subscription
+ * before anything is persisted. Any OTHER state (active, revoked by a
+ * remote removal, unknown, or simply a failed check) reuses the existing
+ * subscription exactly as before -- this only ever recreates a
+ * subscription we have positive evidence is dead, never speculatively.
+ */
+async function getOrRecreateSubscriptionForExplicitEnable(): Promise<PushSubscription> {
+  const registration = await navigator.serviceWorker.ready;
+  const existing = await registration.pushManager.getSubscription();
+  if (!existing) return subscribeBrowser(registration);
+
+  let endpointDead = false;
+  try {
+    const status = await getPushSubscriptionStatusAction(existing.endpoint);
+    endpointDead = status.endpointDead;
+  } catch {
+    endpointDead = false;
+  }
+  if (!endpointDead) return existing;
+
+  await existing.unsubscribe().catch(() => {});
+  return subscribeBrowser(registration);
+}
+
+/**
  * The silent auto-restore attempt (spec point 5): reuses/recreates the
  * browser subscription and re-binds it to the current user server-side,
  * returning whether it actually succeeded -- never throws. Kept as a
@@ -76,20 +119,30 @@ async function getOrCreateSubscription(): Promise<PushSubscription> {
  * project's stricter `react-hooks/set-state-in-effect` lint rule
  * (over-)flags as a possible synchronous effect update, even though every
  * one of these calls only ever runs after multiple real `await`s.
+ *
+ * Passes `explicit: false`, which is what makes this path structurally
+ * incapable of reviving a revoked device: the server rejects a passive
+ * upsert against a revoked row outright (see the migration's
+ * `p_explicit` gate), so a device removed from somewhere else -- or one
+ * whose endpoint permanently failed -- stays off until someone presses
+ * "הפעל התראות" on it in person.
  */
-async function tryAutoRestore(): Promise<boolean> {
+async function tryAutoRestore(): Promise<{ restored: boolean; endpoint: string | null }> {
   try {
     const subscription = await getOrCreateSubscription();
-    const result = await enablePushNotificationsAction(subscription.toJSON());
-    return result.ok;
+    const result = await enablePushNotificationsAction(subscription.toJSON(), false);
+    return { restored: result.ok, endpoint: subscription.endpoint };
   } catch {
-    return false;
+    return { restored: false, endpoint: null };
   }
 }
 
 /**
  * All Web Push subscription state/actions for the current device --
- * backs `NotificationBell`. Deliberately does NOT equate browser
+ * backs the app shell's single shared push-device state
+ * (`PushDeviceProvider`), which is this hook's ONE intended caller.
+ *
+ * Deliberately does NOT equate browser
  * `Notification.permission === "granted"` with "this device is
  * subscribed to המחלבה": a device can have permission granted yet no
  * active `PushSubscription`, and -- the important shared-device case --
@@ -97,10 +150,10 @@ async function tryAutoRestore(): Promise<boolean> {
  * treated as active for a newly logged-in different user. "enabled" is
  * only ever reported once BOTH the local browser subscription exists AND
  * the server confirms (`getPushSubscriptionStatusAction`, RLS-scoped to
- * whoever is authenticated right now) a matching row for the CURRENT
- * user. See `enable()`: the permission prompt is requested only inside
- * this function, itself only ever invoked from the button's own click
- * handler -- never on mount, never automatically.
+ * whoever is authenticated right now) a matching, NON-REVOKED row for
+ * the CURRENT user. See `enable()`: the permission prompt is requested
+ * only inside this function, itself only ever invoked from a button's own
+ * click handler -- never on mount, never automatically.
  *
  * `userId` is the authenticated Supabase user id (a sibling of `Person`
  * identity, never folded into it -- see `PersonalScheduleLoadResult`) and
@@ -114,9 +167,9 @@ async function tryAutoRestore(): Promise<boolean> {
  * live status derivation still works exactly as before, just with no
  * persistence and no auto-restore attempt.
  *
- * Callers must render their `NotificationBell` with `key={userId}` (see
- * `MobileIdentityBar`/`ShellUtilityBar`) -- this codebase's established
- * "reset all internal state when an identity prop changes" idiom (compare
+ * Callers must render their provider with `key={userId}` (see
+ * `AppShell`) -- this codebase's established "reset all internal state
+ * when an identity prop changes" idiom (compare
  * `NotificationScheduleSection`'s `key={editingItem?.id ?? "new"}`), and the only
  * one compatible with this project's stricter React Hooks lint rules
  * (no synchronous `setState` in an effect, no ref reads/writes during
@@ -127,10 +180,37 @@ async function tryAutoRestore(): Promise<boolean> {
  * what then still re-derives the correct state independently, from
  * scratch, for whichever user this fresh instance was mounted for.
  */
-export function usePushSubscription(userId?: string) {
+export interface PushSubscriptionState {
+  state: PushUiState;
+  errorMessage: string | null;
+  testStatus: TestPushStatus;
+  /**
+   * The CURRENT browser subscription's endpoint, once one is known.
+   *
+   * Used only to address server actions at this device (status,
+   * heartbeat, test send, device-list "המכשיר הזה" marking) -- exactly
+   * as it already was before this existed, just resolved once here
+   * instead of re-read at each call site. It is never rendered, never
+   * put in the DOM, and never handed to a component that renders device
+   * information; "המכשירים שלי" receives coarse labels and an opaque
+   * handle from the server instead.
+   */
+  endpoint: string | null;
+  /** This device's remembered, per-account Push intent. `"disabled"` is an EXPLICIT opt-out and suppresses the global missing-Push banner; `null` means no confirmed intent yet. */
+  preference: PushPreference | null;
+  enable: () => Promise<void>;
+  disable: () => Promise<void>;
+  sendTest: () => Promise<void>;
+  /** Re-derives status from scratch (browser subscription + server confirmation). Exposed so a surface that just changed device state -- e.g. removing THIS device from "המכשירים שלי" -- can reflect reality rather than assume it. */
+  refresh: () => Promise<void>;
+}
+
+export function usePushSubscription(userId?: string): PushSubscriptionState {
   const [state, setState] = useState<PushUiState>("checking");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [testStatus, setTestStatus] = useState<TestPushStatus>("idle");
+  const [endpoint, setEndpoint] = useState<string | null>(null);
+  const [preference, setPreference] = useState<PushPreference | null>(null);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -165,14 +245,23 @@ export function usePushSubscription(userId?: string) {
       return;
     }
 
-    const preference = userId ? readPushPreference(userId) : null;
     const subscription = await getCurrentSubscription();
+    // Read AFTER the first `await` on purpose: this is a synchronous
+    // browser-storage read, and doing it before any await would make the
+    // `setPreference` below a synchronous `setState` inside an effect --
+    // the exact shape this project's stricter React Hooks lint rules
+    // reject (see this hook's own docstring).
+    const storedPreference = userId ? readPushPreference(userId) : null;
+    let effectivePreference = storedPreference;
+    let knownEndpoint = subscription?.endpoint ?? null;
 
     let confirmedForCurrentUser = false;
+    let revokedForCurrentUser = false;
     if (subscription) {
       const status = await getPushSubscriptionStatusAction(subscription.endpoint);
       if (!mountedRef.current) return;
       confirmedForCurrentUser = status.subscribed;
+      revokedForCurrentUser = status.revoked;
       // A browser subscription that exists but does NOT belong to (or
       // isn't recognized as belonging to) the current user -- e.g. a
       // leftover from a previously signed-in account on a shared device
@@ -189,7 +278,10 @@ export function usePushSubscription(userId?: string) {
       // preference -- never the mere existence of a browser subscription
       // object, which could just as easily be a leftover from a previous
       // account on a shared device.
-      if (userId && preference === null) markPushPreferenceEnabled(userId);
+      if (userId && storedPreference === null) {
+        markPushPreferenceEnabled(userId);
+        effectivePreference = "enabled";
+      }
     }
 
     // Auto-restore (spec point 5): only ever runs for an explicit saved
@@ -198,13 +290,34 @@ export function usePushSubscription(userId?: string) {
     // current user without ever prompting, but a `"disabled"` or unknown
     // preference (including the account-switch case just above) always
     // falls through to plain "not enabled" instead.
+    //
+    // `revokedForCurrentUser` short-circuits it entirely: a device the
+    // user removed from another device -- or one the push service
+    // reported permanently gone -- must not come back on its own, even
+    // though this device's own remembered preference still says
+    // "enabled". The server would reject the attempt anyway (that is
+    // where the guarantee actually lives); skipping it here just avoids
+    // a pointless round trip and a misleading error.
     let restoredForCurrentUser = false;
-    if (!confirmedForCurrentUser && userId && preference === "enabled" && Notification.permission === "granted") {
-      restoredForCurrentUser = await tryAutoRestore();
+    if (
+      !confirmedForCurrentUser &&
+      !revokedForCurrentUser &&
+      userId &&
+      storedPreference === "enabled" &&
+      Notification.permission === "granted"
+    ) {
+      const restore = await tryAutoRestore();
+      if (!mountedRef.current) return;
+      restoredForCurrentUser = restore.restored;
+      if (restore.endpoint !== null) knownEndpoint = restore.endpoint;
     }
 
     const nextState: PushUiState = confirmedForCurrentUser || restoredForCurrentUser ? "enabled" : "not_enabled";
-    if (mountedRef.current) setState(nextState);
+    if (mountedRef.current) {
+      setEndpoint(knownEndpoint);
+      setPreference(effectivePreference);
+      setState(nextState);
+    }
   }, [userId]);
 
   useEffect(() => {
@@ -223,7 +336,7 @@ export function usePushSubscription(userId?: string) {
       }
 
       // The ONLY place this app ever calls requestPermission() -- always
-      // directly from this function, itself only ever invoked by the
+      // directly from this function, itself only ever invoked by a
       // "הפעל התראות" button's own click handler.
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
@@ -231,9 +344,18 @@ export function usePushSubscription(userId?: string) {
         return;
       }
 
-      const subscription = await getOrCreateSubscription();
+      const subscription = await getOrRecreateSubscriptionForExplicitEnable();
 
-      const result = await enablePushNotificationsAction(subscription.toJSON());
+      // `explicit: true` -- the one intent allowed to clear a revocation,
+      // and the only one that records this device's coarse descriptor.
+      // The descriptor is read here, inside a user-gesture handler, so
+      // there is no render-time `navigator` read to go wrong; the raw
+      // User-Agent never leaves the browser (see `deviceDescriptor.ts`).
+      const result = await enablePushNotificationsAction(
+        subscription.toJSON(),
+        true,
+        readCurrentDeviceDescriptor(isStandaloneDisplayMode()),
+      );
       if (!mountedRef.current) return;
       if (!result.ok) {
         // Deliberately NOT persisted -- the preference must only ever
@@ -244,6 +366,8 @@ export function usePushSubscription(userId?: string) {
         return;
       }
       if (userId) markPushPreferenceEnabled(userId);
+      setEndpoint(subscription.endpoint);
+      setPreference("enabled");
       setState("enabled");
     } catch {
       if (!mountedRef.current) return;
@@ -258,8 +382,11 @@ export function usePushSubscription(userId?: string) {
     // cleanup below -- an explicit disable must survive even if either of
     // those subsequently fails, and it must never be silently overwritten
     // by legacy-migration backfill later (`recheckStatus` only backfills
-    // a `null`/absent preference, never a `"disabled"` one).
+    // a `null`/absent preference, never a `"disabled"` one). It is also
+    // what suppresses the global missing-Push banner: an explicit opt-out
+    // is a real preference, not a state to nag about.
     if (userId) markPushPreferenceDisabled(userId);
+    setPreference("disabled");
     try {
       const subscription = await getCurrentSubscription();
       if (subscription) {
@@ -298,5 +425,5 @@ export function usePushSubscription(userId?: string) {
     }
   }, [recheckStatus]);
 
-  return { state, errorMessage, testStatus, enable, disable, sendTest };
+  return { state, errorMessage, testStatus, endpoint, preference, enable, disable, sendTest, refresh: recheckStatus };
 }

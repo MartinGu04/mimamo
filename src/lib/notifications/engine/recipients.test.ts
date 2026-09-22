@@ -6,14 +6,25 @@ function person(overrides: Partial<Person> & Pick<Person, "id" | "name">): Perso
 }
 
 function makeFakeSupabase(users: { id: string; email: string }[], subscriptionUserIds: string[] = []) {
+  // Every `.is(column, value)` filter the code under test applies to
+  // `push_subscriptions`, recorded so a test can assert the ACTIVE-only
+  // (`revoked_at is null`) filter is never quietly dropped -- a revoked
+  // device must never be counted as push-capable.
+  const isFilters: [string, unknown][] = [];
   return {
+    isFilters,
     auth: {
       admin: {
         listUsers: vi.fn(async () => ({ data: { users }, error: null })),
       },
     },
     from: vi.fn(() => ({
-      select: vi.fn(async () => ({ data: subscriptionUserIds.map((user_id) => ({ user_id })), error: null })),
+      select: vi.fn(() => ({
+        is: vi.fn(async (column: string, value: unknown) => {
+          isFilters.push([column, value]);
+          return { data: subscriptionUserIds.map((user_id) => ({ user_id })), error: null };
+        }),
+      })),
     })),
   };
 }
@@ -316,6 +327,17 @@ describe("fetchAllSubscribedUserIds", () => {
     const userIds = await fetchAllSubscribedUserIds();
 
     expect(new Set(userIds)).toEqual(new Set(["user-1", "user-2"]));
+  });
+
+  it("counts only ACTIVE subscriptions -- the same `revoked_at is null` filter the delivery worker's own targeting applies", async () => {
+    vi.resetModules();
+    const fakeSupabase = makeFakeSupabase([], ["user-1"]);
+    vi.doMock("./serviceClient", () => ({ getNotificationServiceClient: () => fakeSupabase }));
+
+    const { fetchAllSubscribedUserIds } = await import("./recipients");
+    await fetchAllSubscribedUserIds();
+
+    expect(fakeSupabase.isFilters).toEqual([["revoked_at", null]]);
   });
 });
 

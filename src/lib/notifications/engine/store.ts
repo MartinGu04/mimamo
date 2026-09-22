@@ -535,7 +535,7 @@ export async function upsertPendingReminderJob(job: NewNotificationJob): Promise
  * `dedupeKey` identifies a whole logical EPISODE of an ongoing problem
  * (e.g. `weapon_qualification_summary:<managerUserId>`), never one tick's
  * content -- see `weaponQualification.ts`'s own docs and this function's
- * migration (`20260902130000_add_aggregate_notification_episode_dedupe.sql`)
+ * migration (`20260913214805_add_aggregate_notification_episode_dedupe.sql`)
  * for the exact "episode" semantics this exists to serve (spec: fix a
  * production notification-spam incident where 38 -> 40 -> 44 mismatches
  * produced three separate Notification Center entries and three pushes
@@ -1061,13 +1061,24 @@ export interface ActiveSubscription {
   auth: string;
 }
 
-/** Every active push subscription row for an arbitrary recipient -- requires the service-role client, since this is never the calling user's own session. */
+/**
+ * Every ACTIVE push subscription row for an arbitrary recipient --
+ * requires the service-role client, since this is never the calling
+ * user's own session.
+ *
+ * `revoked_at is null` is what makes revocation real rather than
+ * cosmetic: a device the user removed from another device, disabled
+ * locally, or whose endpoint the push service reported permanently gone
+ * stops being a delivery target here, at the single chokepoint every
+ * send goes through -- not at each individual call site.
+ */
 export async function getActiveSubscriptionsForUser(userId: string): Promise<ActiveSubscription[]> {
   const supabase = getNotificationServiceClient();
   const { data, error } = await supabase
     .from("push_subscriptions")
     .select("id, endpoint, p256dh, auth")
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .is("revoked_at", null);
   if (error) throw error;
   return (data ?? []) as ActiveSubscription[];
 }
@@ -1077,6 +1088,8 @@ export interface DeliveryRow {
   pushSubscriptionId: string;
   status: "pending" | "sent" | "failed_permanent" | "failed_transient";
   attempts: number;
+  /** Non-null = the target Service Worker acknowledged actually receiving and displaying this exact push. Never re-sent, whatever the recorded HTTP outcome was -- see `delivery.ts`. */
+  receivedAt: string | null;
 }
 
 export async function ensureDeliveryRows(jobId: string, subscriptionIds: readonly string[]): Promise<void> {
@@ -1093,7 +1106,7 @@ export async function getDeliveriesForJob(jobId: string): Promise<DeliveryRow[]>
   const supabase = getNotificationServiceClient();
   const { data, error } = await supabase
     .from("notification_deliveries")
-    .select("id, push_subscription_id, status, attempts")
+    .select("id, push_subscription_id, status, attempts, received_at")
     .eq("job_id", jobId);
   if (error) throw error;
   return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
@@ -1101,10 +1114,26 @@ export async function getDeliveriesForJob(jobId: string): Promise<DeliveryRow[]>
     pushSubscriptionId: row.push_subscription_id as string,
     status: row.status as DeliveryRow["status"],
     attempts: row.attempts as number,
+    receivedAt: (row.received_at as string | null) ?? null,
   }));
 }
 
-/** Records the terminal (or transient-retry) outcome of one send attempt. Attempt counting itself is bumped separately via `incrementDeliveryAttempts` before the send, since postgrest's `update()` has no atomic increment expression. */
+/**
+ * Records the terminal (or transient-retry) outcome of one send attempt.
+ * Attempt counting itself is bumped separately via
+ * `beginDeliveryAttempt` before the send, since postgrest's `update()`
+ * has no atomic increment expression.
+ *
+ * Deliberately NEVER clears `received_at`, and never downgrades a
+ * delivery the device already acknowledged: `.is("received_at", null)`
+ * makes a genuine Service Worker receipt strictly stronger evidence than
+ * the HTTP outcome of the send that produced it. That is exactly the
+ * transient-send race -- the push provider reports a transient failure
+ * (or the response is lost) while the device in fact received and
+ * displayed the notification, and ACKs before this write lands.
+ * Overwriting `sent`/`received_at` with `failed_transient` there would
+ * re-open the delivery for a retry the user never needed.
+ */
 export async function updateDeliveryOutcome(
   deliveryId: string,
   status: "sent" | "failed_permanent" | "failed_transient",
@@ -1118,22 +1147,74 @@ export async function updateDeliveryOutcome(
       last_attempted_at: new Date().toISOString(),
       last_error: lastError ?? null,
     })
-    .eq("id", deliveryId);
+    .eq("id", deliveryId)
+    .is("received_at", null);
   if (error) throw error;
 }
 
-export async function incrementDeliveryAttempts(deliveryId: string, currentAttempts: number): Promise<void> {
+/**
+ * Opens one send attempt: bumps the attempt counter and persists this
+ * delivery's receipt-token VERIFIER (`sha256(token)`, never the token)
+ * in the same single UPDATE, so receipt tracking costs no extra round
+ * trip per device.
+ *
+ * The hash is deterministic for a given delivery (the token is derived,
+ * not random -- see `lib/notifications/receiptToken.ts`), so a retry
+ * rewrites the identical value rather than rotating it. That is what
+ * keeps a receipt from the FIRST attempt valid: a rotating token would
+ * invalidate exactly the late ACK that proves a "transiently failed"
+ * send actually arrived.
+ *
+ * `null` (no worker secret configured, so no receipt tracking at all)
+ * leaves the column untouched rather than clearing it.
+ */
+export async function beginDeliveryAttempt(
+  deliveryId: string,
+  currentAttempts: number,
+  receiptTokenHash: string | null,
+): Promise<void> {
+  const supabase = getNotificationServiceClient();
+  const patch: Record<string, unknown> = { attempts: currentAttempts + 1 };
+  if (receiptTokenHash !== null) patch.receipt_token_hash = receiptTokenHash;
+
+  const { error } = await supabase.from("notification_deliveries").update(patch).eq("id", deliveryId);
+  if (error) throw error;
+}
+
+/**
+ * Marks one push subscription permanently dead (HTTP 404/410 from the
+ * push service) -- it stops being an active delivery target IMMEDIATELY,
+ * since every send resolves its targets through
+ * `getActiveSubscriptionsForUser`, which filters `revoked_at is null`.
+ *
+ * Revokes rather than deletes, which is a deliberate change from the
+ * original behavior and closes a real resurrection loop:
+ *
+ *   404/410 -> row deleted -> that device opens again -> its device-local
+ *   "enabled" preference silently re-registers the SAME dead endpoint ->
+ *   404/410 again, forever.
+ *
+ * A tombstone breaks the cycle at the second step (the silent
+ * auto-restore path is rejected outright against a revoked row), while
+ * the `revoked_at` filter preserves the original semantic guarantee
+ * exactly: a permanently-invalid endpoint is out of the active set the
+ * moment this returns. Keeping the row also preserves that device's
+ * `notification_deliveries` history, which a delete would cascade away,
+ * and records WHY it died -- so the next explicit "הפעל התראות" on that
+ * device knows to unsubscribe and create a genuinely new browser
+ * subscription instead of reusing the dead one.
+ */
+export async function revokePushSubscriptionById(subscriptionId: string): Promise<void> {
   const supabase = getNotificationServiceClient();
   const { error } = await supabase
-    .from("notification_deliveries")
-    .update({ attempts: currentAttempts + 1 })
-    .eq("id", deliveryId);
-  if (error) throw error;
-}
-
-export async function deletePushSubscriptionById(subscriptionId: string): Promise<void> {
-  const supabase = getNotificationServiceClient();
-  const { error } = await supabase.from("push_subscriptions").delete().eq("id", subscriptionId);
+    .from("push_subscriptions")
+    .update({
+      revoked_at: new Date().toISOString(),
+      revoked_reason: "permanent_push_failure",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", subscriptionId)
+    .is("revoked_at", null);
   if (error) throw error;
 }
 

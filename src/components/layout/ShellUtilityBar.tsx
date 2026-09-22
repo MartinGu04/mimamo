@@ -19,10 +19,10 @@ interface ShellUtilityBarProps {
   dateLabel: string | null;
   /**
    * Authenticated Supabase user id, threaded through only to
-   * `NotificationBell`'s `usePushSubscription` -- see `AppShell`'s own
-   * docstring. `undefined` on the (never actually reached in real usage)
-   * no-`person` render path -- `usePushSubscription` degrades gracefully
-   * with no persisted preference in that case.
+   * `NotificationBell` (per-account install-prompt dismissal) -- see
+   * `AppShell`'s own docstring. `undefined` on the (never actually
+   * reached in real usage) no-`person` render path, which degrades
+   * gracefully with no persisted preference.
    */
   userId?: string;
 }
@@ -128,7 +128,7 @@ export function ShellUtilityBar({ initialClockTime, dateLabel, userId }: ShellUt
         </div>
 
         <div className="flex items-center justify-self-end">
-          {/* `key={userId}` -- see `MobileIdentityBar`'s identical comment: forces a fresh instance (and `usePushSubscription`) on every account switch. */}
+          {/* `key={userId}` -- see `MobileIdentityBar`'s identical comment: forces a fresh bell instance on every account switch. The shared push state is reset one level up, by `AppShell`'s `PushDeviceProvider`. */}
           <NotificationBell key={userId} variant="shell" userId={userId} />
         </div>
       </div>

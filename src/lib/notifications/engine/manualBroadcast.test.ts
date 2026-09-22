@@ -35,7 +35,12 @@ function makeFakeSupabase(users: FakeUser[], subscribedUserIds: string[] = []) {
     from: (table: string) => {
       if (table === "push_subscriptions") {
         return {
-          select: () => Promise.resolve({ data: subscribedUserIds.map((user_id) => ({ user_id })), error: null }),
+          // `.select(...).is("revoked_at", null)` -- only ACTIVE devices
+          // count towards `pushCapableCount`; a removed or permanently-
+          // failed device must never inflate it.
+          select: () => ({
+            is: () => Promise.resolve({ data: subscribedUserIds.map((user_id) => ({ user_id })), error: null }),
+          }),
         };
       }
 

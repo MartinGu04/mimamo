@@ -30,6 +30,51 @@
 /** Only an in-app, same-origin, absolute path is ever navigated to -- never an arbitrary external URL from a push payload. */
 var SAFE_IN_APP_PATH_PATTERN = /^\/[A-Za-z0-9\-._~!$&'()*+,;=:@%/]*$/;
 
+/** The narrow, single-purpose same-origin endpoint this worker POSTs a delivery receipt to. */
+var RECEIPT_ENDPOINT = "/internal/notifications/receipt";
+
+/** A receipt token is exactly 32 bytes of HMAC output as lowercase hex -- anything else is not worth a network request. */
+var RECEIPT_TOKEN_PATTERN = /^[0-9a-f]{64}$/;
+
+/**
+ * Acknowledges that THIS Service Worker genuinely received and displayed
+ * one specific push -- the fact `notification_deliveries.received_at`
+ * records, and a strictly stronger signal than "the push provider
+ * accepted the send", which is all the server could previously observe.
+ *
+ * Runs entirely inside the Service Worker, so it works exactly the same
+ * whether the PWA is open, backgrounded, or fully closed -- it never
+ * depends on a page existing.
+ *
+ * `credentials: "omit"` is deliberate and load-bearing: the receipt
+ * token IS the authority here, so the request must not carry the user's
+ * session cookies. That keeps the endpoint honest (it can never be
+ * tempted to trust the session instead of the token), keeps a closed-PWA
+ * ACK working identically to an open-app one, and means an expired
+ * session can never cost us a receipt.
+ *
+ * The token is a bearer credential and is never logged, never stored,
+ * and never placed in the notification's own `data` (which
+ * `notificationclick` could read long afterwards). The result is
+ * ignored: the notification has already been shown by this point, so
+ * there is nothing a failure could usefully change, and a rejected
+ * promise here must never surface to the user.
+ */
+function acknowledgeDelivery(token) {
+  if (typeof token !== "string" || !RECEIPT_TOKEN_PATTERN.test(token)) return Promise.resolve();
+  if (typeof fetch !== "function") return Promise.resolve();
+  return fetch(RECEIPT_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "omit",
+    cache: "no-store",
+    body: JSON.stringify({ token: token }),
+  }).then(
+    function () {},
+    function () {},
+  );
+}
+
 function resolveSafeNotificationPath(rawPath) {
   if (typeof rawPath !== "string") return "/";
   if (!rawPath.startsWith("/")) return "/";
@@ -52,11 +97,17 @@ self.addEventListener("activate", function (event) {
 });
 
 /**
- * Future Web Push payload shape (no real subscriptions/sending backend
- * yet -- this PR only prepares the client to receive one):
+ * Web Push payload shape:
  *   { title?: string, body?: string, icon?: string, badge?: string,
- *     path?: string, tag?: string }
+ *     path?: string, tag?: string, receiptToken?: string }
  * Every field is optional and defaults to something safe.
+ *
+ * `receiptToken` is the only field that is NOT displayed: it is a
+ * single-purpose delivery-receipt credential, POSTed back to the app
+ * AFTER `showNotification()` resolves (never before, and never instead)
+ * so the server learns this exact push was genuinely received and
+ * displayed. Note `options.data` carries only `path` -- the token is
+ * deliberately kept out of the persisted Notification object.
  */
 self.addEventListener("push", function (event) {
   if (!event.data) return;
@@ -79,7 +130,16 @@ self.addEventListener("push", function (event) {
     options.tag = payload.tag;
   }
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  // The ACK is chained onto the display promise, never run in parallel:
+  // it must only ever claim a receipt once the notification has ACTUALLY
+  // been shown. A failed `showNotification` therefore sends no receipt
+  // at all, which is the truthful outcome -- the delivery simply stays
+  // without a `received_at`, exactly like a push that never arrived.
+  event.waitUntil(
+    self.registration.showNotification(title, options).then(function () {
+      return acknowledgeDelivery(payload.receiptToken);
+    }),
+  );
 });
 
 self.addEventListener("notificationclick", function (event) {

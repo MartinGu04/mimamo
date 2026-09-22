@@ -25,6 +25,111 @@ boundary) and `lib/auth` (identity).
 for best-effort logout cleanup of the current device's subscription --
 see that file's own docstring for why cleanup can never block sign-out.
 
+## Push reliability + device management
+
+The reliability upgrade, layered on top of the PR #29 primitives above
+rather than beside them. Five connected pieces, all additive:
+
+- **Revocation, not deletion.** `push_subscriptions.revoked_at`/
+  `revoked_reason` turn removing a device into a real tombstone. Deleting
+  a row was never enough: the device still holds a browser
+  `PushSubscription` AND a device-local `"enabled"` preference, so
+  `usePushSubscription`'s silent auto-restore simply recreated it on the
+  next open. The database refuses a PASSIVE upsert against a revoked row
+  (`upsert_push_subscription_v2`'s `p_explicit` gate), so only an
+  explicit "הפעל התראות" on that device can bring it back. The original
+  four-argument `upsert_push_subscription` still exists and is wired to
+  the passive intent, so an old client still open mid-rollout keeps
+  working without being able to bypass the gate.
+- **Heartbeat.** `touch_push_subscription` is the narrowest write in the
+  schema: `last_seen_at` and still-NULL descriptor columns only, only on
+  the caller's own non-revoked row. It can never create, reassign, or
+  revive anything. Called once per app open, and at most once per 30
+  minutes of foreground activity -- no timer, no polling
+  (`components/pwa/PushDeviceProvider.tsx`).
+- **Legacy metadata backfill**
+  (`supabase/migrations/20260922030413_legacy_push_device_metadata_backfill.sql`),
+  riding on that same heartbeat. Rows that
+  predate device metadata have no descriptor, so they can only be called
+  "מכשיר". They are repaired progressively and naturally: when that exact
+  installation is opened again, its heartbeat carries the coarse
+  descriptor and `coalesce(<column>, <argument>)` fills ONLY the columns
+  still missing -- a value already stored always wins, so this is a
+  repair path and never a second way to write device metadata. It rides
+  on the heartbeat rather than getting a call of its own precisely
+  because the heartbeat has already established every precondition a
+  backfill needs (a local subscription exists, the endpoint is
+  server-verified as this user's, the row is active) and is already
+  deduplicated to once per app open. A revoked row is skipped entirely,
+  like every other heartbeat write.
+- **Legacy devices in the UI.** Rows that still cannot be named are
+  grouped under a collapsed "מכשירים ישנים (N)" section so they cannot
+  bury the devices a user recognizes. Grouping is presentational only:
+  nothing is deleted, each row keeps its own "הסר מכשיר", and age is
+  never consulted. A `last_seen_at` of 28 days does not mean a device is
+  dead -- it usually means a second PC used occasionally, and pruning it
+  would silently stop notifications someone still expects. The CURRENT
+  device is never grouped, even before its own backfill lands.
+- **Device management** (`deviceTypes.ts`, `deviceLabel.ts`, plus
+  `lib/push/deviceDescriptor.ts`). "המכשירים שלי" receives an opaque
+  `deviceRef` handle and coarse enum metadata -- never an endpoint, key,
+  row id, or raw User-Agent. Removing ANOTHER device revokes it;
+  removing THIS device reuses the existing local disable flow, because
+  revoking the row while leaving the browser subscribed and the local
+  preference saying "enabled" is exactly the inconsistent state this
+  work exists to eliminate.
+- **Delivery receipts** (`receiptToken.ts`, `receiptStore.ts`,
+  `src/app/internal/notifications/receipt/route.ts`).
+  `notification_deliveries.received_at` records that the target Service
+  Worker actually received and displayed the push -- strictly stronger
+  than `status = 'sent'` (the provider accepted the request) and never a
+  read receipt. A receipt also promotes a `failed_transient` delivery to
+  terminal `sent`, which is what stops the worker duplicate-sending a
+  push the device really did receive.
+- **404/410, unchanged in meaning.** A permanently-invalid endpoint still
+  leaves the active delivery set immediately -- `getActiveSubscriptionsForUser`
+  filters `revoked_at is null` -- but as a tombstone rather than a
+  delete, which breaks the 404 -> delete -> silent re-register -> 404
+  loop. The revocation reason is what lets the next explicit enable know
+  to unsubscribe and create a genuinely new browser subscription instead
+  of reusing the dead one.
+
+The one remaining DELETE path is `lib/auth/actions.ts`'s sign-out
+cleanup, and it is deliberately scoped to non-revoked rows: signing out
+is not a removal (the same user's remembered preference is expected to
+restore push on next sign-in), but it must not destroy a tombstone
+either.
+
+### `search_path` on every function in `supabase/migrations/`
+
+Every function this feature adds is declared `set search_path to ''` --
+an EMPTY search_path, the form
+`20260913214946_harden_aggregate_notification_rpc_search_path.sql`
+established for this project (that migration pinned the two aggregate-
+episode RPCs the same way, via `ALTER FUNCTION`, after they shipped
+without one). Four of the five new functions are SECURITY DEFINER, which
+is exactly the case where a schema the caller controls sitting earlier in
+the path would be worth exploiting, so the strictest form is the right
+default rather than `= public`.
+
+Two consequences worth knowing before adding to these files:
+
+- Every application object must be written schema-qualified
+  (`public.push_subscriptions`, `auth.uid()`). Only `pg_catalog` is
+  still searched implicitly, so `now()`/`coalesce()`/base types keep
+  working. An unqualified table fails at RUN time, not at CREATE time.
+- Nothing in the `extensions` schema is reachable. That is why the
+  delivery-receipt verifier is hashed in Node and handed to the RPC
+  already hashed, rather than calling pgcrypto's `digest()` -- see
+  `receiptToken.ts`. For the same reason `gen_random_uuid()` is written
+  `pg_catalog.gen_random_uuid()` where it is stored in a column DEFAULT:
+  pgcrypto ships its own, and a DEFAULT stores the RESOLVED function.
+
+Both properties are executed, not just asserted: the two real-Postgres
+suites apply every migration in `supabase/migrations/` in order and then
+call the functions, one of them from a session whose `search_path` points
+at a decoy schema holding a same-named table.
+
 ## Notification preferences -- intended future extension point
 
 This PR only supports a single global on/off per device (no per-category

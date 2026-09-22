@@ -120,3 +120,96 @@ ownership-derived-from-`auth.uid()`-where-applicable pattern established
 here — and the no-service-role convention specifically, unless a new
 case has the same genuine no-user-session justification PR #30's worker
 does.
+
+## Migration history must match production exactly
+
+Supabase records an applied migration by the **timestamp prefix of its
+filename**. A file whose prefix production has never seen is treated as
+un-applied and re-run on the next `supabase db push`; a migration
+production ran that has no file here is invisible to every contributor
+and to every local/test database built from this directory. Both are
+"drift", and both have happened:
+
+- `add_aggregate_notification_episode_dedupe` was committed here as
+  `20260902130000_…` while production had applied it as
+  `20260913214805_…`.
+- `20260913214946_harden_aggregate_notification_rpc_search_path` had been
+  applied to production but was missing from the repository entirely.
+
+Both are reconciled: the dedupe migration now carries the timestamp
+production actually applied, and the hardening migration it was followed
+by is present. `src/lib/notifications/engine/aggregateNotificationRpcHardeningMigration.test.ts`
+guards the filenames, their ordering, and the absence of duplicate
+timestamp prefixes, so the same drift cannot be re-introduced silently.
+
+A third instance followed immediately, from the opposite direction:
+`20260921090000_push_reliability_and_device_management.sql` was edited
+IN PLACE (to change `touch_push_subscription` from one argument to five)
+after production had already applied it. Production would never have
+re-run it, so the repository would have expected a five-argument
+function that production did not have. It is restored byte-for-byte to
+its applied version, and the change lives in
+`20260922030413_legacy_push_device_metadata_backfill.sql` instead.
+
+Rules that follow from this:
+
+1. **Never rename or renumber a migration that has been applied
+   anywhere.** The filename is the identity.
+2. **Never edit an applied migration's contents** — not to fix it, not
+   to extend it, not even while the PR that introduced it is still open
+   and unmerged. "Unmerged" is not the same as "unapplied": confirm
+   against the live database, not against the PR's own description.
+   Add a new migration that alters what it created.
+3. A migration that only changes a property of an existing object should
+   use `ALTER …`, not `CREATE OR REPLACE …`. Re-declaring makes the new
+   file a second source of truth for a body it does not own, and a later
+   edit to the real definition is then either mirrored by hand or
+   silently reverted.
+4. **Create new migrations with the CLI** (`npx supabase migration new
+   <name>`) rather than inventing a timestamp by hand. It is what keeps
+   the ordering honest against a history that already exists remotely.
+5. **Changing a function's ARITY needs an explicit `DROP`** first.
+   `CREATE OR REPLACE FUNCTION` with a different argument list creates
+   an OVERLOAD, and two same-named functions make PostgREST's
+   by-argument-name resolution ambiguous ("Could not choose the best
+   candidate function"). Dropping also discards the old grants, so the
+   new signature must re-establish its own.
+
+### Testing the chain, not just the files
+
+`src/lib/notifications/pushMigrationChain.integration.test.ts` exists
+because of rule 2's failure mode specifically. Suites that build a test
+database from a hand-picked list of migration files cannot notice an
+edit to an already-applied one — they assemble whatever those files
+currently say, never the sequence production actually follows. That
+suite applies the real ordered history two ways:
+
+- a FRESH database from the complete chain, and
+- a database at production's current state, then upgraded with only the
+  pending migration,
+
+and asserts both converge on an identical `pg_get_functiondef`. The
+per-stage assertions (one-argument heartbeat before the pending
+migration, five-argument and no overload after) are what would have
+caught the in-place edit.
+
+## `search_path` convention for functions
+
+Functions are declared `set search_path to ''` (an EMPTY search_path).
+Only `pg_catalog` is then searched implicitly, so every application
+object must be written schema-qualified (`public.notification_jobs`,
+`auth.uid()`) and nothing in `extensions` (pgcrypto's `digest`,
+`gen_random_bytes`) is reachable at all. `= public` is weaker and is not
+used for new functions.
+
+This matters most for `SECURITY DEFINER` functions, where a schema the
+caller controls sitting earlier in the path is worth exploiting. Every
+`SECURITY DEFINER` function in this schema is pinned this way.
+
+An unqualified reference inside a pinned function fails at **run** time,
+not at `CREATE` time, so the text is not self-checking. The two
+real-Postgres suites (`notificationEngineFunctions.integration.test.ts`,
+`pushReliabilityRpc.integration.test.ts`) apply every migration here in
+order and then execute the functions — one of them from a session whose
+`search_path` points at a decoy schema containing a same-named table, to
+prove the qualification is real.

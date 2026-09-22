@@ -20,6 +20,26 @@ export interface NotificationPayload {
   tag?: string;
   icon: string;
   badge: string;
+  /**
+   * The single-purpose delivery-receipt token for the ONE
+   * `notification_deliveries` row this exact push corresponds to -- the
+   * Service Worker POSTs it back after `showNotification()` succeeds, so
+   * the server learns the push was genuinely received rather than merely
+   * accepted by the push provider.
+   *
+   * Added per-DEVICE at send time (see
+   * `lib/notifications/engine/delivery.ts`), never by
+   * `buildNotificationPayload` -- a payload built here is shared across
+   * every device on a job, and a shared token would let one device's
+   * payload acknowledge another's delivery.
+   *
+   * A bearer credential: never logged, never echoed to any client, and
+   * deliberately never placed in the Notification's own `data` (which
+   * `notificationclick` can read long afterwards). Absent whenever
+   * receipt tracking is unavailable, which is always a silent, graceful
+   * degradation -- the notification itself is unaffected.
+   */
+  receiptToken?: string;
 }
 
 export interface BuildNotificationPayloadInput {

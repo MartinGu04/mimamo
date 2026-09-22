@@ -60,8 +60,14 @@ describe("resolveSafeNotificationPath -- cross-checked against the real public/s
       },
       clients: { claim: () => Promise.resolve() },
       registration: {
+        // Returns a Promise, exactly as the real
+        // `ServiceWorkerRegistration.showNotification` does -- sw.js now
+        // chains the delivery-receipt ACK onto it, so a `undefined`
+        // return here would be an unfaithful stub rather than a
+        // simplification.
         showNotification: (_title: string, options: { data?: { path?: string } }) => {
           capturedPath = options.data?.path;
+          return Promise.resolve();
         },
       },
       location: { origin: "https://mi-ma-mo.example" },

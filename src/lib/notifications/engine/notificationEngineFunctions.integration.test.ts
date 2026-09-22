@@ -1252,4 +1252,79 @@ describe.skipIf(!databaseAvailable)("notification engine SQL functions -- real P
       }
     });
   });
+  // -------------------------------------------------------------------
+  // search_path hardening (20260913214946_harden_aggregate_notification_rpc_search_path)
+  // -------------------------------------------------------------------
+
+  describe("aggregate notification RPCs -- search_path hardening", () => {
+    it("both functions carry an EMPTY pinned search_path after the migrations are applied in order", async () => {
+      const result = await db.query(`
+        select p.proname, coalesce(array_to_string(p.proconfig, ','), '') as config
+          from pg_proc p
+          join pg_namespace n on n.oid = p.pronamespace
+         where n.nspname = 'public'
+           and p.proname in ('upsert_aggregate_notification_job', 'resolve_aggregate_notification_job')
+         order by p.proname
+      `);
+
+      expect(result.rows).toHaveLength(2);
+      for (const row of result.rows) {
+        // Postgres stores `set search_path to ''` as the literal
+        // `search_path=""`; `= public` would read `search_path=public`.
+        expect(row.config).toBe('search_path=""');
+      }
+    });
+
+    it("still resolve public.notification_jobs when a DECOY schema of the same shape sits first in the caller's search_path", async () => {
+      // This is the failure mode an empty search_path exists to prevent,
+      // and simultaneously the risk it introduces: if any reference
+      // inside those function bodies were unqualified, it would resolve
+      // to the decoy here (or fail outright), not to the real table.
+      // Nothing about that is visible at CREATE time -- only at RUN time.
+      await db.query("drop schema if exists search_path_decoy cascade");
+      await db.query("create schema search_path_decoy");
+      await db.query(
+        "create table search_path_decoy.notification_jobs (like public.notification_jobs including all)",
+      );
+
+      const dedupeKey = `harden_check:${Date.now()}`;
+      try {
+        await db.query("set search_path to search_path_decoy, public");
+
+        const opened = await db.query(
+          "select public.upsert_aggregate_notification_job($1,$2,$3,$4,$5,$6,$7,now(),$8) as ok",
+          ["weapon_qualification_summary", USER_A, "t1", "b1", "/", "tag", dedupeKey, "src"],
+        );
+        expect(opened.rows[0].ok).toBe(true);
+
+        const refreshed = await db.query(
+          "select public.upsert_aggregate_notification_job($1,$2,$3,$4,$5,$6,$7,now(),$8) as ok",
+          ["weapon_qualification_summary", USER_A, "t2", "b2", "/", "tag", dedupeKey, "src"],
+        );
+        expect(refreshed.rows[0].ok).toBe(false);
+
+        await db.query("select public.resolve_aggregate_notification_job($1)", [dedupeKey]);
+
+        const reopened = await db.query(
+          "select public.upsert_aggregate_notification_job($1,$2,$3,$4,$5,$6,$7,now(),$8) as ok",
+          ["weapon_qualification_summary", USER_A, "t3", "b3", "/", "tag", dedupeKey, "src"],
+        );
+        expect(reopened.rows[0].ok).toBe(true);
+      } finally {
+        await db.query("reset search_path");
+      }
+
+      const real = await db.query("select title, status from public.notification_jobs where dedupe_key = $1", [
+        dedupeKey,
+      ]);
+      expect(real.rows).toHaveLength(1);
+      expect(real.rows[0].title).toBe("t3");
+      expect(real.rows[0].status).toBe("pending");
+
+      const decoy = await db.query("select count(*)::int as n from search_path_decoy.notification_jobs");
+      expect(decoy.rows[0].n).toBe(0);
+
+      await db.query("drop schema search_path_decoy cascade");
+    });
+  });
 });

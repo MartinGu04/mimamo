@@ -5,6 +5,8 @@ import { PageBackdrop } from "./PageBackdrop";
 import { EmergencyModeBanner } from "./EmergencyModeBanner";
 import { MobileIdentityBar } from "./MobileIdentityBar";
 import { PrivacyStorageNotice } from "@/components/privacy/PrivacyStorageNotice";
+import { GlobalPushBanner } from "@/components/pwa/GlobalPushBanner";
+import { PushDeviceProvider } from "@/components/pwa/PushDeviceProvider";
 import { ShellUtilityBar } from "./ShellUtilityBar";
 import { Sidebar } from "./Sidebar";
 import { MAIN_CONTENT_ID, SkipToMainContentLink } from "./SkipToMainContentLink";
@@ -20,9 +22,10 @@ interface AppShellProps {
   /**
    * `userId` is the authenticated Supabase user id -- an auth-only sibling
    * of `name`/`isManager`/`avatarUrl`, never a personnel/domain identity
-   * field (see `PersonalScheduleLoadResult`). It only ever reaches
-   * `NotificationBell`'s `usePushSubscription`, which uses it to key the
-   * per-user/per-device Push notification preference.
+   * field (see `PersonalScheduleLoadResult`). It only ever reaches the
+   * shell's `PushDeviceProvider` (which uses it to key the per-user/
+   * per-device Push notification preference) and `NotificationBell` (which
+   * uses it to key that device's per-account install-prompt dismissal).
    */
   person?: { name: string; isManager: boolean; avatarUrl: string | null; userId: string };
   /**
@@ -86,28 +89,45 @@ export function AppShell({
   emergencyModeActive = false,
 }: AppShellProps) {
   return (
-    <div className="isolate flex min-h-dvh bg-background text-foreground">
-      <SkipToMainContentLink />
-      <Sidebar person={person} />
-      <div className="relative flex min-h-dvh w-full flex-1 flex-col">
-        <PageBackdrop />
-        {person ? (
-          <MobileIdentityBar
-            name={person.name}
-            isManager={person.isManager}
-            avatarUrl={person.avatarUrl}
-            userId={person.userId}
-          />
-        ) : null}
-        <ShellUtilityBar initialClockTime={initialClockTime} dateLabel={dateLabel} userId={person?.userId} />
-        {emergencyModeActive ? <EmergencyModeBanner /> : null}
-        <main id={MAIN_CONTENT_ID} tabIndex={-1} className="flex-1 px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pb-10 focus:outline-none">
-          <div className="mx-auto w-full max-w-[1440px]">{children}</div>
-        </main>
+    /**
+     * `PushDeviceProvider` wraps the WHOLE authenticated shell, with
+     * `key={person?.userId}` -- this codebase's established "reset all
+     * internal state when identity changes" idiom (the same one the two
+     * bells previously applied individually). It is what makes the two
+     * simultaneously-mounted bells, the global banner, and
+     * "המכשירים שלי" share exactly ONE push-device state machine
+     * instead of running their own -- see that provider's docstring for
+     * the duplicate-round-trip/racing-auto-restore problem that caused.
+     */
+    <PushDeviceProvider key={person?.userId} userId={person?.userId}>
+      <div className="isolate flex min-h-dvh bg-background text-foreground">
+        <SkipToMainContentLink />
+        <Sidebar person={person} />
+        <div className="relative flex min-h-dvh w-full flex-1 flex-col">
+          <PageBackdrop />
+          {person ? (
+            <MobileIdentityBar
+              name={person.name}
+              isManager={person.isManager}
+              avatarUrl={person.avatarUrl}
+              userId={person.userId}
+            />
+          ) : null}
+          <ShellUtilityBar initialClockTime={initialClockTime} dateLabel={dateLabel} userId={person?.userId} />
+          {emergencyModeActive ? <EmergencyModeBanner /> : null}
+          {/* Rendered ONCE here, in the shared main column -- not inside
+              either the mobile or the desktop bar -- so it appears on
+              every authenticated page at every viewport with no
+              duplicate copy to keep in sync. */}
+          <GlobalPushBanner userId={person?.userId} />
+          <main id={MAIN_CONTENT_ID} tabIndex={-1} className="flex-1 px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pb-10 focus:outline-none">
+            <div className="mx-auto w-full max-w-[1440px]">{children}</div>
+          </main>
+        </div>
+        <BottomNav isManager={person?.isManager} />
+        <AccessibilityPreferencesButton />
+        <PrivacyStorageNotice variant="authenticated" />
       </div>
-      <BottomNav isManager={person?.isManager} />
-      <AccessibilityPreferencesButton />
-      <PrivacyStorageNotice variant="authenticated" />
-    </div>
+    </PushDeviceProvider>
   );
 }
