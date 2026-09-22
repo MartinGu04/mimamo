@@ -563,7 +563,8 @@ describe("ManagerPage — Shifts category: coverage + Potential", () => {
       ),
     );
     await renderPage({ category: "shifts" });
-    expect(screen.getByText(/מרטין בדיקה, נועה דוגמה/)).toBeInTheDocument();
+    expect(screen.getByText("מרטין בדיקה")).toBeInTheDocument();
+    expect(screen.getByText("נועה דוגמה")).toBeInTheDocument();
   });
 
   it("pairs day+night shift groups for the same date into one day card", async () => {

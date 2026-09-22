@@ -47,6 +47,11 @@ function dayView(overrides: Partial<ManagerShiftDayView> = {}): ManagerShiftDayV
   };
 }
 
+/** A row's own text always reads "<role> — <name>" -- this is how every test below locates ONE assignment row instead of matching loose text anywhere on the card. */
+function findRow(name: string): HTMLElement {
+  return screen.getByText(name).closest("li")!;
+}
+
 describe("ManagerCoverageSection", () => {
   it("shows an empty message when there are no days with shift data", () => {
     render(<ManagerCoverageSection days={[]} />);
@@ -55,36 +60,36 @@ describe("ManagerCoverageSection", () => {
 
   it("preserves multiple technicians in one period, never collapsed to one", () => {
     render(<ManagerCoverageSection days={[dayView({ day: group({ technicianNames: ["מרטין בדיקה", "נועה דוגמה"] }) })]} />);
-    expect(screen.getByText(/מרטין בדיקה, נועה דוגמה/)).toBeInTheDocument();
+    expect(screen.getByText("מרטין בדיקה")).toBeInTheDocument();
+    expect(screen.getByText("נועה דוגמה")).toBeInTheDocument();
   });
 
-  it("keeps shadow people in their own separate line", () => {
+  it("keeps shadow people in their own visually distinct row", () => {
     render(
       <ManagerCoverageSection
         days={[dayView({ day: group({ technicianNames: ["מרטין בדיקה"], shadowTechnicianNames: ["איתן דוגמה"] }) })]}
       />,
     );
-    expect(screen.getByText(/צל טכנאי/)).toBeInTheDocument();
+    const shadowRow = findRow("איתן דוגמה");
+    expect(shadowRow.textContent).toContain("צל");
+    expect(shadowRow.textContent).toContain("טכנאי");
   });
 
   describe('role presentation order: אחמ"ש before טכנאי (shared with the calendar/selected-day views via inRoleDisplayOrder)', () => {
-    it("renders the אחמ״שים coverage line before the טכנאים line, for a period staffed with both", () => {
-      const { container } = render(
+    it('renders the אחמ"ש row before the טכנאי row, for a period staffed with both', () => {
+      render(
         <ManagerCoverageSection
           days={[dayView({ day: group({ technicianNames: ["גדעון פולין"], supervisorNames: ["איתי אוליר"] }) })]}
         />,
       );
-      const supervisorLine = screen.getByText(/אחמ״שים/).closest("p")!;
-      const technicianLine = screen.getByText(/טכנאים/).closest("p")!;
-      expect(
-        supervisorLine.compareDocumentPosition(technicianLine) & Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
-      // Both names are still present, each attributed to their own real role.
-      expect(container.textContent).toContain("איתי אוליר");
-      expect(container.textContent).toContain("גדעון פולין");
+      const supervisorRow = findRow("איתי אוליר");
+      const technicianRow = findRow("גדעון פולין");
+      expect(supervisorRow.textContent).toContain('אחמ"ש');
+      expect(technicianRow.textContent).toContain("טכנאי");
+      expect(supervisorRow.compareDocumentPosition(technicianRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
-    it("renders the shadow אחמ״ש line before the shadow טכנאי line", () => {
+    it("renders the shadow אחמ״ש row before the shadow טכנאי row", () => {
       render(
         <ManagerCoverageSection
           days={[
@@ -94,14 +99,12 @@ describe("ManagerCoverageSection", () => {
           ]}
         />,
       );
-      const shadowSupervisorLine = screen.getByText(/צל אחמ״ש/).closest("p")!;
-      const shadowTechnicianLine = screen.getByText(/צל טכנאי/).closest("p")!;
-      expect(
-        shadowSupervisorLine.compareDocumentPosition(shadowTechnicianLine) & Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
+      const shadowSupervisorRow = findRow("נועה דוגמה");
+      const shadowTechnicianRow = findRow("דני בדיקה");
+      expect(shadowSupervisorRow.compareDocumentPosition(shadowTechnicianRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
-    it("applies the same order to a missing/partial role's message line too, not just the full-coverage name line", () => {
+    it("applies the same order to a missing/partial role's note too, not just the full-coverage row", () => {
       render(
         <ManagerCoverageSection
           days={[
@@ -115,11 +118,9 @@ describe("ManagerCoverageSection", () => {
           ]}
         />,
       );
-      const supervisorLine = screen.getByText(/חסר אחמ"ש/).closest("p")!;
-      const technicianLine = screen.getByText(/חסר טכנאי/).closest("p")!;
-      expect(
-        supervisorLine.compareDocumentPosition(technicianLine) & Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
+      const supervisorNote = screen.getByText(/חסר אחמ"ש/).closest("li")!;
+      const technicianNote = screen.getByText(/חסר טכנאי/).closest("li")!;
+      expect(supervisorNote.compareDocumentPosition(technicianNote) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
     it("applies the same order independently to BOTH the day and night columns", () => {
@@ -139,14 +140,12 @@ describe("ManagerCoverageSection", () => {
           ]}
         />,
       );
-      const [dayLine, nightLine] = screen.getAllByText(/אחמ״שים/).map((el) => el.closest("p")!);
-      const dayNames = dayLine.textContent ?? "";
-      const nightNames = nightLine.textContent ?? "";
-      expect(dayNames).toContain('אחמ"ש יום');
-      expect(nightNames).toContain('אחמ"ש לילה');
-      const dayTechLine = screen.getByText("טכנאי יום").closest("p")!;
-      const nightTechLine = screen.getByText("טכנאי לילה").closest("p")!;
+      const dayLine = findRow('אחמ"ש יום');
+      const dayTechLine = findRow("טכנאי יום");
       expect(dayLine.compareDocumentPosition(dayTechLine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+      const nightLine = findRow('אחמ"ש לילה');
+      const nightTechLine = findRow("טכנאי לילה");
       expect(nightLine.compareDocumentPosition(nightTechLine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
   });
@@ -177,7 +176,7 @@ describe("ManagerCoverageSection", () => {
     expect(screen.getByText("חסר אחמ״ש")).toBeInTheDocument();
   });
 
-  it("shows the partial interval message for a partially covered role", () => {
+  it("shows the partial interval message in its own note, separate from the names row above it", () => {
     render(
       <ManagerCoverageSection
         days={[
@@ -191,8 +190,10 @@ describe("ManagerCoverageSection", () => {
         ]}
       />,
     );
-    expect(screen.getByText(/כיסוי טכנאי חלקי · 05:30–07:30/)).toBeInTheDocument();
-    expect(screen.getByText(/מרטין בדיקה/)).toBeInTheDocument();
+    const note = screen.getByText(/כיסוי טכנאי חלקי · 05:30–07:30/).closest("li")!;
+    expect(note.textContent).toContain("הערה");
+    const nameRow = findRow("מרטין בדיקה");
+    expect(note).not.toBe(nameRow);
   });
 
   it("never claims a role missing when it is not_evaluable -- shows the truthful unknown message instead", () => {
@@ -212,9 +213,9 @@ describe("ManagerCoverageSection", () => {
     expect(screen.queryByText("חסר טכנאי")).toBeNull();
   });
 
-  it("shows a calm names-only line for a fully covered role, no extra message", () => {
+  it("shows a calm names-only row for a fully covered role, no extra note", () => {
     render(<ManagerCoverageSection days={[dayView({ day: group({ supervisorNames: ["דני כהן"] }) })]} />);
-    expect(screen.getByText(/דני כהן/)).toBeInTheDocument();
+    expect(screen.getByText("דני כהן")).toBeInTheDocument();
   });
 
   it("renders one card per date, with day and night paired inside the same card", () => {
@@ -236,6 +237,23 @@ describe("ManagerCoverageSection", () => {
   it("a period with no shift data at all reads as 'no data', never a fabricated missing verdict", () => {
     render(<ManagerCoverageSection days={[dayView({ day: group(), night: null })]} />);
     expect(screen.getByText("אין נתוני שיבוץ")).toBeInTheDocument();
+  });
+
+  it("a period that DOES have a group but nobody in either role stays quiet, never falling back to the 'no data' message meant for a period with no group at all", () => {
+    render(
+      <ManagerCoverageSection
+        days={[
+          dayView({
+            day: group({ technicianNames: [], supervisorNames: [] }),
+            night: null,
+          }),
+        ]}
+      />,
+    );
+    // Exactly one "no data" message -- the night column (a real null group)
+    // -- never a second one for the day column, which has a real (if
+    // empty) group.
+    expect(screen.getAllByText("אין נתוני שיבוץ")).toHaveLength(1);
   });
 
   it("each card links into the real team calendar for that exact date", () => {
@@ -260,7 +278,79 @@ describe("ManagerCoverageSection", () => {
     expect(withAccent.length).toBe(1);
   });
 
-  describe('regression: a generic (period-unspecified) אחמ"ש assignment renders as covered, once, never as two separate shifts', () => {
+  describe("all-day shift leader gets a dedicated, emphasized surface, duplicated into each column it covers", () => {
+    it("renders a distinct all-day banner above the day/night columns", () => {
+      render(
+        <ManagerCoverageSection days={[dayView({ day: null, night: null, genericSupervisorNames: ["רועי לוין"] })]} />,
+      );
+      const banner = screen.getByText("רועי לוין").closest("div")!;
+      expect(banner.textContent).toContain('אחמ"ש');
+      expect(banner.textContent).toContain("כל היום");
+    });
+
+    it("duplicates the all-day supervisor inside each day/night column it covers, each tagged with an explicit \"all day\" badge", () => {
+      render(
+        <ManagerCoverageSection
+          days={[
+            dayView({
+              genericSupervisorNames: ["רועי לוין"],
+              day: group(),
+              night: group({ periodLabel: "לילה", emoji: "🌙" }),
+            }),
+          ]}
+        />,
+      );
+      const occurrences = screen.getAllByText("רועי לוין");
+      // Once in the banner, plus once inside each of day/night.
+      expect(occurrences).toHaveLength(3);
+      const rowOccurrences = occurrences.filter((el) => el.closest("li") !== null);
+      expect(rowOccurrences).toHaveLength(2);
+      for (const row of rowOccurrences) {
+        expect(row.closest("li")!.textContent).toContain("כל היום");
+      }
+    });
+  });
+
+  describe("a very busy column collapses its overflow into a '+N more details' link rather than growing without bound", () => {
+    it("shows every row when a column stays within the visible-row budget", () => {
+      render(
+        <ManagerCoverageSection
+          days={[
+            dayView({
+              day: group({ supervisorNames: ["רועי לוין"], technicianNames: ["איתן וסרמן"] }),
+            }),
+          ]}
+        />,
+      );
+      expect(screen.getByText("רועי לוין")).toBeInTheDocument();
+      expect(screen.getByText("איתן וסרמן")).toBeInTheDocument();
+      expect(screen.queryByText(/פרטים נוספים/)).toBeNull();
+    });
+
+    it("truncates a column with many rows and links the overflow into the full schedule view for that date", () => {
+      render(
+        <ManagerCoverageSection
+          days={[
+            dayView({
+              date: "2026-08-20",
+              day: group({
+                supervisorNames: ["רועי לוין"],
+                technicianNames: ["איתן וסרמן"],
+                shadowSupervisorNames: ["דניאל כהן"],
+                shadowTechnicianNames: ["יובל ישראלי"],
+                technicianCoverage: coverage({ status: "partial", message: "כיסוי טכנאי חלקי · 07:30–15:00" }),
+              }),
+            }),
+          ]}
+        />,
+      );
+      // 2 names + 2 shadow rows + 1 note = 5 rows, one past the 4-row budget.
+      const moreLink = screen.getByRole("link", { name: "+1 פרטים נוספים" });
+      expect(moreLink).toHaveAttribute("href", "/schedule?person=all&date=2026-08-20");
+    });
+  });
+
+  describe('regression: a generic (period-unspecified) אחמ"ש assignment renders as covered, and is duplicated (badge-tagged) into every day/night column it covers', () => {
     function toGroupView(entry: ManagerShiftOverviewEntry): ManagerShiftGroupView {
       // Trivial field rename, mirroring app/(app)/manager/page.tsx's private
       // buildManagerShiftGroupView -- deliberately NOT re-implementing any
@@ -313,7 +403,7 @@ describe("ManagerCoverageSection", () => {
       };
     }
 
-    it("through the REAL production pipeline (Event[] -> buildShiftStaffingOverview), a date staffed with real technicians and only a generic supervisor shows full coverage on both day and night, and the generic supervisor's name appears EXACTLY ONCE -- never inside both the day and night role lists", () => {
+    it("through the REAL production pipeline (Event[] -> buildShiftStaffingOverview), a date staffed with real technicians and only a generic supervisor shows full coverage on both day and night, with the generic supervisor's name shown once via the shared banner and once more inside each of the day/night columns it covers, each tagged \"כל היום\"", () => {
       const schedule = buildShiftSchedule("07:30");
 
       const events = [
@@ -329,10 +419,9 @@ describe("ManagerCoverageSection", () => {
 
       // Data-structure-level guarantee, independent of rendering: the
       // generic supervisor is NEVER a member of either period's own
-      // roster list (that would be "duplicated into both day and night
-      // assignment lists") -- both stay empty -- while roleCoverage still
-      // reports "full" on both, because the coverage computation (not the
-      // roster) is what folds the generic Event into each period's group.
+      // roster list -- both stay empty -- while roleCoverage still reports
+      // "full" on both, because the coverage computation (not the roster)
+      // is what folds the generic Event into each period's group.
       expect(day.supervisors).toHaveLength(0);
       expect(night.supervisors).toHaveLength(0);
       expect(day.roleCoverage.supervisor.status).toBe("full");
@@ -361,16 +450,22 @@ describe("ManagerCoverageSection", () => {
         />,
       );
 
-      // עילאי שפירא is rendered EXACTLY ONCE on the whole card -- the
-      // single shared generic-assignment line -- never once under "יום"
-      // and again under "לילה" as if it were two independent shifts.
-      expect(screen.getAllByText(/עילאי שפירא/)).toHaveLength(1);
+      // Once in the shared all-day banner, plus once more inside each of
+      // day and night -- never as if it were three independent shifts,
+      // and never missing.
+      const occurrences = screen.getAllByText(/עילאי שפירא/);
+      expect(occurrences).toHaveLength(3);
+      const rowOccurrences = occurrences.filter((el) => el.closest("li") !== null);
+      expect(rowOccurrences).toHaveLength(2);
+      for (const row of rowOccurrences) {
+        expect(row.closest("li")!.textContent).toContain("כל היום");
+      }
       expect(screen.queryByText(/חסר אחמ/)).toBeNull();
       expect(screen.getByText(/טכנאי יום/)).toBeInTheDocument();
       expect(screen.getByText(/טכנאי לילה/)).toBeInTheDocument();
     });
 
-    it("a date staffed ONLY by a generic supervisor (no other shift Events at all) still shows full day+night coverage on the card, with the person's name attributed to neither period's own role list", () => {
+    it("a date staffed ONLY by a generic supervisor (no other shift Events at all) still shows full day+night coverage on the card, with the person's name attributed to neither period's own native role list", () => {
       const schedule = buildShiftSchedule("07:30");
       const events = [event({ personId: "p_ilay", personName: "עילאי שפירא", role: "supervisor", period: "unspecified" })];
 
@@ -395,7 +490,8 @@ describe("ManagerCoverageSection", () => {
         />,
       );
 
-      expect(screen.getAllByText(/עילאי שפירא/)).toHaveLength(1);
+      const occurrences = screen.getAllByText(/עילאי שפירא/);
+      expect(occurrences).toHaveLength(3);
       expect(screen.queryByText(/חסר אחמ/)).toBeNull();
       // Technician is still genuinely missing on both -- the generic
       // supervisor assignment never spills over into covering a

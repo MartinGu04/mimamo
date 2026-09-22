@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { CoverageBadge } from "@/components/ui/CoverageBadge";
 import { Panel } from "@/components/ui/Panel";
@@ -11,57 +12,125 @@ interface EveryoneSelectedDayPanelProps {
   dayView: ScheduleEveryoneDayView | null;
 }
 
-function RoleDetail({ label, role }: { label: string; role: ScheduleRoleStaffingView }) {
-  return (
-    <div>
-      <p className="text-xs font-medium text-muted-2">{label}</p>
-      {role.people.length > 0 ? (
-        <ul className="mt-0.5 flex flex-wrap gap-x-1.5 gap-y-1 text-sm text-foreground">
-          {role.people.map((person) => (
-            <li key={person.key} className="inline-flex items-center gap-1">
-              {person.name}
-              {person.tentative ? <Badge tone="warning">משוער</Badge> : null}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {role.message ? (
-        <p
-          className={`mt-0.5 text-sm font-medium ${
-            role.status === "missing" ? "text-critical" : role.status === "partial" ? "text-warning" : "text-muted"
-          }`}
-        >
-          {role.message}
-        </p>
-      ) : null}
-    </div>
-  );
-}
+type RoleName = "supervisor" | "technician";
 
-function ShadowLine({ label, names }: { label: string; names: string[] }) {
-  if (names.length === 0) return null;
+/** Every role's own fixed emoji + Hebrew label -- ONE mapping shared by every row/badge/note below, so a role can never be labeled inconsistently within this panel. */
+const ROLE_EMOJI: Record<RoleName, string> = { supervisor: "🧑‍✈️", technician: "🔧" };
+const ROLE_LABEL: Record<RoleName, string> = { supervisor: 'אחמ"ש', technician: "טכנאי" };
+
+/** Stand-in for a period with no `SchedulePeriodStaffingView` at all -- lets the row-building logic below treat "no data" and "data, but nobody in this particular role" identically, without a null check at every call site. */
+const EMPTY_ROLE: ScheduleRoleStaffingView = { people: [], status: "not_evaluable", message: null };
+
+/**
+ * One assigned person, always "<role emoji> <role label> — <name>" -- the
+ * role is never shown without who holds it, and never just an icon (Design
+ * Pass: shift-personnel redesign). `allDay` marks a name that's really the
+ * date's own all-day (generic, period-unspecified) assignment shown again
+ * here for this specific period -- see the panel's own top-level doc
+ * comment for why a little duplication beats a Day/Night section that
+ * looks unstaffed.
+ */
+function AssignmentRow({
+  role,
+  name,
+  tentative = false,
+  allDay = false,
+}: {
+  role: RoleName;
+  name: string;
+  tentative?: boolean;
+  allDay?: boolean;
+}) {
   return (
-    <p className="mt-1 text-xs text-muted">
-      <span className="text-muted-2">{label}:</span> {names.join(", ")}
-    </p>
+    <li className="flex flex-wrap items-center gap-1.5 text-sm">
+      <span aria-hidden="true">{ROLE_EMOJI[role]}</span>
+      <span className="font-medium text-muted-2">{ROLE_LABEL[role]}</span>
+      <span aria-hidden="true" className="text-muted-2">
+        —
+      </span>
+      <span className="text-foreground">{name}</span>
+      {tentative ? <Badge tone="warning">משוער</Badge> : null}
+      {allDay ? <Badge tone="primary">כל היום</Badge> : null}
+    </li>
   );
 }
 
 /**
- * A GENERIC (period-unspecified) role assignment, e.g. a weekend cell that
- * just says `אחמ"ש` -- rendered ONCE, here, outside both the day and night
- * `PeriodDetail` sections. Internally the assignment satisfies both
- * periods' coverage (see `ScheduleEveryoneDayView.genericSupervisorNames`'s
- * own doc comment), but showing the SAME name once under "יום" and again
- * under "לילה" would misrepresent one real assignment as two independent
- * shifts -- this is the single place it's ever shown.
+ * A shadow/handover assignment -- deliberately its own tinted, ringed pill
+ * (never a plain text row) so it can never visually blend into the regular
+ * personnel rows above it.
  */
-function GenericAssignmentLine({ label, names }: { label: string; names: string[] }) {
+function ShadowRow({ role, name }: { role: RoleName; name: string }) {
+  return (
+    <li className="flex flex-wrap items-center gap-1.5 rounded-md bg-overlay-soft px-2 py-1 text-sm ring-1 ring-border-strong">
+      <span aria-hidden="true">🌘</span>
+      <Badge tone="neutral">צל</Badge>
+      <span className="font-medium text-muted-2">{ROLE_LABEL[role]}</span>
+      <span aria-hidden="true" className="text-muted-2">
+        —
+      </span>
+      <span className="text-foreground">{name}</span>
+    </li>
+  );
+}
+
+/**
+ * A role's non-"full" coverage message (missing/partial/not_evaluable) --
+ * always its own headed, bordered note block, never a bare paragraph sitting
+ * directly under a person's name where it could look like it belongs to
+ * them instead of describing the role's remaining gap.
+ */
+function RoleNote({
+  role,
+  message,
+  status,
+}: {
+  role: RoleName;
+  message: string;
+  status: ScheduleRoleStaffingView["status"];
+}) {
+  const toneClassName = status === "missing" ? "text-critical" : status === "partial" ? "text-warning" : "text-muted";
+  return (
+    <li className="rounded-md bg-overlay-faint px-2.5 py-1.5 ring-1 ring-border">
+      <p className="flex items-center gap-1.5 text-xs font-medium text-muted-2">
+        <span aria-hidden="true">📝</span>
+        {ROLE_LABEL[role]} · הערה
+      </p>
+      <p className={`mt-0.5 text-sm font-medium ${toneClassName}`}>{message}</p>
+    </li>
+  );
+}
+
+/** Every row this ONE role contributes to a period: its real people (each tagged tentative if applicable), then the date's all-day assignment for this same role (if any, tagged "כל היום"), then its coverage note (if not fully covered) -- never a bare label with nothing under it. */
+function roleRows(role: RoleName, staffing: ScheduleRoleStaffingView, allDayNames: string[]): ReactNode[] {
+  const rows: ReactNode[] = staffing.people.map((person) => (
+    <AssignmentRow key={person.key} role={role} name={person.name} tentative={person.tentative} />
+  ));
+  allDayNames.forEach((name, index) => {
+    rows.push(<AssignmentRow key={`${role}-allday-${index}`} role={role} name={name} allDay />);
+  });
+  if (staffing.message) {
+    rows.push(<RoleNote key={`${role}-note`} role={role} message={staffing.message} status={staffing.status} />);
+  }
+  return rows;
+}
+
+/**
+ * The all-day (generic, period-unspecified) role assignment gets its OWN
+ * emphasized surface -- a dedicated tinted, ringed banner, never just bold
+ * text -- shown once above the Day/Night sections. `null` when this role has
+ * no all-day assignment for the date.
+ */
+function AllDayAssignmentBanner({ role, names }: { role: RoleName; names: string[] }) {
   if (names.length === 0) return null;
   return (
-    <p className="text-sm font-medium text-foreground">
-      <span className="text-muted-2">{label}:</span> {names.join(", ")}
-    </p>
+    <div className="rounded-lg bg-primary/10 px-3 py-2.5 ring-1 ring-primary/25">
+      <p className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+        <span aria-hidden="true">{ROLE_EMOJI[role]}</span>
+        {ROLE_LABEL[role]} (כל היום)
+      </p>
+      <p className="mt-1 text-sm font-semibold text-foreground">{names.join(", ")}</p>
+    </div>
   );
 }
 
@@ -69,15 +138,35 @@ function PeriodDetail({
   title,
   emoji,
   view,
+  genericSupervisorNames,
+  genericTechnicianNames,
 }: {
   title: string;
   emoji: string;
   view: ScheduleEveryoneDayView["day"];
+  /** The date's all-day supervisor/technician names -- duplicated (badge-tagged) into this period's own rows, in addition to the shared banner above, so this section never reads as unstaffed just because nobody was assigned to THIS period specifically. */
+  genericSupervisorNames: string[];
+  genericTechnicianNames: string[];
 }) {
-  const [supervisors, technicians] = view ? inRoleDisplayOrder(view) : [null, null];
+  const [supervisors, technicians] = view ? inRoleDisplayOrder(view) : [EMPTY_ROLE, EMPTY_ROLE];
   const [shadowSupervisorNames, shadowTechnicianNames] = view
     ? inRoleDisplayOrder({ supervisors: view.shadowSupervisorNames, technicians: view.shadowTechnicianNames })
     : [[], []];
+  const [genericForSupervisor, genericForTechnician] = inRoleDisplayOrder({
+    supervisors: genericSupervisorNames,
+    technicians: genericTechnicianNames,
+  });
+
+  const rows: ReactNode[] = [
+    ...roleRows("supervisor", supervisors, genericForSupervisor),
+    ...roleRows("technician", technicians, genericForTechnician),
+    ...shadowSupervisorNames.map((name, index) => (
+      <ShadowRow key={`shadow-supervisor-${index}`} role="supervisor" name={name} />
+    )),
+    ...shadowTechnicianNames.map((name, index) => (
+      <ShadowRow key={`shadow-technician-${index}`} role="technician" name={name} />
+    )),
+  ];
 
   return (
     <div>
@@ -89,27 +178,25 @@ function PeriodDetail({
         {view ? <CoverageBadge status={view.coverageStatus} /> : null}
       </div>
 
-      {view && supervisors && technicians ? (
-        <div className="mt-2 space-y-2">
-          <RoleDetail label='אחמ"שים' role={supervisors} />
-          <RoleDetail label="טכנאים" role={technicians} />
-          <ShadowLine label='צל אחמ"ש' names={shadowSupervisorNames} />
-          <ShadowLine label="צל טכנאי" names={shadowTechnicianNames} />
-        </div>
+      {view ? (
+        rows.length > 0 ? <ul className="mt-2.5 space-y-2">{rows}</ul> : null
       ) : (
-        <p className="mt-2 text-sm text-muted">אין נתוני שיבוץ לתקופה זו.</p>
+        <p className="mt-2.5 text-sm text-muted">אין נתוני שיבוץ לתקופה זו.</p>
       )}
     </div>
   );
 }
 
 /**
- * "כולם" mode's selected-day detail (PR #24 §22) -- the FULL readable
- * picture for one date: day + night staffing (technicians/supervisors,
- * shadow/handover kept separate, explicit role-level coverage), then
- * duties and absences, only where relevant. This is deliberately where
- * all the detail lives -- the month grid cell next to it stays compact
- * (PR #24 §21).
+ * "כולם" mode's selected-day detail (PR #24 §22, redesigned for clearer
+ * role-to-person association) -- the FULL readable picture for one date:
+ * an emphasized all-day-leader banner (if any), then day + night staffing
+ * as one clear row per assignment (never a role heading with nothing under
+ * it), shadow/handover rows visually set apart from regular personnel, and
+ * any partial/missing coverage note kept in its own block so it can never
+ * be mistaken for belonging to the person listed above it. Then duties and
+ * absences, only where relevant. This is deliberately where all the detail
+ * lives -- the month grid cell next to it stays compact (PR #24 §21).
  */
 export function EveryoneSelectedDayPanel({ dayMeta, dayView }: EveryoneSelectedDayPanelProps) {
   if (!dayMeta) return null;
@@ -140,14 +227,26 @@ export function EveryoneSelectedDayPanel({ dayMeta, dayView }: EveryoneSelectedD
         </div>
 
         {hasGenericAssignment ? (
-          <div className="rounded-lg bg-overlay-soft px-3 py-2">
-            <GenericAssignmentLine label='אחמ"ש (כל היום)' names={genericSupervisorNames} />
-            <GenericAssignmentLine label="טכנאי (כל היום)" names={genericTechnicianNames} />
+          <div className="space-y-2">
+            <AllDayAssignmentBanner role="supervisor" names={genericSupervisorNames} />
+            <AllDayAssignmentBanner role="technician" names={genericTechnicianNames} />
           </div>
         ) : null}
 
-        <PeriodDetail title="יום" emoji="☀️" view={dayView?.day ?? null} />
-        <PeriodDetail title="לילה" emoji="🌙" view={dayView?.night ?? null} />
+        <PeriodDetail
+          title="יום"
+          emoji="☀️"
+          view={dayView?.day ?? null}
+          genericSupervisorNames={genericSupervisorNames}
+          genericTechnicianNames={genericTechnicianNames}
+        />
+        <PeriodDetail
+          title="לילה"
+          emoji="🌙"
+          view={dayView?.night ?? null}
+          genericSupervisorNames={genericSupervisorNames}
+          genericTechnicianNames={genericTechnicianNames}
+        />
 
         {duties.length > 0 ? (
           <div>

@@ -38,6 +38,11 @@ function dayView(overrides: Partial<ScheduleEveryoneDayView> = {}): ScheduleEver
   return { date: "2026-08-12", day: null, night: null, genericSupervisorNames: [], genericTechnicianNames: [], duties: [], absences: [], ...overrides };
 }
 
+/** A row's own text always reads "<role> — <name>" -- this is how every test below locates ONE assignment row instead of matching loose text anywhere on the panel. */
+function findRow(name: string): HTMLElement {
+  return screen.getByText(name).closest("li")!;
+}
+
 describe("EveryoneSelectedDayPanel", () => {
   it("renders nothing when there is no day meta at all", () => {
     const { container } = render(<EveryoneSelectedDayPanel dayMeta={null} dayView={null} />);
@@ -50,7 +55,7 @@ describe("EveryoneSelectedDayPanel", () => {
   });
 
   describe('role presentation order: אחמ"ש before טכנאי (never independently reordered per-consumer)', () => {
-    it('renders the אחמ"שים role group before the טכנאים role group, for a period staffed with both', () => {
+    it('renders the אחמ"ש row before the טכנאי row, for a period staffed with both', () => {
       render(
         <EveryoneSelectedDayPanel
           dayMeta={dayMeta()}
@@ -64,21 +69,17 @@ describe("EveryoneSelectedDayPanel", () => {
         />,
       );
 
-      const supervisorLabel = screen.getByText('אחמ"שים');
-      const technicianLabel = screen.getByText("טכנאים");
-      // Both labels are their own sibling `<div>`s under the same period's
-      // content wrapper -- DOM source order IS render order here, so
-      // comparing document position directly proves which one actually
-      // renders first, not just which text happens to appear first.
-      expect(
-        supervisorLabel.compareDocumentPosition(technicianLabel) & Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
-
-      const names = screen.getByText("איתי אוליר").closest("li")!.parentElement!;
-      expect(names.textContent).toContain("איתי אוליר");
+      const supervisorRow = findRow("איתי אוליר");
+      const technicianRow = findRow("גדעון פולין");
+      // Both rows are siblings under the same period's own `<ul>` -- DOM
+      // source order IS render order here, so comparing document position
+      // directly proves which one actually renders first.
+      expect(supervisorRow.compareDocumentPosition(technicianRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(supervisorRow.textContent).toContain('אחמ"ש');
+      expect(technicianRow.textContent).toContain("טכנאי");
     });
 
-    it('renders the shadow "צל אחמ"ש" line before the shadow "צל טכנאי" line', () => {
+    it('renders the shadow "צל אחמ"ש" row before the shadow "צל טכנאי" row', () => {
       render(
         <EveryoneSelectedDayPanel
           dayMeta={dayMeta()}
@@ -95,11 +96,11 @@ describe("EveryoneSelectedDayPanel", () => {
         />,
       );
 
-      const shadowSupervisorLine = screen.getByText('צל אחמ"ש:').closest("p")!;
-      const shadowTechnicianLine = screen.getByText("צל טכנאי:").closest("p")!;
-      expect(
-        shadowSupervisorLine.compareDocumentPosition(shadowTechnicianLine) & Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
+      const shadowSupervisorRow = findRow("נועה דוגמה");
+      const shadowTechnicianRow = findRow("דני בדיקה");
+      expect(shadowSupervisorRow.textContent).toContain('אחמ"ש');
+      expect(shadowTechnicianRow.textContent).toContain("טכנאי");
+      expect(shadowSupervisorRow.compareDocumentPosition(shadowTechnicianRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
     it("applies the SAME order to both day and night periods independently", () => {
@@ -124,15 +125,12 @@ describe("EveryoneSelectedDayPanel", () => {
         />,
       );
 
-      const [dayLabel, nightLabel] = screen.getAllByText('אחמ"שים');
-      expect(dayLabel).toBeTruthy();
-      expect(nightLabel).toBeTruthy();
-      const dayNames = screen.getByText('אחמ"ש יום').closest("li")!.parentElement!;
-      const dayTechNames = screen.getByText("טכנאי יום").closest("li")!.parentElement!;
+      const dayNames = findRow('אחמ"ש יום');
+      const dayTechNames = findRow("טכנאי יום");
       expect(dayNames.compareDocumentPosition(dayTechNames) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-      const nightNames = screen.getByText('אחמ"ש לילה').closest("li")!.parentElement!;
-      const nightTechNames = screen.getByText("טכנאי לילה").closest("li")!.parentElement!;
+      const nightNames = findRow('אחמ"ש לילה');
+      const nightTechNames = findRow("טכנאי לילה");
       expect(nightNames.compareDocumentPosition(nightTechNames) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
@@ -156,13 +154,109 @@ describe("EveryoneSelectedDayPanel", () => {
       // reordering never merges/duplicates/misfiles a person.
       expect(screen.getAllByText("טכנאי אמיתי")).toHaveLength(1);
       expect(screen.getAllByText('אחמ"ש אמיתי')).toHaveLength(1);
-      expect(screen.getByText(/צל טכנאי אמיתי/)).toBeTruthy();
-      expect(screen.getByText(/צל אחמ"ש אמיתי/)).toBeTruthy();
+      expect(screen.getByText("צל טכנאי אמיתי")).toBeTruthy();
+      expect(screen.getByText('צל אחמ"ש אמיתי')).toBeTruthy();
+      // The shadow rows are visually distinct from the regular personnel
+      // rows -- each carries its own "צל" badge.
+      expect(findRow("צל טכנאי אמיתי").textContent).toContain("צל");
+      expect(findRow('צל אחמ"ש אמיתי').textContent).toContain("צל");
     });
   });
 
-  describe('regression: a generic (period-unspecified) אחמ"ש assignment renders as covered, once, never "חסר אחמ״ש" and never as if the person worked two separate shifts', () => {
-    it("through the REAL production pipeline (Event[] -> buildShiftStaffingOverview -> buildScheduleEveryoneDayViews), a date staffed with real technicians and only a generic supervisor shows full coverage on both day and night, with the generic supervisor's name shown EXACTLY ONCE -- via the shared generic-assignment line, never duplicated into both the day and night role lists", async () => {
+  describe("never render an empty role label", () => {
+    it("shows nothing under a period whose roles are all empty and fully covered, never a bare label with no content", () => {
+      render(
+        <EveryoneSelectedDayPanel
+          dayMeta={dayMeta()}
+          dayView={dayView({
+            day: periodView({
+              technicians: { people: [], status: "full", message: null },
+              supervisors: { people: [], status: "full", message: null },
+              coverageStatus: "full",
+            }),
+            night: periodView({
+              period: "night",
+              label: "לילה",
+              emoji: "🌙",
+              technicians: { people: [], status: "full", message: null },
+              supervisors: { people: [], status: "full", message: null },
+              coverageStatus: "full",
+            }),
+          })}
+        />,
+      );
+      // A real (non-null) period never falls back to the "no staffing data"
+      // message either -- that message is reserved for a period with no
+      // staffing view at all.
+      expect(screen.queryByText("אין נתוני שיבוץ לתקופה זו.")).toBeNull();
+    });
+
+    it("keeps a role's coverage note in its own block, headed by which role it's about, distinct from the assignment row above it", () => {
+      render(
+        <EveryoneSelectedDayPanel
+          dayMeta={dayMeta()}
+          dayView={dayView({
+            day: periodView({
+              technicians: {
+                people: [],
+                status: "partial",
+                message: "כיסוי טכנאי חלקי · 07:30–15:00",
+              },
+              supervisors: { people: [{ key: "p1", name: "רועי לוין", tentative: false }], status: "full", message: null },
+              coverageStatus: "partial",
+            }),
+          })}
+        />,
+      );
+
+      const note = screen.getByText(/כיסוי טכנאי חלקי · 07:30–15:00/).closest("li")!;
+      expect(note.textContent).toContain("טכנאי");
+      expect(note.textContent).toContain("הערה");
+      // The note is its own list item, never inside the shift leader's row.
+      const leaderRow = findRow("רועי לוין");
+      expect(note).not.toBe(leaderRow);
+      expect(leaderRow.textContent).not.toContain("כיסוי טכנאי חלקי");
+    });
+  });
+
+  describe("all-day shift leader gets a dedicated, emphasized surface", () => {
+    it('renders a distinct all-day banner for a generic supervisor assignment, above the day/night sections', () => {
+      render(
+        <EveryoneSelectedDayPanel
+          dayMeta={dayMeta()}
+          dayView={dayView({ genericSupervisorNames: ["רועי לוין"] })}
+        />,
+      );
+      const banner = screen.getByText("רועי לוין").closest("div")!;
+      expect(banner.textContent).toContain('אחמ"ש');
+      expect(banner.textContent).toContain("כל היום");
+    });
+
+    it("duplicates the all-day supervisor inside each day/night section it covers, each time tagged with an explicit \"all day\" badge -- a little duplication rather than a section that looks unstaffed", () => {
+      render(
+        <EveryoneSelectedDayPanel
+          dayMeta={dayMeta()}
+          dayView={dayView({
+            genericSupervisorNames: ["רועי לוין"],
+            day: periodView({ coverageStatus: "full" }),
+            night: periodView({ period: "night", label: "לילה", emoji: "🌙", coverageStatus: "full" }),
+          })}
+        />,
+      );
+
+      const occurrences = screen.getAllByText("רועי לוין");
+      // Once in the emphasized banner, plus once inside each of day/night.
+      expect(occurrences).toHaveLength(3);
+      const rowOccurrences = occurrences.filter((el) => el.closest("li") !== null);
+      expect(rowOccurrences).toHaveLength(2);
+      for (const row of rowOccurrences) {
+        expect(row.closest("li")!.textContent).toContain("כל היום");
+      }
+    });
+  });
+
+  describe('regression: a generic (period-unspecified) אחמ"ש assignment renders as covered, never "חסר אחמ״ש", and is duplicated (badge-tagged) into every day/night section it covers', () => {
+    it("through the REAL production pipeline (Event[] -> buildShiftStaffingOverview -> buildScheduleEveryoneDayViews), a date staffed with real technicians and only a generic supervisor shows full coverage on both day and night, with the generic supervisor's name shown once via the shared all-day banner and once more inside each of the day/night sections it covers, each tagged \"כל היום\"", async () => {
       const { buildShiftSchedule } = await import("@/lib/domain/shiftSchedule");
       const { buildShiftStaffingOverview } = await import("@/lib/readModels/managerEventProjections");
       const { buildScheduleEveryoneDayViews } = await import("@/lib/presentation/scheduleEveryone");
@@ -203,16 +297,16 @@ describe("EveryoneSelectedDayPanel", () => {
 
       render(<EveryoneSelectedDayPanel dayMeta={dayMeta({ date: "2026-08-12" })} dayView={views["2026-08-12"]} />);
 
-      // עילאי שפירא appears EXACTLY ONCE on the whole panel -- via the
-      // single shared generic-assignment line -- never once under "יום"
-      // and again under "לילה" as if it were two separate assignments,
-      // and the missing-supervisor message never appears anywhere.
+      // Once in the emphasized all-day banner, plus once more inside each
+      // of day and night -- never as if it were three independent shifts,
+      // and never missing.
       const occurrences = screen.getAllByText(/עילאי שפירא/);
-      expect(occurrences).toHaveLength(1);
-      // The single occurrence is the shared generic-assignment line, not
-      // an entry in either period's own "אחמ"שים" `<li>` roster -- that
-      // roster only ever holds NATIVE day/night-specific supervisors.
-      expect(occurrences[0].closest("li")).toBeNull();
+      expect(occurrences).toHaveLength(3);
+      const rowOccurrences = occurrences.filter((el) => el.closest("li") !== null);
+      expect(rowOccurrences).toHaveLength(2);
+      for (const row of rowOccurrences) {
+        expect(row.closest("li")!.textContent).toContain("כל היום");
+      }
       expect(screen.queryByText(/חסר אחמ/)).toBeNull();
       expect(screen.getByText("טכנאי יום")).toBeTruthy();
       expect(screen.getByText("טכנאי לילה")).toBeTruthy();
