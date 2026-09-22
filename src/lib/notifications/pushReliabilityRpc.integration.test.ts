@@ -62,10 +62,24 @@ if (!databaseAvailable) {
 
 const MIGRATIONS_DIR = path.join(__dirname, "..", "..", "..", "supabase", "migrations");
 
-function migrationSql(fragment: string): string {
-  const file = fs.readdirSync(MIGRATIONS_DIR).find((name) => name.includes(fragment));
-  if (!file) throw new Error(`No migration matching ${fragment}`);
-  return fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf8");
+/**
+ * Every migration, in the exact order Supabase applies them.
+ *
+ * Deliberately the WHOLE chain rather than a hand-picked list of
+ * fragments. Naming individual files is how this suite used to work, and
+ * it is precisely what let an edit to an already-applied migration go
+ * unnoticed: the schema under test was assembled from whatever those
+ * files happened to say, never from the sequence production actually
+ * follows. `pushMigrationChain.integration.test.ts` additionally proves
+ * the staged production upgrade; this suite just needs the real end
+ * state.
+ */
+function orderedMigrationSql(): string[] {
+  return fs
+    .readdirSync(MIGRATIONS_DIR)
+    .filter((name) => name.endsWith(".sql"))
+    .sort()
+    .map((name) => fs.readFileSync(path.join(MIGRATIONS_DIR, name), "utf8"));
 }
 
 describe.skipIf(!databaseAvailable)("push reliability RPCs -- real PostgreSQL execution", () => {
@@ -167,9 +181,9 @@ describe.skipIf(!databaseAvailable)("push reliability RPCs -- real PostgreSQL ex
       $$;
     `);
 
-    await db.query(migrationSql("create_push_subscriptions"));
-    await db.query(migrationSql("create_notification_engine"));
-    await db.query(migrationSql("push_reliability_and_device_management"));
+    for (const sql of orderedMigrationSql()) {
+      await db.query(sql);
+    }
 
     await db.query("insert into auth.users (id) values ($1), ($2)", [USER_A, USER_B]);
   }, 30_000);

@@ -142,17 +142,56 @@ by is present. `src/lib/notifications/engine/aggregateNotificationRpcHardeningMi
 guards the filenames, their ordering, and the absence of duplicate
 timestamp prefixes, so the same drift cannot be re-introduced silently.
 
+A third instance followed immediately, from the opposite direction:
+`20260921090000_push_reliability_and_device_management.sql` was edited
+IN PLACE (to change `touch_push_subscription` from one argument to five)
+after production had already applied it. Production would never have
+re-run it, so the repository would have expected a five-argument
+function that production did not have. It is restored byte-for-byte to
+its applied version, and the change lives in
+`20260922030413_legacy_push_device_metadata_backfill.sql` instead.
+
 Rules that follow from this:
 
 1. **Never rename or renumber a migration that has been applied
    anywhere.** The filename is the identity.
-2. **Never edit an applied migration's contents.** Add a new migration
-   that alters what it created, the way the hardening one does.
+2. **Never edit an applied migration's contents** — not to fix it, not
+   to extend it, not even while the PR that introduced it is still open
+   and unmerged. "Unmerged" is not the same as "unapplied": confirm
+   against the live database, not against the PR's own description.
+   Add a new migration that alters what it created.
 3. A migration that only changes a property of an existing object should
    use `ALTER …`, not `CREATE OR REPLACE …`. Re-declaring makes the new
    file a second source of truth for a body it does not own, and a later
    edit to the real definition is then either mirrored by hand or
    silently reverted.
+4. **Create new migrations with the CLI** (`npx supabase migration new
+   <name>`) rather than inventing a timestamp by hand. It is what keeps
+   the ordering honest against a history that already exists remotely.
+5. **Changing a function's ARITY needs an explicit `DROP`** first.
+   `CREATE OR REPLACE FUNCTION` with a different argument list creates
+   an OVERLOAD, and two same-named functions make PostgREST's
+   by-argument-name resolution ambiguous ("Could not choose the best
+   candidate function"). Dropping also discards the old grants, so the
+   new signature must re-establish its own.
+
+### Testing the chain, not just the files
+
+`src/lib/notifications/pushMigrationChain.integration.test.ts` exists
+because of rule 2's failure mode specifically. Suites that build a test
+database from a hand-picked list of migration files cannot notice an
+edit to an already-applied one — they assemble whatever those files
+currently say, never the sequence production actually follows. That
+suite applies the real ordered history two ways:
+
+- a FRESH database from the complete chain, and
+- a database at production's current state, then upgraded with only the
+  pending migration,
+
+and asserts both converge on an identical `pg_get_functiondef`. The
+per-stage assertions (one-argument heartbeat before the pending
+migration, five-argument and no overload after) are what would have
+caught the in-place edit.
 
 ## `search_path` convention for functions
 

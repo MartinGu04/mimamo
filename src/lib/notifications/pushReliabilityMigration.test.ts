@@ -56,11 +56,33 @@ describe("push reliability migration -- additive only", () => {
     }
   });
 
-  it("does not edit an already-applied migration -- every other migration file is untouched by this one", () => {
-    // A sanity check on the convention rather than the file: this
-    // migration must be the newest by filename ordering.
+  it("is FROZEN -- it is applied in production, so its contents may never change again", () => {
+    // Supabase records a migration as applied by its timestamp prefix
+    // and never re-runs it, so an in-place edit here is invisible to
+    // production forever and silently drifts the schema away from this
+    // repository. That mistake was made once (the legacy-metadata
+    // backfill was first written into this file) and is what
+    // `20260922030413_legacy_push_device_metadata_backfill.sql` exists
+    // to correct.
+    //
+    // The concrete, checkable consequence: the heartbeat here must stay
+    // the ONE-argument form production actually received. Anything that
+    // needs to change about it belongs in a NEW migration.
+    expect(sql).toMatch(/create or replace function public\.touch_push_subscription\(p_endpoint text\)/i);
+    // Scoped to the heartbeat's own body: `p_device_type` legitimately
+    // appears in `upsert_push_subscription_v2`, which DID ship here.
+    const heartbeat = sql.slice(sql.indexOf("create or replace function public.touch_push_subscription("));
+    const heartbeatDefinition = heartbeat.slice(0, heartbeat.indexOf("$$;"));
+    expect(heartbeatDefinition).not.toMatch(/p_device_type/);
+    expect(heartbeatDefinition).not.toMatch(/coalesce\(device_/i);
+    expect(executableSql).not.toMatch(/drop function/i);
+  });
+
+  it("is no longer the newest migration -- follow-up work lands in later files, never back in this one", () => {
     const files = fs.readdirSync(MIGRATIONS_DIR).filter((name) => name.endsWith(".sql")).sort();
-    expect(files.at(-1)).toMatch(/push_reliability_and_device_management/);
+    const index = files.indexOf("20260921090000_push_reliability_and_device_management.sql");
+    expect(index).toBeGreaterThanOrEqual(0);
+    expect(index).toBeLessThan(files.length - 1);
   });
 });
 
@@ -183,11 +205,18 @@ describe("push reliability migration -- SECURITY DEFINER hardening", () => {
   });
 });
 
-describe("push reliability migration -- the heartbeat can only ever do two things", () => {
+describe("push reliability migration -- the heartbeat AS DEPLOYED", () => {
+  // The single-argument form production is running right now. The
+  // descriptor-backfill variant lives in the later migration and is
+  // guarded by `legacyPushDeviceMetadataBackfillMigration.test.ts`.
   const heartbeatBody = sql.slice(sql.indexOf("create or replace function public.touch_push_subscription("));
   const heartbeatStatement = heartbeatBody.slice(0, heartbeatBody.indexOf("get diagnostics"));
 
-  it("bumps last_seen_at, only for the caller's own NON-revoked row", () => {
+  it("takes exactly one argument", () => {
+    expect(sql).toMatch(/create or replace function public\.touch_push_subscription\(p_endpoint text\)\s*\nreturns boolean/i);
+  });
+
+  it("bumps last_seen_at and nothing else, only for the caller's own NON-revoked row", () => {
     expect(heartbeatStatement).toMatch(/set last_seen_at = now\(\)/i);
     expect(heartbeatStatement).toMatch(/user_id = auth\.uid\(\)/i);
     expect(heartbeatStatement).toMatch(/revoked_at is null/i);
@@ -197,54 +226,11 @@ describe("push reliability migration -- the heartbeat can only ever do two thing
     expect(heartbeatStatement).not.toMatch(/insert into/i);
     expect(heartbeatStatement).not.toMatch(/set user_id/i);
     expect(heartbeatStatement).not.toMatch(/revoked_at\s*=\s*null/i);
-    expect(heartbeatStatement).not.toMatch(/revoked_reason\s*=/i);
   });
 
-  it("backfills legacy metadata with coalesce(<column>, <argument>) -- the argument order that makes an existing value win", () => {
-    // Reversed (`coalesce(<argument>, <column>)`) this would silently
-    // become an overwrite API for anything a client chose to send.
-    for (const column of ["device_type", "device_platform", "device_browser", "device_standalone"]) {
-      expect(heartbeatStatement).toMatch(new RegExp(`${column}\\s*=\\s*coalesce\\(${column},`, "i"));
-    }
-  });
-
-  it("touches NOTHING else on the row -- not the endpoint, not the keys, not device_ref", () => {
-    // Every column assigned inside the UPDATE's SET clause, read from
-    // the statement itself rather than trusted from the diff.
-    const setClause = heartbeatStatement.slice(
-      heartbeatStatement.indexOf("update public.push_subscriptions"),
-      heartbeatStatement.indexOf("where endpoint = p_endpoint"),
-    );
-    const assignments = (setClause.match(/^\s*(?:set\s+)?(\w+)\s*=/gim) ?? []).map((line) =>
-      line.trim().replace(/^set\s+/i, "").replace(/\s*=$/, ""),
-    );
-    expect(new Set(assignments)).toEqual(
-      new Set(["last_seen_at", "device_type", "device_platform", "device_browser", "device_standalone"]),
-    );
-  });
-
-  it("normalizes the incoming descriptor against the same closed enums as an explicit enable", () => {
-    expect(heartbeatStatement).toMatch(
-      /v_type := case when p_device_type in \('phone', 'tablet', 'desktop'\) then p_device_type else null end/i,
-    );
-    expect(heartbeatStatement).toMatch(/v_platform := case/i);
-    expect(heartbeatStatement).toMatch(/v_browser := case/i);
-  });
-
-  it("drops the earlier single-argument shape rather than leaving a PostgREST-ambiguous overload behind", () => {
-    expect(executableSql).toMatch(/drop function if exists public\.touch_push_subscription\(text\);/i);
-    const grantLines = executableSql.match(/^grant execute on function public\.touch_push_subscription.*$/gim) ?? [];
-    expect(grantLines).toHaveLength(1);
-    expect(grantLines[0]).toMatch(/\(text, text, text, text, boolean\)/i);
-  });
-
-  it("introduces no age-based cleanup anywhere in the migration", () => {
-    // A stale `last_seen_at` never proves a device is dead -- someone
-    // may use a second PC only occasionally -- so nothing here may
-    // delete or revoke on age.
-    expect(executableSql).not.toMatch(/interval\s+'/i);
-    expect(executableSql).not.toMatch(/last_seen_at\s*<[^=]/i);
-    expect(executableSql).not.toMatch(/delete\s+from\s+public\.push_subscriptions/i);
+  it("revokes then grants EXECUTE for the one-argument signature only", () => {
+    expect(sql).toMatch(/revoke all on function public\.touch_push_subscription\(text\) from public/i);
+    expect(sql).toMatch(/grant execute on function public\.touch_push_subscription\(text\) to authenticated/i);
   });
 });
 

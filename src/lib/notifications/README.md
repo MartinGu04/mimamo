@@ -47,7 +47,9 @@ rather than beside them. Five connected pieces, all additive:
   revive anything. Called once per app open, and at most once per 30
   minutes of foreground activity -- no timer, no polling
   (`components/pwa/PushDeviceProvider.tsx`).
-- **Legacy metadata backfill**, riding on that same heartbeat. Rows that
+- **Legacy metadata backfill**
+  (`supabase/migrations/20260922030413_legacy_push_device_metadata_backfill.sql`),
+  riding on that same heartbeat. Rows that
   predate device metadata have no descriptor, so they can only be called
   "מכשיר". They are repaired progressively and naturally: when that exact
   installation is opened again, its heartbeat carries the coarse

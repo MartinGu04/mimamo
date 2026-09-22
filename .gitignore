@@ -61,3 +61,7 @@ graphify-out/reflections/
 graphify-out/.graphify_*
 !graphify-out/.graphify_labels.json
 !graphify-out/.graphify_labels.json.sig
+
+# Supabase CLI scratch state (`npx supabase migration new`, version checks).
+# Machine-local only -- the migrations themselves ARE committed.
+supabase/.temp/

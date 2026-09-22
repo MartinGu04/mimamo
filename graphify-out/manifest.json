@@ -4344,9 +4344,9 @@
     "semantic_hash": ""
   },
   "src/lib/notifications/README.md": {
-    "mtime": 1790026361.4101098,
-    "seen": 1790026582.410866,
-    "ast_hash": "f28c98ba5b316b4b623a3cc143640169",
+    "mtime": 1790046811.4564466,
+    "seen": 1790047193.363164,
+    "ast_hash": "6734d15891a25febc5097b6543aa7d49",
     "semantic_hash": ""
   },
   "src/lib/notifications/engine/README.md": {
@@ -4404,9 +4404,9 @@
     "semantic_hash": "873e3769327a5b29ff38180eecc31714"
   },
   "supabase/README.md": {
-    "mtime": 1790024653.3174994,
-    "seen": 1790024924.0560262,
-    "ast_hash": "a5f2d6293359768a44df0f460b939091",
+    "mtime": 1790046811.4557369,
+    "seen": 1790047193.3631833,
+    "ast_hash": "4a85f88b39b1cd61d524b925a383c9af",
     "semantic_hash": ""
   },
   "public/brand/org-logo-strategic-communication.webp": {
@@ -5922,15 +5922,15 @@
     "semantic_hash": ""
   },
   "src/lib/notifications/pushReliabilityMigration.test.ts": {
-    "mtime": 1790025959.0057511,
-    "seen": 1790026582.4103425,
-    "ast_hash": "6f838b1feb6de3c0209c2b3bf42d54f3",
+    "mtime": 1790046358.8114321,
+    "seen": 1790047193.3624473,
+    "ast_hash": "b59de79ae36f9db200cb71c10ebc621f",
     "semantic_hash": ""
   },
   "src/lib/notifications/pushReliabilityRpc.integration.test.ts": {
-    "mtime": 1790026281.2390468,
-    "seen": 1790026582.4103436,
-    "ast_hash": "61c729eba1bd61252076d38388f30439",
+    "mtime": 1790046479.984392,
+    "seen": 1790047193.3624494,
+    "ast_hash": "3655adc29eaddf2035e2fde5f36815ac",
     "semantic_hash": ""
   },
   "src/lib/notifications/receiptStore.ts": {
@@ -5976,9 +5976,9 @@
     "semantic_hash": ""
   },
   "supabase/migrations/20260921090000_push_reliability_and_device_management.sql": {
-    "mtime": 1790026041.338098,
-    "seen": 1790026582.4108107,
-    "ast_hash": "c4356bc77367390e1a3bc58d9f1ed90f",
+    "mtime": 1790046247.0756357,
+    "seen": 1790047193.3630612,
+    "ast_hash": "479d73b0ac9f6b30b8b26aa9e1ebcd7c",
     "semantic_hash": ""
   },
   ".claude/skills/israeli-accessibility-compliance/SKILL.md": {
@@ -6021,6 +6021,24 @@
     "mtime": 1790024123.9095116,
     "seen": 1790024924.0559783,
     "ast_hash": "c02d9924d64d7a31cd4dfabf00583685",
+    "semantic_hash": ""
+  },
+  "src/lib/notifications/legacyPushDeviceMetadataBackfillMigration.test.ts": {
+    "mtime": 1790046397.647634,
+    "seen": 1790047193.3624341,
+    "ast_hash": "1498267560cd53ad6dc2ce0d3a405bdc",
+    "semantic_hash": ""
+  },
+  "src/lib/notifications/pushMigrationChain.integration.test.ts": {
+    "mtime": 1790046457.0916336,
+    "seen": 1790047193.3624418,
+    "ast_hash": "6c3780ea2808ab0ad6b55a5ce907834a",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260922030413_legacy_push_device_metadata_backfill.sql": {
+    "mtime": 1790046286.5716352,
+    "seen": 1790047193.363063,
+    "ast_hash": "9e8f9831f87f18aabaaf54a267f914c3",
     "semantic_hash": ""
   }
 }
