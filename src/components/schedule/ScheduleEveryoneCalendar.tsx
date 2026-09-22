@@ -40,7 +40,7 @@ export function ScheduleEveryoneCalendar({ grid, days, dayViews, defaultSelected
 
   return (
     <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-6">
-      <Panel variant="panel" glass="subtle">
+      <Panel variant="panel" glass="subtle" className="calendar-surface">
         <EveryoneMonthGrid
           grid={grid}
           days={days}

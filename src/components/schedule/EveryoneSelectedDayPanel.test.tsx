@@ -109,28 +109,28 @@ describe("EveryoneSelectedDayPanel", () => {
           dayMeta={dayMeta()}
           dayView={dayView({
             day: periodView({
-              technicians: { people: [{ key: "p1", name: "טכנאי יום", tentative: false }], status: "full", message: null },
-              supervisors: { people: [{ key: "p2", name: 'אחמ"ש יום', tentative: false }], status: "full", message: null },
+              technicians: { people: [{ key: "p1", name: "איתן וסרמן", tentative: false }], status: "full", message: null },
+              supervisors: { people: [{ key: "p2", name: "רועי לוין", tentative: false }], status: "full", message: null },
               coverageStatus: "full",
             }),
             night: periodView({
               period: "night",
               label: "לילה",
               emoji: "🌙",
-              technicians: { people: [{ key: "p3", name: "טכנאי לילה", tentative: false }], status: "full", message: null },
-              supervisors: { people: [{ key: "p4", name: 'אחמ"ש לילה', tentative: false }], status: "full", message: null },
+              technicians: { people: [{ key: "p3", name: "איתי אוליר", tentative: false }], status: "full", message: null },
+              supervisors: { people: [{ key: "p4", name: "דניאל כהן", tentative: false }], status: "full", message: null },
               coverageStatus: "full",
             }),
           })}
         />,
       );
 
-      const dayNames = findRow('אחמ"ש יום');
-      const dayTechNames = findRow("טכנאי יום");
+      const dayNames = findRow("רועי לוין");
+      const dayTechNames = findRow("איתן וסרמן");
       expect(dayNames.compareDocumentPosition(dayTechNames) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-      const nightNames = findRow('אחמ"ש לילה');
-      const nightTechNames = findRow("טכנאי לילה");
+      const nightNames = findRow("דניאל כהן");
+      const nightTechNames = findRow("איתי אוליר");
       expect(nightNames.compareDocumentPosition(nightTechNames) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
@@ -253,6 +253,34 @@ describe("EveryoneSelectedDayPanel", () => {
         expect(row.closest("li")!.textContent).toContain("כל היום");
       }
     });
+
+    it("renders the all-day row BEFORE the period-specific row within a section, so the broader assignment never reads as secondary, and labels the period-specific row with its own period", () => {
+      render(
+        <EveryoneSelectedDayPanel
+          dayMeta={dayMeta()}
+          dayView={dayView({
+            genericSupervisorNames: ["רועי לוין"],
+            night: periodView({
+              period: "night",
+              label: "לילה",
+              emoji: "🌙",
+              supervisors: { people: [{ key: "p1", name: "איתי אוליר", tentative: false }], status: "full", message: null },
+              coverageStatus: "full",
+            }),
+          })}
+        />,
+      );
+
+      // "רועי לוין" also appears in the emphasized all-day banner (not a
+      // row), so pick the LI-based occurrence specifically rather than
+      // assuming uniqueness the way `findRow` does.
+      const allDayRow = screen.getAllByText("רועי לוין").find((el) => el.closest("li"))!.closest("li")!;
+      const periodRow = findRow("איתי אוליר");
+      expect(allDayRow.compareDocumentPosition(periodRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(allDayRow.textContent).toContain("כל היום");
+      expect(allDayRow.textContent).not.toContain("לילה");
+      expect(periodRow.textContent).toContain("לילה");
+    });
   });
 
   describe('regression: a generic (period-unspecified) אחמ"ש assignment renders as covered, never "חסר אחמ״ש", and is duplicated (badge-tagged) into every day/night section it covers', () => {
@@ -287,8 +315,8 @@ describe("EveryoneSelectedDayPanel", () => {
       }
 
       const events = [
-        event({ personId: "p_tech_day", personName: "טכנאי יום", role: "technician", period: "day" }),
-        event({ personId: "p_tech_night", personName: "טכנאי לילה", role: "technician", period: "night" }),
+        event({ personId: "p_tech_day", personName: "איתן וסרמן", role: "technician", period: "day" }),
+        event({ personId: "p_tech_night", personName: "איתי אוליר", role: "technician", period: "night" }),
         event({ personId: "p_ilay", personName: "עילאי שפירא", role: "supervisor", period: "unspecified" }),
       ];
 
@@ -308,8 +336,8 @@ describe("EveryoneSelectedDayPanel", () => {
         expect(row.closest("li")!.textContent).toContain("כל היום");
       }
       expect(screen.queryByText(/חסר אחמ/)).toBeNull();
-      expect(screen.getByText("טכנאי יום")).toBeTruthy();
-      expect(screen.getByText("טכנאי לילה")).toBeTruthy();
+      expect(screen.getByText("איתן וסרמן")).toBeTruthy();
+      expect(screen.getByText("איתי אוליר")).toBeTruthy();
     });
   });
 

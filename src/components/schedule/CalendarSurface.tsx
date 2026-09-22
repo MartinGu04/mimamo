@@ -60,11 +60,17 @@ export function dayNumberFromDate(date: string): number {
  * row height, and the day number's own placement alone, the same way a
  * native phone calendar has no cell gridlines. Identical across every
  * calendar surface.
+ *
+ * Uses the calendar's own `--calendar-cell-border` token (light mode: a
+ * distinctly stronger steel-gray than the app's ordinary `--border`, so the
+ * grid lines stay legible against the calendar's own strengthened tray
+ * surface; dark mode: `--border`, unchanged) rather than `border-border`
+ * directly -- see `globals.css`'s calendar-surface tokens.
  */
 export function cellBorderClasses(columnIndex: number, isFirstRow: boolean): string {
   const start = columnIndex === 0 ? "sm:border-s" : "";
   const top = isFirstRow ? "sm:border-t" : "";
-  return `sm:border-b sm:border-e sm:border-border ${start} ${top}`.trim();
+  return `sm:border-b sm:border-e sm:border-[var(--calendar-cell-border)] ${start} ${top}`.trim();
 }
 
 /**
@@ -148,7 +154,7 @@ export function OverflowChip({ count, className = "" }: { count: number; classNa
 /** The shared weekday-header row (week-number gutter spacer + 7 short weekday labels) sitting above every calendar surface's grid body. */
 export function CalendarWeekdayHeader() {
   return (
-    <div className="flex items-stretch gap-1 border-b border-border pb-2 sm:gap-1.5">
+    <div className="flex items-stretch gap-1 border-b border-[var(--calendar-cell-border)] pb-2 sm:gap-1.5">
       <span aria-hidden="true" className="w-5 shrink-0 sm:w-6" />
       <div className="grid flex-1 grid-cols-7 gap-1 text-center text-xs font-medium sm:gap-1.5 sm:text-sm">
         {SHORT_WEEKDAY_LABELS.map((label, index) => (
@@ -251,6 +257,14 @@ interface CalendarDayCellProps {
  * outer cell geometry and interaction states can never diverge. Only the
  * content area's children (and the small header-extra slot) differ per
  * surface.
+ *
+ * An ordinary (non-weekend, non-selected) cell sits on `--calendar-cell-bg`
+ * -- a real, opaque white chip in light mode, so it reads clearly against
+ * the calendar container's own strengthened `--calendar-surface` tray
+ * (transparent in dark mode, unchanged there). Weekend/selected keep their
+ * own existing tint/ring, layered on top of that same tray -- selected
+ * stays the strongest state precisely because it's the only one still
+ * combining a color shift AND a ring.
  */
 export function CalendarDayCell({
   date,
@@ -278,7 +292,7 @@ export function CalendarDayCell({
           ? "bg-overlay-strong ring-2 ring-inset ring-primary/40"
           : isWeekend
             ? "bg-weekend-tint hover:bg-overlay-soft"
-            : "hover:bg-overlay-soft"
+            : "bg-[var(--calendar-cell-bg)] hover:bg-overlay-soft"
       }`}
     >
       <div className={`flex h-full flex-col gap-0.5 ${isPast ? "opacity-60" : ""}`}>

@@ -28,23 +28,29 @@ const EMPTY_ROLE: ScheduleRoleStaffingView = { people: [], status: "not_evaluabl
  * date's own all-day (generic, period-unspecified) assignment shown again
  * here for this specific period -- see the panel's own top-level doc
  * comment for why a little duplication beats a Day/Night section that
- * looks unstaffed.
+ * looks unstaffed. A non-all-day row instead carries `periodLabel` (e.g.
+ * "לילה") -- it genuinely IS that period's own native assignment, so the
+ * row can say so precisely (never on the all-day row, which is not
+ * period-specific at all).
  */
 function AssignmentRow({
   role,
   name,
   tentative = false,
   allDay = false,
+  periodLabel,
 }: {
   role: RoleName;
   name: string;
   tentative?: boolean;
   allDay?: boolean;
+  periodLabel?: string;
 }) {
+  const label = allDay || !periodLabel ? ROLE_LABEL[role] : `${ROLE_LABEL[role]} ${periodLabel}`;
   return (
     <li className="flex flex-wrap items-center gap-1.5 text-sm">
       <span aria-hidden="true">{ROLE_EMOJI[role]}</span>
-      <span className="font-medium text-muted-2">{ROLE_LABEL[role]}</span>
+      <span className="font-medium text-muted-2">{label}</span>
       <span aria-hidden="true" className="text-muted-2">
         —
       </span>
@@ -101,13 +107,26 @@ function RoleNote({
   );
 }
 
-/** Every row this ONE role contributes to a period: its real people (each tagged tentative if applicable), then the date's all-day assignment for this same role (if any, tagged "כל היום"), then its coverage note (if not fully covered) -- never a bare label with nothing under it. */
-function roleRows(role: RoleName, staffing: ScheduleRoleStaffingView, allDayNames: string[]): ReactNode[] {
-  const rows: ReactNode[] = staffing.people.map((person) => (
-    <AssignmentRow key={person.key} role={role} name={person.name} tentative={person.tentative} />
+/**
+ * Every row this ONE role contributes to a period: the date's all-day
+ * assignment for this role FIRST (if any, tagged "כל היום") -- it's the
+ * broader assignment, so it leads rather than trailing behind a period-
+ * specific person and reading as secondary -- then its real, period-native
+ * people (each carrying this period's own label, e.g. "אחמ"ש לילה", and
+ * tagged tentative if applicable), then its coverage note (if not fully
+ * covered) -- never a bare label with nothing under it.
+ */
+function roleRows(
+  role: RoleName,
+  staffing: ScheduleRoleStaffingView,
+  allDayNames: string[],
+  periodLabel: string,
+): ReactNode[] {
+  const rows: ReactNode[] = allDayNames.map((name, index) => (
+    <AssignmentRow key={`${role}-allday-${index}`} role={role} name={name} allDay />
   ));
-  allDayNames.forEach((name, index) => {
-    rows.push(<AssignmentRow key={`${role}-allday-${index}`} role={role} name={name} allDay />);
+  staffing.people.forEach((person) => {
+    rows.push(<AssignmentRow key={person.key} role={role} name={person.name} tentative={person.tentative} periodLabel={periodLabel} />);
   });
   if (staffing.message) {
     rows.push(<RoleNote key={`${role}-note`} role={role} message={staffing.message} status={staffing.status} />);
@@ -158,8 +177,8 @@ function PeriodDetail({
   });
 
   const rows: ReactNode[] = [
-    ...roleRows("supervisor", supervisors, genericForSupervisor),
-    ...roleRows("technician", technicians, genericForTechnician),
+    ...roleRows("supervisor", supervisors, genericForSupervisor, title),
+    ...roleRows("technician", technicians, genericForTechnician, title),
     ...shadowSupervisorNames.map((name, index) => (
       <ShadowRow key={`shadow-supervisor-${index}`} role="supervisor" name={name} />
     )),

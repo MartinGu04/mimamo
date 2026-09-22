@@ -138,11 +138,20 @@ function AllDayBanner({ role, names }: { role: RoleName; names: string[] }) {
   );
 }
 
-/** Every row this ONE role contributes to a period: its real people, then the date's all-day assignment for this same role (if any, tagged "כל היום"), then its coverage note (if not fully covered) -- never a bare label with nothing under it. */
+/**
+ * Every row this ONE role contributes to a period: the date's all-day
+ * assignment for this role FIRST (if any, tagged "כל היום") -- it's the
+ * broader assignment, so it leads rather than trailing behind a period-
+ * specific person and reading as secondary -- then its real, period-native
+ * people, then its coverage note (if not fully covered) -- never a bare
+ * label with nothing under it.
+ */
 function roleRows(role: RoleName, names: string[], coverage: ManagerRoleCoverageRowView, allDayNames: string[]): ReactNode[] {
-  const rows: ReactNode[] = names.map((name, index) => <AssignmentRow key={`${role}-${index}`} role={role} name={name} />);
-  allDayNames.forEach((name, index) => {
-    rows.push(<AssignmentRow key={`${role}-allday-${index}`} role={role} name={name} allDay />);
+  const rows: ReactNode[] = allDayNames.map((name, index) => (
+    <AssignmentRow key={`${role}-allday-${index}`} role={role} name={name} allDay />
+  ));
+  names.forEach((name, index) => {
+    rows.push(<AssignmentRow key={`${role}-${index}`} role={role} name={name} />);
   });
   if (coverage.message) {
     rows.push(<RoleNote key={`${role}-note`} role={role} coverage={coverage} />);

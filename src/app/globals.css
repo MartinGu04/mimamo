@@ -54,6 +54,34 @@
      the day-number badge -- and always wins). */
   --weekend-tint: rgba(24, 33, 43, 0.04);
 
+  /* Calendar surface hierarchy (shift-personnel redesign, light-mode
+     contrast pass) -- the calendar's own container/cells/borders get a
+     distinctly stronger, cool blue-gray treatment in LIGHT mode only, so
+     the calendar reads as its own tray sitting on the page instead of
+     blending into it (the ordinary `--background`/`--surface-1` pair is
+     deliberately close, by design, everywhere else in the app). Dark mode
+     is intentionally excluded from every token below -- see the dark
+     blocks further down, which re-point these back at the EXACT SAME
+     formula `.glass-subtle` itself already resolves to, so the calendar's
+     dark-mode look stays pixel-identical to before this pass (dark mode
+     already gets its depth from the SATCOM-canvas glass blur, which this
+     never touches). Consumed by the `.glass-subtle.calendar-surface`
+     override near the bottom of this file, and by `CalendarSurface.tsx`'s
+     cell/border classes. */
+  --calendar-surface: #e3e9ee;
+  --calendar-surface-border: #a9b9c8;
+  --calendar-surface-bg-image: none;
+  --calendar-surface-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.7),
+    0 0 0 1px var(--calendar-surface-border),
+    0 16px 32px -18px rgba(31, 45, 61, 0.25),
+    0 4px 10px -4px rgba(31, 45, 61, 0.12);
+  /* Cells sit as light chips inside the tray above -- opaque white, a real
+     step lighter than `--calendar-surface`, so the grid itself is
+     immediately readable rather than one flat wash. */
+  --calendar-cell-bg: #ffffff;
+  --calendar-cell-border: #c3cfda;
+
   --card: var(--surface-1);
   --card-foreground: var(--foreground);
 
@@ -202,6 +230,21 @@
 
     --weekend-tint: rgba(255, 255, 255, 0.05);
 
+    /* Calendar surface hierarchy: re-point at the EXACT SAME formula
+       `.glass-subtle` itself already resolves to in this theme (every
+       token referenced here is already correct for dark mode on its own),
+       so the light-mode contrast pass above never changes the calendar's
+       dark-mode appearance. */
+    --calendar-surface: rgb(var(--glass-base) / calc(var(--glass-alpha-subtle) + var(--glass-alpha-bump)));
+    --calendar-surface-border: transparent;
+    --calendar-surface-bg-image: linear-gradient(160deg, var(--glass-env-tint-subtle), transparent 62%);
+    --calendar-surface-shadow:
+      inset 0 1px 0 0 var(--glass-highlight-subtle),
+      0 0 0 1px var(--glass-line-subtle),
+      var(--glass-depth-subtle);
+    --calendar-cell-bg: transparent;
+    --calendar-cell-border: var(--border);
+
     --sidebar: #111b25;
     --sidebar-foreground: #edf1f4;
     --sidebar-muted: #9aa6b2;
@@ -322,6 +365,20 @@
   --overlay-strong: rgba(255, 255, 255, 0.1);
 
   --weekend-tint: rgba(255, 255, 255, 0.05);
+
+  /* Calendar surface hierarchy: identical to the `prefers-color-scheme:
+     dark` block above -- see its comment (an explicit `data-theme="dark"`
+     choice must not depend on the system preference, same reason every
+     other token here is duplicated). */
+  --calendar-surface: rgb(var(--glass-base) / calc(var(--glass-alpha-subtle) + var(--glass-alpha-bump)));
+  --calendar-surface-border: transparent;
+  --calendar-surface-bg-image: linear-gradient(160deg, var(--glass-env-tint-subtle), transparent 62%);
+  --calendar-surface-shadow:
+    inset 0 1px 0 0 var(--glass-highlight-subtle),
+    0 0 0 1px var(--glass-line-subtle),
+    var(--glass-depth-subtle);
+  --calendar-cell-bg: transparent;
+  --calendar-cell-border: var(--border);
 
   --sidebar: #111b25;
   --sidebar-foreground: #edf1f4;
@@ -917,6 +974,25 @@ body {
       inset 0 1px 0 0 var(--glass-highlight),
       0 0 0 var(--glass-ring-width, 1px) var(--glass-ring-color, var(--glass-line)),
       var(--glass-depth);
+  }
+
+  /*
+   * The calendar's own container (`ScheduleCalendar`/`ScheduleEveryoneCalendar`
+   * mark their month-grid `Panel` with this class) -- a distinctly stronger,
+   * cool-gray tray in LIGHT mode, so the calendar reads as its own surface
+   * rather than blending into the page, while staying pixel-identical to the
+   * plain `.glass-subtle` above in DARK mode (see the theme-aware
+   * `--calendar-surface-*` tokens at the top of this file for how). A
+   * two-class selector so this reliably wins the cascade over the bare
+   * `.glass-subtle` rule above regardless of source order, without
+   * `!important` -- and so it only ever affects a surface explicitly opted
+   * in, never every other `.glass-subtle` list/table/manager-tooling panel
+   * in the app.
+   */
+  .glass-subtle.calendar-surface {
+    background-color: var(--calendar-surface);
+    background-image: var(--calendar-surface-bg-image);
+    box-shadow: var(--calendar-surface-shadow);
   }
 
   /* A glass surface that also carries a SELECTION/accent ring.
