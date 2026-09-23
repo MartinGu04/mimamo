@@ -73,6 +73,11 @@ function scheduleModel(overrides: Partial<ScheduleReadModel> = {}): ScheduleRead
   };
 }
 
+// Both fixture people carry at least one item on 2026-08-11 -- the default
+// team-week view is `?people=active` (see `lib/presentation/teamWeekFilter.ts`),
+// so a genuinely empty-celled fixture would have BOTH people silently
+// filtered out of the matrix by default, breaking every test below that
+// isn't specifically exercising the active/all filter itself.
 function teamWeekView(overrides: Partial<ScheduleTeamWeekView> = {}): ScheduleTeamWeekView {
   return {
     weekStart: "2026-08-09",
@@ -83,16 +88,44 @@ function teamWeekView(overrides: Partial<ScheduleTeamWeekView> = {}): ScheduleTe
       { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" },
     ],
     cells: {
-      p_eitan: Object.fromEntries(
-        ["2026-08-09", "2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13", "2026-08-14", "2026-08-15"].map(
-          (date) => [date, []],
+      p_eitan: {
+        ...Object.fromEntries(
+          ["2026-08-09", "2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13", "2026-08-14", "2026-08-15"].map(
+            (date) => [date, []],
+          ),
         ),
-      ),
-      p_daniel: Object.fromEntries(
-        ["2026-08-09", "2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13", "2026-08-14", "2026-08-15"].map(
-          (date) => [date, []],
+        "2026-08-11": [
+          {
+            key: "eitan-1",
+            title: 'אחמ"ש יום',
+            category: "shift" as const,
+            period: "day" as const,
+            dutyFamily: null,
+            absenceKind: null,
+            tentative: false,
+            shadow: false,
+          },
+        ],
+      },
+      p_daniel: {
+        ...Object.fromEntries(
+          ["2026-08-09", "2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13", "2026-08-14", "2026-08-15"].map(
+            (date) => [date, []],
+          ),
         ),
-      ),
+        "2026-08-11": [
+          {
+            key: "daniel-1",
+            title: "טכנאי יום",
+            category: "shift" as const,
+            period: "day" as const,
+            dutyFamily: null,
+            absenceKind: null,
+            tentative: false,
+            shadow: false,
+          },
+        ],
+      },
     },
     ...overrides,
   };

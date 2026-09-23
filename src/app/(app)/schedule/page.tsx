@@ -11,6 +11,7 @@ import { ScheduleHeader } from "@/components/schedule/ScheduleHeader";
 import { ScheduleManagerSelector } from "@/components/schedule/ScheduleManagerSelector";
 import { TeamWeekMatrix } from "@/components/schedule/TeamWeekMatrix";
 import { TeamWeekNav } from "@/components/schedule/TeamWeekNav";
+import { TeamWeekPeopleFilterSwitch } from "@/components/schedule/TeamWeekPeopleFilterSwitch";
 import type { DayMeta } from "@/components/schedule/types";
 import { DataFreshnessStatus } from "@/components/ui/DataFreshnessStatus";
 import { Panel } from "@/components/ui/Panel";
@@ -29,6 +30,7 @@ import { formatHebrewCalendarDate, formatHebrewMonthRange, getHolidayContext } f
 import { formatHebrewMonthYear, formatHebrewWeekRangeLabel, formatHebrewWeekdayAndDate } from "@/lib/presentation/hebrewDate";
 import { parseEmergencyScheduleRangeParam, type EmergencyScheduleRangeKey } from "@/lib/presentation/emergencyAgenda";
 import { buildScheduleEveryoneDayViews } from "@/lib/presentation/scheduleEveryone";
+import { parseTeamWeekPeopleFilter, type TeamWeekPeopleFilter } from "@/lib/presentation/teamWeekFilter";
 import { getRequestSchedule } from "@/lib/readModels/getRequestSchedule";
 import type { EmergencyScheduleReadModel } from "@/lib/readModels/emergencyScheduleTypes";
 import type { SchedulePerspective } from "@/lib/readModels/scheduleTypes";
@@ -62,6 +64,8 @@ interface SchedulePageProps {
     view?: SearchParamValue;
     /** "YYYY-MM-DD" week anchor for the team-week matrix -- see `ScheduleParams.rawWeek`. Ignored outside `view=team-week`. */
     week?: SearchParamValue;
+    /** "active" (default) | "all" -- the team-week matrix's people-visibility filter. See `parseTeamWeekPeopleFilter`. Ignored outside `view=team-week`. */
+    people?: SearchParamValue;
   }>;
 }
 
@@ -112,6 +116,19 @@ function scheduleEveryoneViewHref(view: ScheduleEveryoneView, weekStart: string 
 }
 
 /**
+ * Builds a team-week matrix URL with a specific `?people=` filter, preserving
+ * `person=all&view=team-week` and the currently displayed `week` (when one is
+ * anchored) -- the same "only ever touch the ONE param this control owns"
+ * convention `scheduleEveryoneViewHref`/`scheduleHref` already establish.
+ */
+function teamWeekPeopleFilterHref(filter: TeamWeekPeopleFilter, weekStart: string | null): string {
+  const params = new URLSearchParams({ person: "all", view: "team-week" });
+  if (weekStart) params.set("week", weekStart);
+  params.set("people", filter);
+  return `/schedule?${params.toString()}`;
+}
+
+/**
  * "הלוח שלי" -- the personal monthly calendar (formerly "לוח משמרות", a
  * shift-only calendar; see `CalendarGrid`/`SelectedDayPanel`/
  * `calendarEvents` for the shift+duty+absence+holiday widening, and
@@ -154,6 +171,9 @@ export default async function SchedulePage({ searchParams }: SchedulePageProps) 
   // this is a strict equality check, never a fuzzy parse, so there is
   // nothing here that could crash or fall through unexpectedly.
   const requestedTeamWeekView = firstParam(params.view) === "team-week";
+  // Presentation-only: `parseTeamWeekPeopleFilter` already falls back to
+  // "active" for anything missing/unrecognized -- see that function.
+  const peopleFilter = parseTeamWeekPeopleFilter(firstParam(params.people) ?? null);
 
   // `?date=` is self-sufficient: when a valid date is supplied and no
   // explicit `?month=` overrides it, the displayed/requested month is
@@ -235,58 +255,68 @@ export default async function SchedulePage({ searchParams }: SchedulePageProps) 
     ? scheduleEveryoneViewHref("team-week", getNextOperationalWeek(model.teamWeek).weekStart)
     : "/schedule";
   const todayWeekHref = scheduleEveryoneViewHref("team-week", null);
+  const activePeopleFilterHref = teamWeekPeopleFilterHref("active", model.teamWeek?.weekStart ?? null);
+  const allPeopleFilterHref = teamWeekPeopleFilterHref("all", model.teamWeek?.weekStart ?? null);
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <ScheduleHeader
-          monthLabel={isTeamWeekView ? teamWeekLabel : monthLabel}
-          monthRangeSubtitle={isTeamWeekView ? "תצוגת מטריצה שבועית" : formatHebrewMonthRange(displayMonthKey.year, displayMonthKey.month)}
-        />
-        {isTeamWeekView ? (
-          <TeamWeekNav
-            prevHref={prevWeekHref}
-            nextHref={nextWeekHref}
-            todayHref={todayWeekHref}
-            isOnCurrentWeek={isOnCurrentWeek}
-            weekLabel={teamWeekLabel}
-          />
-        ) : (
-          <MonthNav
-            prevHref={prevHref}
-            nextHref={nextHref}
-            todayHref={todayHref}
-            isOnCurrentMonth={isOnCurrentMonth}
-            monthLabel={monthLabel}
-          />
-        )}
-      </div>
+      <ScheduleHeader
+        monthLabel={isTeamWeekView ? teamWeekLabel : monthLabel}
+        monthRangeSubtitle={isTeamWeekView ? "תצוגת מטריצה שבועית" : formatHebrewMonthRange(displayMonthKey.year, displayMonthKey.month)}
+      />
 
-      {model.manager ? (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
-            <ScheduleManagerSelector
-              managerName={model.manager.name}
-              people={model.roster}
-              perspective={model.perspective}
-              selectedPersonId={model.selectedPersonId}
-            />
-            {model.perspective === "all" ? (
-              <ScheduleEveryoneViewSwitch
-                activeView={isTeamWeekView ? "team-week" : "month"}
-                monthHref={scheduleEveryoneViewHref("month", null)}
-                teamWeekHref={scheduleEveryoneViewHref("team-week", null)}
+      {/* One consolidated toolbar: perspective selector, view switch, people
+          filter, and date navigation all read as one set of controls, with
+          data freshness visually separated but still in this same region. */}
+      <Panel variant="inline" className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-3">
+          {model.manager ? (
+            <>
+              <ScheduleManagerSelector
+                managerName={model.manager.name}
+                people={model.roster}
+                perspective={model.perspective}
+                selectedPersonId={model.selectedPersonId}
               />
-            ) : null}
-          </div>
-          <DataFreshnessStatus fetchedAt={model.fetchedAt} className="sm:w-auto" />
+              {model.perspective === "all" ? (
+                <ScheduleEveryoneViewSwitch
+                  activeView={isTeamWeekView ? "team-week" : "month"}
+                  monthHref={scheduleEveryoneViewHref("month", null)}
+                  teamWeekHref={scheduleEveryoneViewHref("team-week", null)}
+                />
+              ) : null}
+              {isTeamWeekView ? (
+                <TeamWeekPeopleFilterSwitch
+                  activeFilter={peopleFilter}
+                  activeHref={activePeopleFilterHref}
+                  allHref={allPeopleFilterHref}
+                />
+              ) : null}
+            </>
+          ) : null}
+          {isTeamWeekView ? (
+            <TeamWeekNav
+              prevHref={prevWeekHref}
+              nextHref={nextWeekHref}
+              todayHref={todayWeekHref}
+              isOnCurrentWeek={isOnCurrentWeek}
+              weekLabel={teamWeekLabel}
+            />
+          ) : (
+            <MonthNav
+              prevHref={prevHref}
+              nextHref={nextHref}
+              todayHref={todayHref}
+              isOnCurrentMonth={isOnCurrentMonth}
+              monthLabel={monthLabel}
+            />
+          )}
         </div>
-      ) : (
-        <DataFreshnessStatus fetchedAt={model.fetchedAt} />
-      )}
+        <DataFreshnessStatus fetchedAt={model.fetchedAt} className="sm:w-auto" />
+      </Panel>
 
       {isTeamWeekView && model.teamWeek ? (
-        <TeamWeekMatrix teamWeek={model.teamWeek} todayDate={model.localNow.date} />
+        <TeamWeekMatrix teamWeek={model.teamWeek} todayDate={model.localNow.date} peopleFilter={peopleFilter} />
       ) : model.perspective === "all" && model.everyone ? (
         <ScheduleEveryoneCalendar
           grid={grid}

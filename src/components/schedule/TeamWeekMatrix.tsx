@@ -2,13 +2,17 @@ import { isWeekendColumn } from "@/lib/domain/calendarMonth";
 import { assignmentEmoji } from "@/lib/presentation/emoji";
 import { eventColorBgClassName } from "@/lib/presentation/eventColor";
 import { formatCompactDate, formatHebrewWeekdayAndDate, formatShortWeekday } from "@/lib/presentation/hebrewDate";
+import { filterTeamWeekPeople, type TeamWeekPeopleFilter } from "@/lib/presentation/teamWeekFilter";
 import type { ScheduleTeamWeekCellItem, ScheduleTeamWeekPerson, ScheduleTeamWeekView } from "@/lib/readModels/scheduleTypes";
 import { Panel } from "@/components/ui/Panel";
+import { ScrollFadeViewport } from "./ScrollFadeViewport";
 
 interface TeamWeekMatrixProps {
   teamWeek: ScheduleTeamWeekView;
   /** "YYYY-MM-DD" -- the server-resolved "today", for the current-day row highlight. Never computed client-side. */
   todayDate: string;
+  /** "active" (default) shows only people with an item this week; "all" shows every eligible person. Presentation-only -- see `lib/presentation/teamWeekFilter.ts`. */
+  peopleFilter: TeamWeekPeopleFilter;
 }
 
 /** At most this many items render directly in a cell before collapsing into a "+N" overflow -- never a taller cell. */
@@ -21,16 +25,20 @@ const GROUP_LABEL: Record<ScheduleTeamWeekPerson["roleGroup"], string> = {
 
 /**
  * Shared by every `<th>` in `<thead>` -- deliberately carries NEITHER
- * `height`/`top-*` NOR `z-*` (each callsite below adds its own single
- * value of each), never two conflicting utility classes for the same CSS
- * property on the same element (Tailwind resolves same-specificity
+ * `height`/`top-*`/`background` NOR `z-*` (each callsite below adds its own
+ * single value of each), never two conflicting utility classes for the same
+ * CSS property on the same element (Tailwind resolves same-specificity
  * conflicts by generated-CSS source order, not by class-string order, so
  * this file never lets that ambiguity exist -- this is also exactly why
  * the corner `<th>` below needs its OWN height rather than reusing
- * `HEADER_ROW_HEIGHT`, since it spans both rows, not one).
+ * `HEADER_ROW_HEIGHT`, since it spans both rows, not one, and why the
+ * group-header/person-name/corner cells each set their OWN background
+ * below rather than sharing one baked into this constant -- the group
+ * header row needs a visually stronger band than the person-name row
+ * beneath it, see `GROUP_DIVIDER_CLASS`).
  */
 const HEADER_CELL_BASE =
-  "sticky whitespace-nowrap border-b border-border bg-surface-2 px-2 py-2 align-middle text-xs font-semibold text-foreground";
+  "sticky whitespace-nowrap border-b border-border px-2 py-2 align-middle text-xs font-semibold text-foreground";
 
 /**
  * One header row's fixed height (2.25rem/36px) -- applied to BOTH the
@@ -62,6 +70,17 @@ const HEADER_ROW_2_TOP = "top-9";
  * silently-inert one.
  */
 const MATRIX_MAX_HEIGHT = "max-h-[75vh]";
+
+/**
+ * The supervisor/technician group boundary -- a visible divider that stays
+ * correct through both horizontal and vertical scroll because it's a real
+ * border on the boundary column's own cells (group header, person-name
+ * header, and every body `<td>` in that column), never a separately
+ * positioned overlay that could drift out of alignment while scrolling.
+ * Applied only to the FIRST column of the second (or later) group -- see
+ * `groupBoundaryPersonIds` below.
+ */
+const GROUP_DIVIDER_CLASS = "border-s-2 border-s-primary/40";
 
 function rowBgClassName(isToday: boolean, isWeekend: boolean): string {
   if (isToday) return "bg-primary/[0.06]";
@@ -99,7 +118,7 @@ function CellItemChip({ item }: { item: ScheduleTeamWeekCellItem }) {
     .join(", ");
 
   return (
-    <span className={`flex min-w-0 items-center gap-1 rounded px-1 py-0.5 text-[11px] leading-4 text-foreground ${bgClassName}`}>
+    <span className={`flex min-w-0 items-center gap-1 rounded-md px-1.5 py-1 text-[11px] leading-4 text-foreground ${bgClassName}`}>
       {emoji ? (
         <span aria-hidden="true" className="shrink-0">
           {emoji}
@@ -129,7 +148,7 @@ function TeamWeekCell({ items }: { items: ScheduleTeamWeekCellItem[] }) {
   const overflowCount = items.length - visible.length;
 
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex flex-col gap-1">
       {visible.map((item) => (
         <CellItemChip key={item.key} item={item} />
       ))}
@@ -155,8 +174,8 @@ function TeamWeekCell({ items }: { items: ScheduleTeamWeekCellItem[] }) {
  * Sticky first column (the date) + sticky header rows (role-group, then
  * person names) via CSS `position: sticky`, inside a wrapper that is a
  * REAL, bounded scroll viewport for both axes (`overflow-auto` +
- * `MATRIX_MAX_HEIGHT` below) -- this bound is not cosmetic, it's load-
- * bearing: per the CSS Overflow spec,
+ * `MATRIX_MAX_HEIGHT` below, now owned by `ScrollFadeViewport`) -- this
+ * bound is not cosmetic, it's load-bearing: per the CSS Overflow spec,
  * setting `overflow-x: auto` alone (leaving `overflow-y` unset/`visible`)
  * still forces `overflow-y`'s COMPUTED value to `auto` too (the "mixed
  * visible/non-visible" rule), which already makes this element the
@@ -172,11 +191,13 @@ function TeamWeekCell({ items }: { items: ScheduleTeamWeekCellItem[] }) {
  * both its header rows and its first column then stick correctly
  * relative to ITS OWN internal scroll, the same spreadsheet-style
  * "frozen row/column" behavior a wide roster needs, and it's the only
- * configuration in which sticky can ever do anything at all here. The
- * scroll region is also given `role="region"` + `tabIndex={0}` so a
- * keyboard-only user (no mouse/touch) can still reach and scroll it with
- * arrow keys; without that, a purely visual scrollable div containing no
- * natively-focusable content is invisible to Tab-only navigation.
+ * configuration in which sticky can ever do anything at all here.
+ * `ScrollFadeViewport` renders the `role="region"` + `tabIndex={0}`
+ * wrapper (so a keyboard-only user can still reach and scroll it with
+ * arrow keys) plus its own small client-only edge-fade hint -- see that
+ * component's docstring; nothing about the frozen-panes mechanics
+ * described here changed by that wrapping, it still applies to the exact
+ * same scrollable element.
  *
  * TWO stacked sticky header rows is the other subtlety here: `position:
  * sticky` does NOT stack multiple sticky elements on the same axis by
@@ -191,14 +212,24 @@ function TeamWeekCell({ items }: { items: ScheduleTeamWeekCellItem[] }) {
  * (`start-0`) is an entirely separate axis and keeps working during
  * horizontal scroll regardless.
  *
+ * The supervisor/technician boundary gets a real border on the boundary
+ * column's own cells (`GROUP_DIVIDER_CLASS`, see there) rather than a
+ * positioned overlay, so it survives both scroll axes for the same reason
+ * the sticky cells do -- it's just part of the cell, not a separate
+ * element trying to track it.
+ *
  * `teamWeek.people` is already in final display order (every supervisor,
  * roster order preserved, then every technician, roster order preserved --
- * see `buildScheduleTeamWeekView`); this component only re-groups them by
- * `roleGroup` to compute each group header's `colSpan`, it never re-sorts.
+ * see `buildScheduleTeamWeekView`); `peopleFilter` (see
+ * `lib/presentation/teamWeekFilter.ts`) only narrows WHICH of those people
+ * render, it never reorders or mutates `teamWeek` itself. This component
+ * only re-groups the filtered list by `roleGroup` to compute each group
+ * header's `colSpan`.
  */
-export function TeamWeekMatrix({ teamWeek, todayDate }: TeamWeekMatrixProps) {
-  const supervisors = teamWeek.people.filter((person) => person.roleGroup === "supervisor");
-  const technicians = teamWeek.people.filter((person) => person.roleGroup === "technician");
+export function TeamWeekMatrix({ teamWeek, todayDate, peopleFilter }: TeamWeekMatrixProps) {
+  const visiblePeople = filterTeamWeekPeople(teamWeek, peopleFilter);
+  const supervisors = visiblePeople.filter((person) => person.roleGroup === "supervisor");
+  const technicians = visiblePeople.filter((person) => person.roleGroup === "technician");
   const groups = (
     [
       { key: "supervisor" as const, people: supervisors },
@@ -206,21 +237,32 @@ export function TeamWeekMatrix({ teamWeek, todayDate }: TeamWeekMatrixProps) {
     ] satisfies { key: ScheduleTeamWeekPerson["roleGroup"]; people: ScheduleTeamWeekPerson[] }[]
   ).filter((group) => group.people.length > 0);
   const columns = groups.flatMap((group) => group.people);
+  const groupBoundaryPersonIds = new Set(
+    groups
+      .slice(1)
+      .map((group) => group.people[0]?.id)
+      .filter((id): id is string => Boolean(id)),
+  );
 
   if (columns.length === 0) {
+    if (teamWeek.people.length === 0) {
+      return (
+        <Panel variant="compact" className="text-sm text-muted">
+          אין אנשי צוות עם תפקיד מבצעי להצגה בשבוע זה.
+        </Panel>
+      );
+    }
     return (
       <Panel variant="compact" className="text-sm text-muted">
-        אין אנשי צוות עם תפקיד מבצעי להצגה בשבוע זה.
+        אין אנשי צוות פעילים בשבוע זה. אפשר לעבור לתצוגת &quot;כולם&quot; כדי להציג את כל אנשי הצוות.
       </Panel>
     );
   }
 
   return (
-    <div
-      role="region"
-      aria-label="לוח צוות שבועי, גלילה אופקית ואנכית"
-      tabIndex={0}
-      className={`overflow-auto rounded-xl ring-1 ring-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${MATRIX_MAX_HEIGHT}`}
+    <ScrollFadeViewport
+      ariaLabel="לוח צוות שבועי, גלילה אופקית ואנכית"
+      className={`team-week-scroll overflow-auto rounded-xl ring-1 ring-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${MATRIX_MAX_HEIGHT}`}
     >
       <table className="w-full border-separate border-spacing-0 text-sm">
         <caption className="sr-only">
@@ -231,16 +273,16 @@ export function TeamWeekMatrix({ teamWeek, todayDate }: TeamWeekMatrixProps) {
             <th
               rowSpan={2}
               scope="col"
-              className={`${HEADER_CELL_BASE} start-0 top-0 z-30 h-[4.5rem] w-16 text-start sm:w-20`}
+              className={`${HEADER_CELL_BASE} start-0 top-0 z-30 h-[4.5rem] w-16 bg-surface-2 text-start sm:w-20`}
             >
               תאריך
             </th>
-            {groups.map((group) => (
+            {groups.map((group, groupIndex) => (
               <th
                 key={group.key}
                 scope="colgroup"
                 colSpan={group.people.length}
-                className={`${HEADER_CELL_BASE} ${HEADER_ROW_HEIGHT} top-0 z-20 text-center`}
+                className={`${HEADER_CELL_BASE} ${HEADER_ROW_HEIGHT} top-0 z-20 bg-surface-3 text-center ${groupIndex > 0 ? GROUP_DIVIDER_CLASS : ""}`}
               >
                 {GROUP_LABEL[group.key]}
               </th>
@@ -251,7 +293,7 @@ export function TeamWeekMatrix({ teamWeek, todayDate }: TeamWeekMatrixProps) {
               <th
                 key={person.id}
                 scope="col"
-                className={`${HEADER_CELL_BASE} ${HEADER_ROW_HEIGHT} ${HEADER_ROW_2_TOP} z-20 min-w-[128px] text-center font-medium`}
+                className={`${HEADER_CELL_BASE} ${HEADER_ROW_HEIGHT} ${HEADER_ROW_2_TOP} z-20 min-w-[128px] bg-surface-2 text-center font-medium ${groupBoundaryPersonIds.has(person.id) ? GROUP_DIVIDER_CLASS : ""}`}
               >
                 {person.name}
               </th>
@@ -271,21 +313,33 @@ export function TeamWeekMatrix({ teamWeek, todayDate }: TeamWeekMatrixProps) {
               <tr key={date}>
                 <th
                   scope="row"
-                  className={`sticky start-0 z-10 whitespace-nowrap border-b border-border px-2 py-2 text-start text-xs font-medium ${rowBg} ${isToday ? "text-primary" : "text-foreground"}`}
+                  className={`sticky start-0 z-10 whitespace-nowrap border-b border-border px-2 py-2.5 text-start text-xs font-medium ${rowBg} ${isToday ? "text-primary" : "text-foreground"}`}
                 >
-                  <span aria-hidden="true" className="block">
-                    {weekday}
-                  </span>
-                  <span aria-hidden="true" className="block text-muted-2" dir="ltr">
-                    {compact}
-                  </span>
+                  <div
+                    className={`inline-flex flex-col items-start gap-0.5 rounded-lg px-1.5 py-1 ${isToday ? "bg-primary/15 ring-1 ring-primary/50" : ""}`}
+                  >
+                    <span aria-hidden="true" className="block">
+                      {weekday}
+                    </span>
+                    <span aria-hidden="true" className="block text-muted-2" dir="ltr">
+                      {compact}
+                    </span>
+                    {isToday ? (
+                      <span aria-hidden="true" className="block text-[9px] font-semibold text-primary">
+                        היום
+                      </span>
+                    ) : null}
+                  </div>
                   <span className="sr-only">
                     {fullLabel}
                     {isToday ? ", היום" : ""}
                   </span>
                 </th>
                 {columns.map((person) => (
-                  <td key={person.id} className={`border-b border-border px-1.5 py-1.5 align-top ${rowBg}`}>
+                  <td
+                    key={person.id}
+                    className={`border-b border-border px-1.5 py-2 align-top ${rowBg} ${groupBoundaryPersonIds.has(person.id) ? GROUP_DIVIDER_CLASS : ""}`}
+                  >
                     <TeamWeekCell items={teamWeek.cells[person.id]?.[date] ?? []} />
                   </td>
                 ))}
@@ -294,6 +348,6 @@ export function TeamWeekMatrix({ teamWeek, todayDate }: TeamWeekMatrixProps) {
           })}
         </tbody>
       </table>
-    </div>
+    </ScrollFadeViewport>
   );
 }

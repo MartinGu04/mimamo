@@ -1,6 +1,6 @@
 import type { Event, EventCategory } from "@/lib/domain/event";
 import { isRecognizedOperationalActivityEvent } from "@/lib/domain/operationalActivityKeywords";
-import { classifyRoleGroup, isShiftCapable } from "@/lib/domain/personnelType";
+import { classifyPersonnelType, classifyRoleGroup, isShiftCapable } from "@/lib/domain/personnelType";
 import type { OperationalWeek } from "@/lib/domain/operationalWeek";
 import type { Person } from "@/lib/domain/types";
 import type { ScheduleTeamWeekCellItem, ScheduleTeamWeekPerson, ScheduleTeamWeekView } from "./scheduleTypes";
@@ -45,12 +45,20 @@ function isRelevantTeamWeekEvent(event: Event): boolean {
  * `isShiftCapable`'s existing "can this person be rostered onto a shift at
  * all" contract used elsewhere in this codebase -- never a title-string
  * match.
+ *
+ * Team Week is scoped to actual operational shift workers only: a person
+ * must ALSO classify as `"regular"` (חובה) or `"reserve"` (מילואים) via
+ * `classifyPersonnelType`. A permanent (קבע) or unclassified person is
+ * excluded even when `isSupervisor`/`isTechnician` is true -- permanent
+ * personnel don't belong in this rotating-shift view.
  */
 function buildTeamWeekPeople(people: readonly Person[]): ScheduleTeamWeekPerson[] {
   const supervisors: ScheduleTeamWeekPerson[] = [];
   const technicians: ScheduleTeamWeekPerson[] = [];
 
   for (const person of people) {
+    const serviceCategory = classifyPersonnelType(person.personnelType);
+    if (serviceCategory !== "regular" && serviceCategory !== "reserve") continue;
     if (!isShiftCapable(person)) continue;
     const roleGroup = classifyRoleGroup(person);
     // Structurally unreachable given the `isShiftCapable` guard above

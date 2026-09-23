@@ -20,7 +20,7 @@ function person(overrides: Partial<Person> = {}): Person {
     isManager: false,
     isTechnician: false,
     isSupervisor: false,
-    personnelType: null,
+    personnelType: "חובה", // regular -- the common case for this suite's shift-capable fixtures
     dischargeDate: null,
     enlistmentDate: null,
     ...overrides,
@@ -83,6 +83,64 @@ describe("buildScheduleTeamWeekView — roster membership (5, permanent/unrelate
     const view = buildScheduleTeamWeekView([], [both], WEEK);
     expect(view.people).toHaveLength(1);
     expect(view.people[0].roleGroup).toBe("supervisor");
+  });
+});
+
+describe("buildScheduleTeamWeekView — personnel-type eligibility (permanent/קבע excluded)", () => {
+  it("excludes a permanent (קבע) person even when isSupervisor is true", () => {
+    const permanentSupervisor = person({ id: "p_perm_sup", name: "קבע אחמ\"ש", isSupervisor: true, personnelType: "קבע" });
+    const view = buildScheduleTeamWeekView([], [permanentSupervisor], WEEK);
+    expect(view.people).toHaveLength(0);
+  });
+
+  it("excludes a permanent (קבע) person even when isTechnician is true", () => {
+    const permanentTechnician = person({ id: "p_perm_tech", name: "קבע טכנאי", isTechnician: true, personnelType: "קבע" });
+    const view = buildScheduleTeamWeekView([], [permanentTechnician], WEEK);
+    expect(view.people).toHaveLength(0);
+  });
+
+  it("includes a regular (חובה) supervisor and technician", () => {
+    const regularSupervisor = person({ id: "p_reg_sup", name: "חובה אחמ\"ש", isSupervisor: true, personnelType: "חובה" });
+    const regularTechnician = person({ id: "p_reg_tech", name: "חובה טכנאי", isTechnician: true, personnelType: "חובה" });
+    const view = buildScheduleTeamWeekView([], [regularSupervisor, regularTechnician], WEEK);
+    expect(view.people.map((p) => p.id)).toEqual(["p_reg_sup", "p_reg_tech"]);
+  });
+
+  it("includes a reserve (מילואים) supervisor and technician", () => {
+    const reserveSupervisor = person({ id: "p_res_sup", name: "מילואים אחמ\"ש", isSupervisor: true, personnelType: "מילואים" });
+    const reserveTechnician = person({ id: "p_res_tech", name: "מילואים טכנאי", isTechnician: true, personnelType: "מילואים" });
+    const view = buildScheduleTeamWeekView([], [reserveSupervisor, reserveTechnician], WEEK);
+    expect(view.people.map((p) => p.id)).toEqual(["p_res_sup", "p_res_tech"]);
+  });
+
+  it("excludes a non-operational person (neither isSupervisor nor isTechnician), regardless of personnelType", () => {
+    const regularNonOperational = person({ id: "p_reg_other", name: "חובה לא תפעולי", personnelType: "חובה" });
+    const view = buildScheduleTeamWeekView([], [regularNonOperational], WEEK);
+    expect(view.people).toHaveLength(0);
+  });
+
+  it("excludes an unclassified personnelType (null / unrecognized string), even when isSupervisor/isTechnician is true", () => {
+    const unclassifiedSupervisor = person({ id: "p_unc_sup", name: "לא מסווג", isSupervisor: true, personnelType: null });
+    const unrecognizedTechnician = person({ id: "p_unrec_tech", name: "מחרוזת לא מוכרת", isTechnician: true, personnelType: "משהו אחר" });
+    const view = buildScheduleTeamWeekView([], [unclassifiedSupervisor, unrecognizedTechnician], WEEK);
+    expect(view.people).toHaveLength(0);
+  });
+
+  it("duplicate-name safety still works after personnelType filtering -- each stays keyed by id", () => {
+    const dupA = person({ id: "p_dup_a", name: "דניאל כהן", isTechnician: true, personnelType: "חובה" });
+    const dupPermanent = person({ id: "p_dup_b", name: "דניאל כהן", isTechnician: true, personnelType: "קבע" });
+    const view = buildScheduleTeamWeekView([], [dupA, dupPermanent], WEEK);
+    expect(view.people.map((p) => p.id)).toEqual(["p_dup_a"]);
+    expect(view.people[0].name).toBe("דניאל כהן");
+  });
+
+  it("supervisor/technician grouping stays deterministic once permanent personnel are filtered out of an interleaved roster", () => {
+    const permanentTechnician = person({ id: "p_perm", name: "קבע באמצע", isTechnician: true, personnelType: "קבע" });
+    const regularSupervisor = person({ id: "p_sup", name: "אחמ\"ש", isSupervisor: true, personnelType: "חובה" });
+    const reserveTechnician = person({ id: "p_tech", name: "טכנאי", isTechnician: true, personnelType: "מילואים" });
+    const view = buildScheduleTeamWeekView([], [permanentTechnician, regularSupervisor, reserveTechnician], WEEK);
+    expect(view.people.map((p) => p.roleGroup)).toEqual(["supervisor", "technician"]);
+    expect(view.people.map((p) => p.id)).toEqual(["p_sup", "p_tech"]);
   });
 });
 

@@ -48,26 +48,26 @@ function teamWeek(overrides: Partial<ScheduleTeamWeekView> = {}): ScheduleTeamWe
 
 describe("TeamWeekMatrix — table semantics (accessibility)", () => {
   it("renders a real <table> with row/column headers, never a plain div grid", () => {
-    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-09" />);
+    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-09" peopleFilter="all" />);
     expect(screen.getByRole("table")).toBeInTheDocument();
     expect(screen.getAllByRole("columnheader").length).toBeGreaterThan(0);
     expect(screen.getAllByRole("rowheader").length).toBe(DATES.length);
   });
 
   it("the scrollable container is keyboard-reachable (role=region, tabIndex=0) -- horizontal scroll never breaks keyboard access", () => {
-    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-09" />);
+    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-09" peopleFilter="all" />);
     const region = screen.getByRole("region", { name: /גלילה אופקית/ });
     expect(region).toHaveAttribute("tabindex", "0");
   });
 
   it("5. groups columns under אחמ\"שים / טכנאים headers", () => {
-    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-09" />);
+    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-09" peopleFilter="all" />);
     expect(screen.getByRole("columnheader", { name: 'אחמ"שים' })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "טכנאים" })).toBeInTheDocument();
   });
 
   it("the two sticky header rows use distinct, non-overlapping top offsets (group header at top-0, person names offset by the group header's own height) -- regression for the two-sticky-rows overlap bug", () => {
-    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-09" />);
+    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-09" peopleFilter="all" />);
 
     const groupHeader = screen.getByRole("columnheader", { name: 'אחמ"שים' });
     expect(groupHeader.className).toMatch(/(?:^|\s)top-0(?:\s|$)/);
@@ -89,7 +89,7 @@ describe("TeamWeekMatrix — table semantics (accessibility)", () => {
   });
 
   it("the corner cell's explicit height equals exactly twice one header row's height (4.5rem = 2 × h-9) -- proves the offset math, not just the class names", () => {
-    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-09" />);
+    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-09" peopleFilter="all" />);
     const cornerHeader = screen.getByRole("columnheader", { name: "תאריך" });
     expect(cornerHeader.className).toContain("h-[4.5rem]");
     const groupHeader = screen.getByRole("columnheader", { name: 'אחמ"שים' });
@@ -97,7 +97,7 @@ describe("TeamWeekMatrix — table semantics (accessibility)", () => {
   });
 
   it("person name headers appear once per person", () => {
-    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-09" />);
+    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-09" peopleFilter="all" />);
     expect(screen.getByRole("columnheader", { name: "איתן דוגמה" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "דניאל כהן" })).toBeInTheDocument();
   });
@@ -105,7 +105,7 @@ describe("TeamWeekMatrix — table semantics (accessibility)", () => {
 
 describe("TeamWeekMatrix — current-day row marking (12)", () => {
   it("12. marks the today row's accessible text, distinct from every other row", () => {
-    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-11" />);
+    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-11" peopleFilter="all" />);
     const rowHeaders = screen.getAllByRole("rowheader");
     const todayHeader = rowHeaders.find((el) => el.textContent?.includes("היום"));
     expect(todayHeader).toBeDefined();
@@ -113,15 +113,146 @@ describe("TeamWeekMatrix — current-day row marking (12)", () => {
   });
 
   it("no row claims 'היום' when todayDate falls outside the displayed week", () => {
-    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-09-01" />);
+    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-09-01" peopleFilter="all" />);
     const rowHeaders = screen.getAllByRole("rowheader");
     expect(rowHeaders.some((el) => el.textContent?.includes("היום"))).toBe(false);
+  });
+
+  it("the today date cell gets a stronger, non-flat visual anchor (a rounded ring/pill), not just the row's own flat background", () => {
+    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-11" peopleFilter="all" />);
+    const rowHeaders = screen.getAllByRole("rowheader");
+    const todayHeader = rowHeaders.find((el) => el.textContent?.includes("היום"));
+    expect(todayHeader).toBeDefined();
+    const pill = todayHeader!.querySelector("div");
+    expect(pill).not.toBeNull();
+    expect(pill!.className).toContain("ring-1");
+    expect(pill!.className).toContain("ring-primary/50");
+    expect(pill!.className).toContain("rounded-lg");
+  });
+
+  it("a visible (non-sr-only) 'היום' indicator renders inside the today cell", () => {
+    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-11" peopleFilter="all" />);
+    const rowHeaders = screen.getAllByRole("rowheader");
+    const todayHeader = rowHeaders.find((el) => el.textContent?.includes("היום"));
+    const visibleMarkers = Array.from(todayHeader!.querySelectorAll('[aria-hidden="true"]')).filter((el) => el.textContent === "היום");
+    expect(visibleMarkers.length).toBeGreaterThan(0);
+  });
+
+  it("a non-today row never gets the ring/pill treatment", () => {
+    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-11" peopleFilter="all" />);
+    const rowHeaders = screen.getAllByRole("rowheader");
+    const otherHeader = rowHeaders.find((el) => !el.textContent?.includes("היום"));
+    expect(otherHeader).toBeDefined();
+    const pill = otherHeader!.querySelector("div");
+    expect(pill!.className).not.toContain("ring-primary/50");
+  });
+});
+
+describe("TeamWeekMatrix — supervisor/technician group divider (3)", () => {
+  it("the group boundary column's header and body cells carry a visible divider border; the first supervisor column never does", () => {
+    const view = teamWeek({
+      people: [
+        { id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor" as const },
+        { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" as const },
+        { id: "p_noa", name: "נועה דוגמה", roleGroup: "technician" as const },
+      ],
+    });
+    render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" peopleFilter="all" />);
+
+    const technicianGroupHeader = screen.getByRole("columnheader", { name: "טכנאים" });
+    expect(technicianGroupHeader.className).toContain("border-s-2");
+
+    const supervisorGroupHeader = screen.getByRole("columnheader", { name: 'אחמ"שים' });
+    expect(supervisorGroupHeader.className).not.toContain("border-s-2");
+
+    const firstTechnicianHeader = screen.getByRole("columnheader", { name: "דניאל כהן" });
+    expect(firstTechnicianHeader.className).toContain("border-s-2");
+
+    const secondTechnicianHeader = screen.getByRole("columnheader", { name: "נועה דוגמה" });
+    expect(secondTechnicianHeader.className).not.toContain("border-s-2");
+
+    const firstSupervisorHeader = screen.getByRole("columnheader", { name: "איתן דוגמה" });
+    expect(firstSupervisorHeader.className).not.toContain("border-s-2");
+  });
+
+  it("the divider is a real border on each body row's boundary cell too, not just the header (survives vertical scroll -- it's part of the cell, not an overlay)", () => {
+    const view = teamWeek({
+      people: [
+        { id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor" as const },
+        { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" as const },
+      ],
+    });
+    render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" peopleFilter="all" />);
+    const cells = screen.getAllByRole("cell");
+    const boundaryCells = cells.filter((cell) => cell.className.includes("border-s-2"));
+    // One boundary <td> per date row.
+    expect(boundaryCells).toHaveLength(DATES.length);
+  });
+
+  it("renders with a single group and no divider at all when only one role group is present", () => {
+    const view = teamWeek({
+      people: [
+        { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" as const },
+        { id: "p_noa", name: "נועה דוגמה", roleGroup: "technician" as const },
+      ],
+    });
+    render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" peopleFilter="all" />);
+    expect(screen.queryByRole("columnheader", { name: 'אחמ"שים' })).toBeNull();
+    const technicianGroupHeader = screen.getByRole("columnheader", { name: "טכנאים" });
+    expect(technicianGroupHeader.className).not.toContain("border-s-2");
+  });
+});
+
+describe("TeamWeekMatrix — active-only people filter (5)", () => {
+  function activeFilterView(): ScheduleTeamWeekView {
+    return teamWeek({
+      people: [
+        { id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor" as const },
+        { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" as const },
+      ],
+      cells: {
+        ...emptyCells(["p_eitan", "p_daniel"]),
+        p_daniel: {
+          ...emptyCells(["p_daniel"]).p_daniel,
+          "2026-08-11": [item({ key: "a", title: "טכנאי יום" })],
+        },
+      },
+    });
+  }
+
+  it("peopleFilter='active' hides a zero-event eligible person's column entirely", () => {
+    render(<TeamWeekMatrix teamWeek={activeFilterView()} todayDate="2026-08-09" peopleFilter="active" />);
+    expect(screen.queryByRole("columnheader", { name: "איתן דוגמה" })).toBeNull();
+    expect(screen.getByRole("columnheader", { name: "דניאל כהן" })).toBeInTheDocument();
+  });
+
+  it("peopleFilter='all' shows every eligible person, including zero-event ones", () => {
+    render(<TeamWeekMatrix teamWeek={activeFilterView()} todayDate="2026-08-09" peopleFilter="all" />);
+    expect(screen.getByRole("columnheader", { name: "איתן דוגמה" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "דניאל כהן" })).toBeInTheDocument();
+  });
+
+  it("filtering never mutates teamWeek.cells -- the underlying projection stays intact regardless of which filter is rendered", () => {
+    const view = activeFilterView();
+    const before = JSON.stringify(view);
+    render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" peopleFilter="active" />);
+    expect(JSON.stringify(view)).toBe(before);
+  });
+
+  it("shows a distinct, informative empty state when the active filter hides everyone, rather than the generic 'no shift-capable roster' message", () => {
+    const view = teamWeek({
+      people: [{ id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor" as const }],
+      cells: emptyCells(["p_eitan"]),
+    });
+    render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" peopleFilter="active" />);
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.getByText(/אין אנשי צוות פעילים בשבוע זה/)).toBeInTheDocument();
   });
 });
 
 describe("TeamWeekMatrix — cell content (8, 9, 10, 11)", () => {
   it("11. an empty cell renders calmly -- no dash, no placeholder text", () => {
-    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-09" />);
+    render(<TeamWeekMatrix teamWeek={teamWeek()} todayDate="2026-08-09" peopleFilter="all" />);
     const cells = screen.getAllByRole("cell");
     for (const cell of cells) {
       expect(cell.textContent).toBe("");
@@ -138,7 +269,7 @@ describe("TeamWeekMatrix — cell content (8, 9, 10, 11)", () => {
         },
       },
     });
-    render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" />);
+    render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" peopleFilter="all" />);
     expect(screen.getByText("טכנאי יום")).toBeInTheDocument();
   });
 
@@ -152,7 +283,7 @@ describe("TeamWeekMatrix — cell content (8, 9, 10, 11)", () => {
         },
       },
     });
-    const { container } = render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" />);
+    const { container } = render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" peopleFilter="all" />);
     expect(within(container).getByText("צל")).toBeInTheDocument();
     expect(container.textContent).toContain("חפיפה / צל");
   });
@@ -167,7 +298,7 @@ describe("TeamWeekMatrix — cell content (8, 9, 10, 11)", () => {
         },
       },
     });
-    const { container } = render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" />);
+    const { container } = render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" peopleFilter="all" />);
     expect(container.textContent).toContain("?");
     expect(container.textContent).toContain("משוער");
   });
@@ -186,7 +317,7 @@ describe("TeamWeekMatrix — cell content (8, 9, 10, 11)", () => {
         },
       },
     });
-    render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" />);
+    render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" peopleFilter="all" />);
     expect(screen.getByText("טכנאי יום")).toBeInTheDocument();
     expect(screen.getByText("שמירה 2")).toBeInTheDocument();
     expect(screen.queryByText("עתודה 1")).toBeNull(); // capped at 2 visible chips
@@ -207,7 +338,7 @@ describe("TeamWeekMatrix — cell content (8, 9, 10, 11)", () => {
         },
       },
     });
-    render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" />);
+    render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" peopleFilter="all" />);
     expect(screen.getByText('אחמ"ש יום - צל')).toBeInTheDocument();
     expect(screen.getByText("מטווחים")).toBeInTheDocument();
     expect(screen.queryByText(/^\+\d/)).toBeNull();
@@ -227,7 +358,7 @@ describe("TeamWeekMatrix — cell content (8, 9, 10, 11)", () => {
         },
       },
     });
-    render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" />);
+    render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" peopleFilter="all" />);
     expect(screen.getByText("טכנאי יום")).toBeInTheDocument();
     expect(screen.getByText("שמירה 2")).toBeInTheDocument();
     expect(screen.queryByText("מטווחים")).toBeNull(); // capped at 2 visible chips -- still present in the data, just not rendered
@@ -244,14 +375,14 @@ describe("TeamWeekMatrix — cell content (8, 9, 10, 11)", () => {
         },
       },
     });
-    render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" />);
+    render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" peopleFilter="all" />);
     expect(screen.queryByText(/^\+\d/)).toBeNull();
   });
 });
 
 describe("TeamWeekMatrix — empty roster", () => {
   it("renders a calm message instead of an empty/broken table when no one is shift-capable", () => {
-    render(<TeamWeekMatrix teamWeek={teamWeek({ people: [], cells: {} })} todayDate="2026-08-09" />);
+    render(<TeamWeekMatrix teamWeek={teamWeek({ people: [], cells: {} })} todayDate="2026-08-09" peopleFilter="all" />);
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.getByText(/אין אנשי צוות/)).toBeInTheDocument();
   });
