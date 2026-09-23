@@ -263,6 +263,52 @@ describe("TeamWeekMatrix — active-only people filter: regular (חובה) alway
     expect(screen.getByText(/אין אנשי צוות פעילים בשבוע זה/)).toBeInTheDocument();
   });
 
+  it("regression: an all-reserve roster with zero activity (columns.length === 0) still shows the VIEWER's personal fallback, not the generic empty-active message, when the viewer is one of those eligible-but-hidden reserve people", () => {
+    const view = teamWeek({
+      people: [
+        { id: "p_res_a", name: "מילואים א", roleGroup: "supervisor" as const, serviceCategory: "reserve" as const },
+        { id: "p_res_b", name: "מילואים ב", roleGroup: "technician" as const, serviceCategory: "reserve" as const },
+      ],
+      cells: emptyCells(["p_res_a", "p_res_b"]),
+    });
+    render(
+      <TeamWeekMatrix
+        teamWeek={view}
+        todayDate="2026-08-09"
+        peopleFilter="active"
+        viewerPersonId="p_res_a"
+        allPeopleFilterHref="/schedule?person=all&view=team-week"
+      />,
+    );
+    // Never the generic empty-active message -- the viewer's own personal
+    // fallback takes precedence.
+    expect(screen.queryByText(/אין אנשי צוות פעילים בשבוע זה/)).toBeNull();
+    expect(screen.getByText(/אין לך פעילות השבוע/)).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "הצג את כולם" });
+    expect(link).toHaveAttribute("href", "/schedule?person=all&view=team-week");
+    // Still no table and no Find Me button -- there is genuinely nothing to scroll to.
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.queryByRole("button", { name: /איפה אני/ })).toBeNull();
+  });
+
+  it("an all-reserve roster with zero activity where the VIEWER is not part of the roster at all still shows the generic empty-active message", () => {
+    const view = teamWeek({
+      people: [{ id: "p_res_a", name: "מילואים א", roleGroup: "supervisor" as const, serviceCategory: "reserve" as const }],
+      cells: emptyCells(["p_res_a"]),
+    });
+    render(
+      <TeamWeekMatrix
+        teamWeek={view}
+        todayDate="2026-08-09"
+        peopleFilter="active"
+        viewerPersonId="p_viewer_none"
+        allPeopleFilterHref="/schedule?person=all&view=team-week"
+      />,
+    );
+    expect(screen.getByText(/אין אנשי צוות פעילים בשבוע זה/)).toBeInTheDocument();
+    expect(screen.queryByText(/אין לך פעילות השבוע/)).toBeNull();
+  });
+
   it("a regular-only roster with zero events anywhere never hits the active-filter empty state -- regular people are never activity-gated", () => {
     const view = teamWeek({
       people: [{ id: "p_reg_sup", name: "אחמ\"ש חובה", roleGroup: "supervisor" as const, serviceCategory: "regular" as const }],

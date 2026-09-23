@@ -201,6 +201,27 @@ function TeamWeekCell({ items }: { items: ScheduleTeamWeekCellItem[] }) {
 }
 
 /**
+ * The "you're eligible but the active filter hid your column" message --
+ * shared verbatim by BOTH places it can render: the normal matrix flow
+ * (case B, `columns.length > 0`) and the empty-columns early return (an
+ * all-inactive-reserve roster can leave `columns` empty while the viewer
+ * is still one of those eligible-but-hidden reserve people). Returns only
+ * the text + link content, never its own wrapping element -- each call
+ * site supplies its own wrapper (`<p>` in the normal flow, `Panel` in the
+ * empty-state branch) so the two contexts' own typography stays intact.
+ */
+function ActiveFilterFallbackMessage({ allPeopleFilterHref }: { allPeopleFilterHref: string }) {
+  return (
+    <>
+      אין לך פעילות השבוע ·{" "}
+      <Link href={allPeopleFilterHref} className="font-medium text-primary underline-offset-2 hover:underline">
+        הצג את כולם
+      </Link>
+    </>
+  );
+}
+
+/**
  * "שבוע צוות" -- the team-week roster matrix (dates × people), a second,
  * optional presentation of the manager "כולם" perspective (never a
  * replacement for the month calendar). A real `<table>`, deliberately not
@@ -282,21 +303,14 @@ export function TeamWeekMatrix({ teamWeek, todayDate, peopleFilter, viewerPerson
       .filter((id): id is string => Boolean(id)),
   );
 
-  if (columns.length === 0) {
-    if (teamWeek.people.length === 0) {
-      return (
-        <Panel variant="compact" className="text-sm text-muted">
-          אין אנשי צוות עם תפקיד מבצעי להצגה בשבוע זה.
-        </Panel>
-      );
-    }
-    return (
-      <Panel variant="compact" className="text-sm text-muted">
-        אין אנשי צוות פעילים בשבוע זה. אפשר לעבור לתצוגת &quot;כולם&quot; כדי להציג את כל אנשי הצוות.
-      </Panel>
-    );
-  }
-
+  // Viewer eligibility/visibility MUST be computed before the empty-columns
+  // early return below -- an all-reserve roster that's entirely inactive
+  // this week leaves `columns` empty, but the viewer themselves can still
+  // be one of those eligible reserve people, who needs the personal
+  // "אין לך פעילות השבוע" fallback rather than the generic empty-state
+  // message. Computing this after the early return would silently swallow
+  // that case.
+  //
   // Case A: the viewer's own column is among the currently RENDERED
   // (filtered) columns -- Find Me has a real target.
   const viewerColumnVisible = columns.some((person) => person.id === viewerPersonId);
@@ -314,14 +328,33 @@ export function TeamWeekMatrix({ teamWeek, todayDate, peopleFilter, viewerPerson
   // for a regular viewer.
   const showActiveFilterFallback = isViewerEligible && !viewerColumnVisible;
 
+  if (columns.length === 0) {
+    if (teamWeek.people.length === 0) {
+      return (
+        <Panel variant="compact" className="text-sm text-muted">
+          אין אנשי צוות עם תפקיד מבצעי להצגה בשבוע זה.
+        </Panel>
+      );
+    }
+    if (showActiveFilterFallback) {
+      return (
+        <Panel variant="compact" className="text-sm text-muted">
+          <ActiveFilterFallbackMessage allPeopleFilterHref={allPeopleFilterHref} />
+        </Panel>
+      );
+    }
+    return (
+      <Panel variant="compact" className="text-sm text-muted">
+        אין אנשי צוות פעילים בשבוע זה. אפשר לעבור לתצוגת &quot;כולם&quot; כדי להציג את כל אנשי הצוות.
+      </Panel>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-1.5">
       {showActiveFilterFallback ? (
         <p className="text-xs text-muted">
-          אין לך פעילות השבוע ·{" "}
-          <Link href={allPeopleFilterHref} className="font-medium text-primary underline-offset-2 hover:underline">
-            הצג את כולם
-          </Link>
+          <ActiveFilterFallbackMessage allPeopleFilterHref={allPeopleFilterHref} />
         </p>
       ) : null}
       <ScrollFadeViewport

@@ -102,13 +102,19 @@ describe("activeTeamWeekPersonIds", () => {
 });
 
 describe("filterTeamWeekPeople -- 'active' always keeps regular (חובה) people, only hides an inactive reserve (מילואים) person", () => {
+  // Genuinely supervisor-first/technician-second, matching the real order
+  // `buildScheduleTeamWeekView` produces (every supervisor, roster order
+  // preserved, then every technician, roster order preserved) -- NOT an
+  // interleaved list, so tests below that assert order-preservation
+  // actually prove that contract rather than accidentally passing on a
+  // fixture that was never grouped that way to begin with.
   function mixedRosterView(overrides: Partial<ScheduleTeamWeekView> = {}): ScheduleTeamWeekView {
     return teamWeek({
       people: [
         { id: "p_reg_sup", name: "אחמ\"ש חובה", roleGroup: "supervisor", serviceCategory: "regular" },
-        { id: "p_reg_tech", name: "טכנאי חובה", roleGroup: "technician", serviceCategory: "regular" },
         { id: "p_res_active_sup", name: "אחמ\"ש מילואים פעיל", roleGroup: "supervisor", serviceCategory: "reserve" },
         { id: "p_res_inactive_sup", name: "אחמ\"ש מילואים לא פעיל", roleGroup: "supervisor", serviceCategory: "reserve" },
+        { id: "p_reg_tech", name: "טכנאי חובה", roleGroup: "technician", serviceCategory: "regular" },
         { id: "p_res_active_tech", name: "טכנאי מילואים פעיל", roleGroup: "technician", serviceCategory: "reserve" },
         { id: "p_res_inactive_tech", name: "טכנאי מילואים לא פעיל", roleGroup: "technician", serviceCategory: "reserve" },
       ],
@@ -162,16 +168,16 @@ describe("filterTeamWeekPeople -- 'active' always keeps regular (חובה) peopl
 
   it("full expected 'active' visibility set for the mixed roster", () => {
     const visible = filterTeamWeekPeople(mixedRosterView(), "active").map((p) => p.id);
-    expect(visible).toEqual(["p_reg_sup", "p_reg_tech", "p_res_active_sup", "p_res_active_tech"]);
+    expect(visible).toEqual(["p_reg_sup", "p_res_active_sup", "p_reg_tech", "p_res_active_tech"]);
   });
 
   it("6. 'all' reveals every eligible person, including the inactive reserves", () => {
     const visible = filterTeamWeekPeople(mixedRosterView(), "all").map((p) => p.id);
     expect(visible).toEqual([
       "p_reg_sup",
-      "p_reg_tech",
       "p_res_active_sup",
       "p_res_inactive_sup",
+      "p_reg_tech",
       "p_res_active_tech",
       "p_res_inactive_tech",
     ]);
@@ -179,13 +185,27 @@ describe("filterTeamWeekPeople -- 'active' always keeps regular (חובה) peopl
 
   it("7. preserves supervisor-first/technician-second and each group's roster-relative order under both filters", () => {
     const view = mixedRosterView();
+    // The fixture itself must actually BE supervisor-first/technician-second
+    // (the real order buildScheduleTeamWeekView produces) -- otherwise the
+    // assertions below would only prove pass-through behavior, never the
+    // stated ordering contract.
+    expect(view.people.map((p) => p.roleGroup)).toEqual([
+      "supervisor",
+      "supervisor",
+      "supervisor",
+      "technician",
+      "technician",
+      "technician",
+    ]);
+
     expect(filterTeamWeekPeople(view, "all").map((p) => p.id)).toEqual(view.people.map((p) => p.id));
-    // Under "active", the inactive reserves drop out but the relative
-    // order of everyone remaining is unchanged (never re-sorted).
+    // Under "active", the inactive reserves drop out but supervisor-first/
+    // technician-second AND each group's roster-relative order among
+    // everyone remaining is unchanged (never re-sorted).
     expect(filterTeamWeekPeople(view, "active").map((p) => p.id)).toEqual([
       "p_reg_sup",
-      "p_reg_tech",
       "p_res_active_sup",
+      "p_reg_tech",
       "p_res_active_tech",
     ]);
   });
