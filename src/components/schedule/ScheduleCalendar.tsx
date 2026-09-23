@@ -75,7 +75,7 @@ export function ScheduleCalendar({
 
   return (
     <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-6">
-      <Panel variant="panel" glass="subtle">
+      <Panel variant="panel" glass="subtle" className="calendar-surface">
         <CalendarGrid
           grid={grid}
           days={days}

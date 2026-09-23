@@ -1,4 +1,6 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
+import { Badge } from "@/components/ui/Badge";
 import { Panel } from "@/components/ui/Panel";
 import type { GlassLevel } from "@/components/ui/glass";
 import { CoverageBadge } from "@/components/ui/CoverageBadge";
@@ -11,12 +13,14 @@ interface ManagerCoverageSectionProps {
   days: ManagerShiftDayView[];
 }
 
-const ROLE_TONE_CLASS: Record<ManagerRoleCoverageRowView["status"], string> = {
-  full: "text-[11px] text-muted",
-  partial: "text-xs font-medium text-warning",
-  missing: "text-xs font-medium text-critical",
-  not_evaluable: "text-[11px] text-muted",
-};
+type RoleName = "supervisor" | "technician";
+
+/** Every role's own fixed emoji + Hebrew label -- ONE mapping shared by every row/badge/note below, so a role can never be labeled inconsistently within one card. */
+const ROLE_EMOJI: Record<RoleName, string> = { supervisor: "🧑‍✈️", technician: "🔧" };
+const ROLE_LABEL: Record<RoleName, string> = { supervisor: 'אחמ"ש', technician: "טכנאי" };
+
+/** At most this many rows show per day/night column before the rest collapse into a "+N more details" link into the full schedule view -- the card is allowed to grow to fit a normal day, but never to the point of dwarfing its neighbors in the grid on a truly packed one. */
+const MAX_VISIBLE_ROWS_PER_PERIOD = 4;
 
 /** The stronger of a day's two period statuses -- decides the card's own accent border, so a problem is visible before reading a single name. `null` when the date has no shift data for either period at all. */
 function worstCoverageStatus(day: ManagerShiftGroupView | null, night: ManagerShiftGroupView | null): CoverageStatus | null {
@@ -54,76 +58,169 @@ const CARD_GLASS: Record<CoverageStatus, GlassLevel> = {
   missing: "none",
 };
 
-function ShadowList({ label, names }: { label: string; names: string[] }) {
-  if (names.length === 0) return null;
+/**
+ * One assigned person, always "<role emoji> <role label> — <name>" -- the
+ * role is never shown without who holds it (Design Pass: shift-personnel
+ * redesign). `allDay` marks a name that's really the date's own all-day
+ * (generic, period-unspecified) assignment shown again here for this
+ * specific period -- see `AllDayBanner`'s own doc comment for why a little
+ * duplication beats a day/night column that looks unstaffed.
+ */
+function AssignmentRow({ role, name, allDay = false }: { role: RoleName; name: string; allDay?: boolean }) {
   return (
-    <p className="text-[11px] text-muted">
-      <span className="text-muted-2">{label}:</span> {names.join(", ")}
-    </p>
+    <li className="flex flex-wrap items-center gap-1.5 rounded-md bg-[var(--calendar-row-bg)] px-[var(--calendar-row-px-compact)] py-[var(--calendar-row-py-compact)] text-xs ring-1 ring-[var(--calendar-row-border)]">
+      <span aria-hidden="true">{ROLE_EMOJI[role]}</span>
+      <span className="font-medium text-muted-2">{ROLE_LABEL[role]}</span>
+      <span aria-hidden="true" className="text-muted-2">
+        —
+      </span>
+      <span className="text-foreground">{name}</span>
+      {allDay ? <Badge tone="primary">כל היום</Badge> : null}
+    </li>
   );
 }
 
 /**
- * A GENERIC (period-unspecified) role assignment, e.g. a weekend cell that
- * just says `אחמ"ש` -- rendered ONCE per date card, above the day/night
- * `PeriodColumn`s. Internally the assignment satisfies both periods'
- * coverage (see `ManagerShiftDayView.genericSupervisorNames`'s own doc
- * comment), but listing the SAME name in the day column AND the night
- * column would misrepresent one real assignment as two independent
- * shifts -- this is the single place it's ever shown.
+ * A shadow/handover assignment -- deliberately its own tinted, ringed pill
+ * (never a plain text row) so it can never visually blend into the regular
+ * personnel rows above it.
  */
-function GenericAssignmentLine({ label, names }: { label: string; names: string[] }) {
-  if (names.length === 0) return null;
+function ShadowRow({ role, name }: { role: RoleName; name: string }) {
   return (
-    <p className="text-xs text-muted">
-      <span className="text-muted-2">{label}:</span> {names.join(", ")}
-    </p>
+    <li className="flex flex-wrap items-center gap-1.5 rounded-md bg-[var(--calendar-shadow-row-bg)] px-2 py-1 text-xs ring-1 ring-[var(--calendar-shadow-row-border)]">
+      <span aria-hidden="true">🌘</span>
+      <Badge tone="neutral">צל</Badge>
+      <span className="font-medium text-muted-2">{ROLE_LABEL[role]}</span>
+      <span aria-hidden="true" className="text-muted-2">
+        —
+      </span>
+      <span className="text-foreground">{name}</span>
+    </li>
   );
 }
 
 /**
- * One role's explicit coverage line -- "טכנאים: X, Y" when full (calm,
- * names only); "חסר טכנאי" / "כיסוי טכנאי חלקי · 05:30–07:30" / "לא ניתן
- * להעריך כיסוי טכנאי" otherwise -- NEVER inferred from an empty name list,
- * always the domain-derived `roleCoverage` diagnostic message.
+ * A role's non-"full" coverage message (missing/partial/not_evaluable) --
+ * always its own headed, bordered note block, never a bare paragraph sitting
+ * directly under a person's name where it could look like it belongs to
+ * them instead of describing the role's remaining gap. Only the SURFACE
+ * (background/ring) follows the calendar's light-mode-polish tokens -- the
+ * message's own warning/critical/muted text color is untouched, so a
+ * "חסר טכנאי" note reads exactly as urgent as before.
  */
-function RoleCoverageLine({
-  roleLabel,
-  names,
-  coverage,
-}: {
-  roleLabel: string;
-  names: string[];
-  coverage: ManagerRoleCoverageRowView;
-}) {
-  if (coverage.status === "full") {
-    if (names.length === 0) return null;
-    return (
-      <p className="text-[11px] text-muted">
-        <span className="text-muted-2">{roleLabel}:</span> {names.join(", ")}
+function RoleNote({ role, coverage }: { role: RoleName; coverage: ManagerRoleCoverageRowView }) {
+  const toneClassName =
+    coverage.status === "missing" ? "text-critical" : coverage.status === "partial" ? "text-warning" : "text-muted";
+  return (
+    <li className="rounded-md bg-[var(--calendar-note-bg)] px-2 py-1.5 ring-1 ring-[var(--calendar-note-border)]">
+      <p className="flex items-center gap-1.5 text-[11px] font-medium text-muted-2">
+        <span aria-hidden="true">📝</span>
+        {ROLE_LABEL[role]} · הערה
       </p>
-    );
-  }
-
-  return (
-    <p className={ROLE_TONE_CLASS[coverage.status]}>
-      {coverage.message}
-      {names.length > 0 ? <span className="text-muted-2"> · {names.join(", ")}</span> : null}
-    </p>
+      <p className={`mt-0.5 text-xs font-medium ${toneClassName}`}>{coverage.message}</p>
+    </li>
   );
 }
 
-function PeriodColumn({ emoji, periodLabel, group }: { emoji: string; periodLabel: string; group: ManagerShiftGroupView | null }) {
-  const [supervisorRole, technicianRole] = group
-    ? inRoleDisplayOrder({
-        supervisors: { label: "אחמ״שים", names: group.supervisorNames, coverage: group.supervisorCoverage },
-        technicians: { label: "טכנאים", names: group.technicianNames, coverage: group.technicianCoverage },
-      })
-    : [null, null];
-  const [shadowSupervisorNames, shadowTechnicianNames] = group
-    ? inRoleDisplayOrder({ supervisors: group.shadowSupervisorNames, technicians: group.shadowTechnicianNames })
-    : [[], []];
+/**
+ * The all-day (generic, period-unspecified) role assignment gets its OWN
+ * emphasized surface -- a dedicated tinted, ringed banner, never just bold
+ * text -- shown once above the day/night columns. `null` when this role has
+ * no all-day assignment for the date.
+ */
+function AllDayBanner({ role, names }: { role: RoleName; names: string[] }) {
+  if (names.length === 0) return null;
+  return (
+    <div className="rounded-lg bg-primary/10 px-2.5 py-2 ring-1 ring-primary/25">
+      <p className="flex items-center gap-1.5 text-[11px] font-semibold text-primary">
+        <span aria-hidden="true">{ROLE_EMOJI[role]}</span>
+        {ROLE_LABEL[role]} (כל היום)
+      </p>
+      <p className="mt-0.5 text-xs font-semibold text-foreground">{names.join(", ")}</p>
+    </div>
+  );
+}
 
+/**
+ * Every row this ONE role contributes to a period: the date's all-day
+ * assignment for this role FIRST (if any, tagged "כל היום") -- it's the
+ * broader assignment, so it leads rather than trailing behind a period-
+ * specific person and reading as secondary -- then its real, period-native
+ * people, then its coverage note (if not fully covered) -- never a bare
+ * label with nothing under it.
+ */
+function roleRows(role: RoleName, names: string[], coverage: ManagerRoleCoverageRowView, allDayNames: string[]): ReactNode[] {
+  const rows: ReactNode[] = allDayNames.map((name, index) => (
+    <AssignmentRow key={`${role}-allday-${index}`} role={role} name={name} allDay />
+  ));
+  names.forEach((name, index) => {
+    rows.push(<AssignmentRow key={`${role}-${index}`} role={role} name={name} />);
+  });
+  if (coverage.message) {
+    rows.push(<RoleNote key={`${role}-note`} role={role} coverage={coverage} />);
+  }
+  return rows;
+}
+
+/** Every row one day/night column would show, in full -- before the card's own visible-row cap is applied. */
+function periodRows(
+  period: "day" | "night",
+  group: ManagerShiftGroupView | null,
+  genericSupervisorNames: string[],
+  genericTechnicianNames: string[],
+): ReactNode[] {
+  if (!group) return [];
+
+  const [supervisorNames, technicianNames] = inRoleDisplayOrder({
+    supervisors: group.supervisorNames,
+    technicians: group.technicianNames,
+  });
+  const [supervisorCoverage, technicianCoverage] = inRoleDisplayOrder({
+    supervisors: group.supervisorCoverage,
+    technicians: group.technicianCoverage,
+  });
+  const [shadowSupervisorNames, shadowTechnicianNames] = inRoleDisplayOrder({
+    supervisors: group.shadowSupervisorNames,
+    technicians: group.shadowTechnicianNames,
+  });
+  const [genericForSupervisor, genericForTechnician] = inRoleDisplayOrder({
+    supervisors: genericSupervisorNames,
+    technicians: genericTechnicianNames,
+  });
+
+  return [
+    ...roleRows("supervisor", supervisorNames, supervisorCoverage, genericForSupervisor),
+    ...roleRows("technician", technicianNames, technicianCoverage, genericForTechnician),
+    ...shadowSupervisorNames.map((name, index) => (
+      <ShadowRow key={`${period}-shadow-supervisor-${index}`} role="supervisor" name={name} />
+    )),
+    ...shadowTechnicianNames.map((name, index) => (
+      <ShadowRow key={`${period}-shadow-technician-${index}`} role="technician" name={name} />
+    )),
+  ];
+}
+
+/** Caps a period's rows at `MAX_VISIBLE_ROWS_PER_PERIOD` -- the rest collapse into a "+N more details" count rather than growing the card without bound. */
+function truncateRows(rows: ReactNode[]): { visible: ReactNode[]; hiddenCount: number } {
+  if (rows.length <= MAX_VISIBLE_ROWS_PER_PERIOD) return { visible: rows, hiddenCount: 0 };
+  return { visible: rows.slice(0, MAX_VISIBLE_ROWS_PER_PERIOD), hiddenCount: rows.length - MAX_VISIBLE_ROWS_PER_PERIOD };
+}
+
+function PeriodColumn({
+  emoji,
+  periodLabel,
+  group,
+  rows,
+  hiddenCount,
+  moreHref,
+}: {
+  emoji: string;
+  periodLabel: string;
+  group: ManagerShiftGroupView | null;
+  rows: ReactNode[];
+  hiddenCount: number;
+  moreHref: string;
+}) {
   return (
     <div className="min-w-0 flex-1">
       <div className="flex items-center justify-between gap-2">
@@ -133,16 +230,16 @@ function PeriodColumn({ emoji, periodLabel, group }: { emoji: string; periodLabe
         </p>
         {group ? <CoverageBadge status={group.coverageStatus} /> : null}
       </div>
-      {group && supervisorRole && technicianRole ? (
-        <div className="mt-1.5 space-y-1">
-          <RoleCoverageLine roleLabel={supervisorRole.label} names={supervisorRole.names} coverage={supervisorRole.coverage} />
-          <RoleCoverageLine roleLabel={technicianRole.label} names={technicianRole.names} coverage={technicianRole.coverage} />
-          <ShadowList label='צל אחמ״ש' names={shadowSupervisorNames} />
-          <ShadowList label="צל טכנאי" names={shadowTechnicianNames} />
-        </div>
+      {group ? (
+        rows.length > 0 ? <ul className="mt-2 space-y-1.5">{rows}</ul> : null
       ) : (
-        <p className="mt-1.5 text-[11px] text-muted-2">אין נתוני שיבוץ</p>
+        <p className="mt-2 text-[11px] text-muted-2">אין נתוני שיבוץ</p>
       )}
+      {hiddenCount > 0 ? (
+        <Link href={moreHref} className="mt-1.5 inline-block text-[11px] font-medium text-primary hover:underline">
+          +{hiddenCount} פרטים נוספים
+        </Link>
+      ) : null}
     </div>
   );
 }
@@ -150,27 +247,42 @@ function PeriodColumn({ emoji, periodLabel, group }: { emoji: string; periodLabe
 function DayCard({ view }: { view: ManagerShiftDayView }) {
   const status = worstCoverageStatus(view.day, view.night) ?? "full";
   const accent = CARD_ACCENT_CLASS[status];
+  const moreHref = scheduleEveryoneHref({ date: view.date });
+
+  const day = truncateRows(periodRows("day", view.day, view.genericSupervisorNames, view.genericTechnicianNames));
+  const night = truncateRows(periodRows("night", view.night, view.genericSupervisorNames, view.genericTechnicianNames));
 
   return (
-    <Panel variant="panel" glass={CARD_GLASS[status]} className={`flex flex-col gap-2.5 ${accent}`}>
+    <Panel variant="panel" glass={CARD_GLASS[status]} className={`flex flex-col gap-3 ${accent}`}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-semibold text-foreground">{view.dateLabel}</p>
-        <Link
-          href={scheduleEveryoneHref({ date: view.date })}
-          className="shrink-0 text-xs font-medium text-primary hover:underline"
-        >
+        <Link href={moreHref} className="shrink-0 text-xs font-medium text-primary hover:underline">
           ללוח ←
         </Link>
       </div>
       {view.genericSupervisorNames.length > 0 || view.genericTechnicianNames.length > 0 ? (
-        <div className="border-t border-border pt-2.5">
-          <GenericAssignmentLine label='אחמ״ש (כל היום)' names={view.genericSupervisorNames} />
-          <GenericAssignmentLine label="טכנאי (כל היום)" names={view.genericTechnicianNames} />
+        <div className="space-y-1.5 border-t border-border pt-3">
+          <AllDayBanner role="supervisor" names={view.genericSupervisorNames} />
+          <AllDayBanner role="technician" names={view.genericTechnicianNames} />
         </div>
       ) : null}
-      <div className="flex gap-4 border-t border-border pt-2.5">
-        <PeriodColumn emoji="☀️" periodLabel="יום" group={view.day} />
-        <PeriodColumn emoji="🌙" periodLabel="לילה" group={view.night} />
+      <div className="flex gap-4 border-t border-border pt-3">
+        <PeriodColumn
+          emoji="☀️"
+          periodLabel="יום"
+          group={view.day}
+          rows={day.visible}
+          hiddenCount={day.hiddenCount}
+          moreHref={moreHref}
+        />
+        <PeriodColumn
+          emoji="🌙"
+          periodLabel="לילה"
+          group={view.night}
+          rows={night.visible}
+          hiddenCount={night.hiddenCount}
+          moreHref={moreHref}
+        />
       </div>
     </Panel>
   );
@@ -186,9 +298,19 @@ function DayCard({ view }: { view: ManagerShiftDayView }) {
  * job belongs to "דורש טיפול" in Overview) -- just laid out so the manager
  * can understand the period at a glance: a problem date's card carries a
  * visible amber/critical accent border, a fully-covered date stays quiet.
- * Each card links straight into the real team calendar
+ *
+ * Each assignment is one row -- "<emoji> <role> — <name>" -- so a role is
+ * never separated from who holds it (Design Pass: shift-personnel
+ * redesign), an all-day role gets its own emphasized banner PLUS a
+ * badge-tagged row inside whichever day/night column it covers (a little
+ * duplication beats a column that reads as unstaffed), shadow assignments
+ * are their own visually distinct pill, and a role's coverage gap is its
+ * own note block rather than a bare line under the names above it. A very
+ * busy column collapses its overflow into a "+N more details" link rather
+ * than growing the card past its neighbors in the grid -- that link, and
+ * the card's own "ללוח ←", both lead into the real team calendar
  * (`/schedule?person=all&date=...`, the existing manager-only Schedule
- * perspective) for that specific date's full detail -- never a second
+ * perspective), which shows that date's full detail -- never a second
  * calendar implementation here.
  */
 export function ManagerCoverageSection({ days }: ManagerCoverageSectionProps) {

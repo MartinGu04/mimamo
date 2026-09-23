@@ -60,11 +60,17 @@ export function dayNumberFromDate(date: string): number {
  * row height, and the day number's own placement alone, the same way a
  * native phone calendar has no cell gridlines. Identical across every
  * calendar surface.
+ *
+ * Uses the calendar's own `--calendar-cell-border` token (light mode: a
+ * distinctly stronger steel-gray than the app's ordinary `--border`, so the
+ * grid lines stay legible against the calendar's own strengthened tray
+ * surface; dark mode: `--border`, unchanged) rather than `border-border`
+ * directly -- see `globals.css`'s calendar-surface tokens.
  */
 export function cellBorderClasses(columnIndex: number, isFirstRow: boolean): string {
   const start = columnIndex === 0 ? "sm:border-s" : "";
   const top = isFirstRow ? "sm:border-t" : "";
-  return `sm:border-b sm:border-e sm:border-border ${start} ${top}`.trim();
+  return `sm:border-b sm:border-e sm:border-[var(--calendar-cell-border)] ${start} ${top}`.trim();
 }
 
 /**
@@ -94,8 +100,8 @@ export function IndicatorChip({
   statusDotClassName,
   /**
    * When set (e.g. `eventColorBgClassName`, `lib/presentation/eventColor.ts`),
-   * replaces the chip's default neutral `bg-overlay-soft` with a semantic
-   * soft color tint, from `sm:` up -- used only by `CalendarGrid`'s
+   * replaces the chip's default neutral `--calendar-chip-bg` tint with a
+   * semantic soft color tint, from `sm:` up -- used only by `CalendarGrid`'s
    * single-person "הלוח שלי" indicators, never by `EveryoneMonthGrid` (which
    * never passes this prop, so its chips are completely unaffected). Always
    * a single Tailwind class (see `EVENT_COLOR_SOFT_BG_CLASS`), safe to
@@ -113,10 +119,14 @@ export function IndicatorChip({
   categoryBgClassName?: string;
   className?: string;
 }) {
-  const bgClassName = categoryBgClassName ? `sm:${categoryBgClassName}` : "sm:bg-overlay-soft";
+  const bgClassName = categoryBgClassName ? `sm:${categoryBgClassName}` : "sm:bg-[var(--calendar-chip-bg)]";
+  // Only the uncategorized default gets the extra ring -- a per-event-type
+  // COLOR chip (personal calendar) already reads clearly on its own tinted
+  // background and keeps its existing borderless look untouched.
+  const ringClassName = categoryBgClassName ? "" : "sm:ring-1 sm:ring-[var(--calendar-chip-border)]";
   return (
     <span
-      className={`flex min-w-0 items-center gap-1 sm:rounded ${bgClassName} px-0 sm:px-1 text-[10px] leading-[14px] sm:text-xs sm:leading-4 lg:text-[13px] lg:leading-5 ${toneClassName} ${className}`}
+      className={`flex min-w-0 items-center gap-1 sm:rounded ${bgClassName} ${ringClassName} px-0 sm:px-1 text-[10px] leading-[14px] sm:text-xs sm:leading-4 lg:text-[13px] lg:leading-5 ${toneClassName} ${className}`}
     >
       {statusDotClassName ? (
         <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full sm:hidden ${statusDotClassName}`} />
@@ -148,7 +158,7 @@ export function OverflowChip({ count, className = "" }: { count: number; classNa
 /** The shared weekday-header row (week-number gutter spacer + 7 short weekday labels) sitting above every calendar surface's grid body. */
 export function CalendarWeekdayHeader() {
   return (
-    <div className="flex items-stretch gap-1 border-b border-border pb-2 sm:gap-1.5">
+    <div className="flex items-stretch gap-1 border-b border-[var(--calendar-cell-border)] pb-2 sm:gap-1.5">
       <span aria-hidden="true" className="w-5 shrink-0 sm:w-6" />
       <div className="grid flex-1 grid-cols-7 gap-1 text-center text-xs font-medium sm:gap-1.5 sm:text-sm">
         {SHORT_WEEKDAY_LABELS.map((label, index) => (
@@ -203,14 +213,25 @@ interface OutOfMonthCellProps {
   isFirstRow: boolean;
 }
 
-/** A non-interactive, dimmed adjacent-month cell, participating in the same bordered grid geometry as a real day cell. Shared so leading/trailing padding can never look like a "detached, disabled card" in one surface but not the other. */
+/**
+ * A non-interactive, dimmed adjacent-month cell, participating in the same
+ * bordered grid geometry as a real day cell. Shared so leading/trailing
+ * padding can never look like a "detached, disabled card" in one surface
+ * but not the other.
+ *
+ * Non-weekend out-of-month cells sit on `--calendar-out-of-month-bg` -- a
+ * semi-opaque white wash over the calendar's own (light-mode) tray, so a
+ * whole leading/trailing padding row reads as an airy, lightened area
+ * rather than a heavy solid-gray block, while staying visibly muted next
+ * to a real white in-month cell (dark mode: transparent, unchanged).
+ */
 export function OutOfMonthCell({ cell, columnIndex, isFirstRow }: OutOfMonthCellProps) {
   const isWeekend = isWeekendColumn(columnIndex);
   return (
     <div
       aria-hidden="true"
       className={`flex ${CALENDAR_CELL_HEIGHT_CLASSES} items-start justify-start p-1 sm:p-1.5 ${cellBorderClasses(columnIndex, isFirstRow)} ${
-        isWeekend ? "bg-weekend-tint" : ""
+        isWeekend ? "bg-weekend-tint" : "bg-[var(--calendar-out-of-month-bg)]"
       }`}
     >
       <span className="text-xs font-medium text-muted-2 opacity-40 sm:text-sm lg:text-base">
@@ -251,6 +272,14 @@ interface CalendarDayCellProps {
  * outer cell geometry and interaction states can never diverge. Only the
  * content area's children (and the small header-extra slot) differ per
  * surface.
+ *
+ * An ordinary (non-weekend, non-selected) cell sits on `--calendar-cell-bg`
+ * -- a real, opaque white chip in light mode, so it reads clearly against
+ * the calendar container's own strengthened `--calendar-surface` tray
+ * (transparent in dark mode, unchanged there). Weekend/selected keep their
+ * own existing tint/ring, layered on top of that same tray -- selected
+ * stays the strongest state precisely because it's the only one still
+ * combining a color shift AND a ring.
  */
 export function CalendarDayCell({
   date,
@@ -278,7 +307,7 @@ export function CalendarDayCell({
           ? "bg-overlay-strong ring-2 ring-inset ring-primary/40"
           : isWeekend
             ? "bg-weekend-tint hover:bg-overlay-soft"
-            : "hover:bg-overlay-soft"
+            : "bg-[var(--calendar-cell-bg)] hover:bg-overlay-soft"
       }`}
     >
       <div className={`flex h-full flex-col gap-0.5 ${isPast ? "opacity-60" : ""}`}>

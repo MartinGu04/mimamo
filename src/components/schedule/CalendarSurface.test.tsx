@@ -152,11 +152,13 @@ describe("mobile grid declutter (borders + chip chrome are sm:+ only)", () => {
     }
   });
 
-  it("cellBorderClasses still produces the same sm:+ border set as before (desktop unchanged)", () => {
+  it("cellBorderClasses still produces the same sm:+ border set as before (desktop unchanged), now via the calendar's own stronger border token", () => {
     expect(cellBorderClasses(0, true).split(" ").sort()).toEqual(
-      ["sm:border-b", "sm:border-e", "sm:border-border", "sm:border-s", "sm:border-t"].sort(),
+      ["sm:border-b", "sm:border-e", "sm:border-[var(--calendar-cell-border)]", "sm:border-s", "sm:border-t"].sort(),
     );
-    expect(cellBorderClasses(1, false).split(" ").sort()).toEqual(["sm:border-b", "sm:border-e", "sm:border-border"].sort());
+    expect(cellBorderClasses(1, false).split(" ").sort()).toEqual(
+      ["sm:border-b", "sm:border-e", "sm:border-[var(--calendar-cell-border)]"].sort(),
+    );
   });
 
   it("a real day cell's outer button carries only sm:-prefixed border classes, no bare border below sm:", () => {
@@ -196,7 +198,7 @@ describe("mobile grid declutter (borders + chip chrome are sm:+ only)", () => {
     render(<IndicatorChip emoji="☀️" label="יום" />);
     const chip = screen.getByText("יום").parentElement as HTMLElement;
     const tokens = chip.className.split(" ").filter(Boolean);
-    expect(tokens).not.toContain("bg-overlay-soft");
-    expect(tokens).toContain("sm:bg-overlay-soft");
+    expect(tokens).not.toContain("bg-[var(--calendar-chip-bg)]");
+    expect(tokens).toContain("sm:bg-[var(--calendar-chip-bg)]");
   });
 });
