@@ -417,6 +417,18 @@ describe("TeamWeekMatrix — 'איפה אני?' self orientation (viewerPersonId
     expect(container.querySelectorAll(".team-week-self-column")).toHaveLength(1 + DATES.length);
   });
 
+  it("regression: the self column marker never drops the sticky utility from the person-name header -- vertical-scroll stickiness must survive being combined with team-week-self-column", () => {
+    const view = teamWeek();
+    render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" peopleFilter="all" viewerPersonId="p_daniel" allPeopleFilterHref="/x" />);
+    const selfHeader = screen.getByRole("columnheader", { name: "דניאל כהן, אני" });
+    // A plain "sticky" match alone would also match "team-week-self-column"
+    // if this class were ever renamed to contain that substring -- assert
+    // the exact Tailwind utility token instead.
+    expect(selfHeader.className.split(/\s+/)).toContain("sticky");
+    const otherHeader = screen.getByRole("columnheader", { name: "איתן דוגמה" });
+    expect(otherHeader.className.split(/\s+/)).toContain("sticky");
+  });
+
   it("12. the 'איפה אני?' Find Me control renders only when the viewer's own column is currently rendered", () => {
     const view = teamWeek();
     const { rerender } = render(

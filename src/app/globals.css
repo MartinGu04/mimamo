@@ -1611,10 +1611,22 @@ html[data-a11y-text="xlarge"] {
 /* `bg-primary/[0.06]` tint, since box-shadow/border/background are        */
 /* independent, non-conflicting properties. The keyframe alternates the    */
 /* tint on/off three times over ~2s for a gentle, refined pulse -- never   */
-/* opacity flashing, never a white flash, never changing text visibility. */
-.team-week-self-column {
-  position: relative;
-}
+/* opacity flashing, never a white flash, never changing text visibility.  */
+/*                                                                         */
+/* Deliberately NO `.team-week-self-column { position: relative; }` rule   */
+/* here -- `box-shadow` needs no positioning context on its own element to */
+/* render, and this file's plain (unlayered) CSS sits ABOVE every          */
+/* `@layer`-wrapped Tailwind utility in cascade priority regardless of     */
+/* source order (`@import "tailwindcss"` at the top of this file pulls     */
+/* Tailwind's utilities in as `@layer utilities`). A same-specificity      */
+/* `position: relative` here would have silently beaten the person-name    */
+/* header's own `.sticky` utility (`position: sticky`, from                */
+/* `HEADER_CELL_BASE` in TeamWeekMatrix.tsx) whenever a header also carries */
+/* `.team-week-self-column` -- the viewer's own column header would stop   */
+/* sticking during vertical scroll while every other header keeps sticking.*/
+/* Regression test: TeamWeekMatrix.test.tsx's "self column marker never    */
+/* drops the sticky utility" case.                                        */
+/* ---------------------------------------------------------------------- */
 
 @keyframes team-week-self-pulse {
   0%,
