@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Panel } from "@/components/ui/Panel";
+import { ChevronLeft } from "lucide-react";
 import type { ReportOneDraft } from "@/lib/domain/reportOne";
 import { formatReportOneDateDot } from "@/lib/presentation/reportOneFormat";
+import { QUICK_ACTION_CARD_CLASS } from "./homeQuickActionCardStyles";
 import { ReportOneEditorOverlay } from "./ReportOneEditorOverlay";
 
 interface ReportOneQuickActionProps {
@@ -19,6 +20,13 @@ interface ReportOneQuickActionProps {
  * Opens `ReportOneEditorOverlay` via local state; the draft itself is
  * already generated server-side (`getRequestReportOneTomorrow`) by the time
  * this renders, so opening the action is instant -- never a client fetch.
+ *
+ * Redesigned (Home quick-action cards pass) from a full-width banner --
+ * where the small trailing "פתיחה" button was the only clickable part --
+ * into a compact, WHOLE-card `<button>` sharing `QUICK_ACTION_CARD_CLASS`
+ * with its `TeamWeekQuickAction` pair (see `IssuesPanel`'s existing
+ * whole-card-`Link` precedent for why the entire surface, not a nested
+ * control, is the click target).
  */
 export function ReportOneQuickAction({ draft, reserveInclusionByPersonId }: ReportOneQuickActionProps) {
   const [open, setOpen] = useState(false);
@@ -26,19 +34,14 @@ export function ReportOneQuickAction({ draft, reserveInclusionByPersonId }: Repo
 
   return (
     <>
-      <Panel variant="compact" glass="medium" className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">🛰️ דוח 1 למחר</p>
-          {targetDateLabel ? <p className="mt-0.5 text-xs text-muted">מוכן עבור {targetDateLabel}</p> : null}
-        </div>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="shrink-0 rounded-lg bg-primary px-3.5 py-1.5 text-sm font-medium text-primary-foreground transition-colors duration-150 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        >
-          פתיחה
-        </button>
-      </Panel>
+      <button type="button" onClick={() => setOpen(true)} className={QUICK_ACTION_CARD_CLASS}>
+        <p className="text-sm font-semibold text-foreground">🛰️ דוח 1 למחר</p>
+        {targetDateLabel ? <p className="text-xs text-muted">מוכן עבור {targetDateLabel}</p> : null}
+        <span className="mt-auto flex items-center gap-0.5 pt-2 text-xs font-medium text-muted">
+          <span>פתיחה</span>
+          <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" strokeWidth={2} />
+        </span>
+      </button>
 
       {open ? (
         <ReportOneEditorOverlay draft={draft} reserveInclusionByPersonId={reserveInclusionByPersonId} onClose={() => setOpen(false)} />

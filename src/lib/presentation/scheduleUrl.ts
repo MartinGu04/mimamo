@@ -38,7 +38,8 @@ export function scheduleEveryoneHref(params: ScheduleEveryoneHrefParams = {}): s
  * handling). Available to EVERY authenticated, uniquely-mapped viewer, not
  * manager-only -- see `scheduleTypes.ts`'s own docs. The ONE constant
  * behind every one-click Team Week shortcut in the app (Home's
- * `WeekOverviewSection`, `PermanentManagerHome`) so they can never drift
+ * `TeamWeekQuickAction`, rendered via `HomeQuickActions` on both
+ * `Dashboard` and `PermanentManagerHome`) so they can never drift
  * apart from each other or from `/schedule` itself.
  */
 export function scheduleTeamWeekHref(): string {

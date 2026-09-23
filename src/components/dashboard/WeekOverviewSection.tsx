@@ -1,10 +1,6 @@
-import { Users } from "lucide-react";
-import Link from "next/link";
 import type { PersonalWeekDayView, PersonalWeekOverview } from "@/lib/presentation/personalWeekOverview";
 import { formatCompactDate, formatHebrewWeekday } from "@/lib/presentation/hebrewDate";
-import { scheduleTeamWeekHref } from "@/lib/presentation/scheduleUrl";
 import { Badge } from "@/components/ui/Badge";
-import { EXPAND_HIT_AREA_CLASS } from "@/components/ui/hitArea";
 import { TimeRange } from "./TimeRange";
 import { WeekOverviewAutoScroll } from "./WeekOverviewAutoScroll";
 
@@ -26,17 +22,12 @@ function dayElementId(date: string): string {
  * this section's whole purpose is the complete week shape, not a
  * non-repetition list.
  *
- * The section heading also carries the "צוות השבוע" one-click shortcut
- * (opposite side of the title) into the read-only Team Week matrix
- * (`scheduleTeamWeekHref()`, `/schedule?person=all&view=team-week`) --
- * this is the ONE place in the whole app that answers "who's working this
- * week?" in a single click from Home, for EVERY mapped viewer (regular/
- * reserve/manager alike, never manager-only -- see `scheduleTypes.ts`'s
- * own authorization docs). `WeekOverviewSection` only ever renders on the
- * regular (non-Emergency-Mode) `Dashboard`, so this shortcut structurally
- * never appears during Emergency Mode -- Emergency Mode renders a
- * completely separate `EmergencyDashboard` instead (see `(dashboard)/page.tsx`),
- * never this component at all.
+ * The one-click "צוות השבוע" Team Week shortcut this heading used to
+ * carry (opposite side of the title) has moved to `TeamWeekQuickAction`,
+ * rendered higher up the page via `HomeQuickActions` -- a small Link
+ * tucked beside a heading read too much like a static heading to be
+ * discoverable (Home quick-action cards pass). This heading is now plain
+ * text only.
  *
  * One `<ol>` renders both layouts: a horizontal snap-scroll rail (base
  * through `md`, so a tablet still gets the comfortable rail rather than a
@@ -49,18 +40,9 @@ export function WeekOverviewSection({ overview }: WeekOverviewSectionProps) {
 
   return (
     <section aria-labelledby="week-overview-heading">
-      <div className="flex items-center justify-between gap-3">
-        <h2 id="week-overview-heading" className="text-base font-semibold text-foreground sm:text-lg">
-          השבוע הקרוב
-        </h2>
-        <Link
-          href={scheduleTeamWeekHref()}
-          className={`relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted transition-colors duration-200 hover:bg-overlay-soft hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:text-sm ${EXPAND_HIT_AREA_CLASS}`}
-        >
-          <Users className="h-4 w-4 shrink-0" aria-hidden="true" strokeWidth={2} />
-          צוות השבוע
-        </Link>
-      </div>
+      <h2 id="week-overview-heading" className="text-base font-semibold text-foreground sm:text-lg">
+        השבוע הקרוב
+      </h2>
 
       <ol
         id={RAIL_ID}

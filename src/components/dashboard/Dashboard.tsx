@@ -1,7 +1,7 @@
 import { BLOCKING_ABSENCE_KINDS } from "@/lib/domain/operationalIssues";
 import type { ReportOneDraft } from "@/lib/domain/reportOne";
 import { DataFreshnessStatus } from "@/components/ui/DataFreshnessStatus";
-import { ReportOneQuickAction } from "@/components/home/ReportOneQuickAction";
+import { HomeQuickActions } from "@/components/home/HomeQuickActions";
 import { SetupSection } from "@/components/home/SetupSection";
 import { buildPersonalWeekOverview } from "@/lib/presentation/personalWeekOverview";
 import type { PersonalEventView, PersonalScheduleReadModel } from "@/lib/readModels/types";
@@ -32,9 +32,10 @@ interface DashboardProps {
    * "דוח 1 למחר" -- `null`/omitted whenever this person isn't a manager
    * (Report 1 needs department-wide roster/schedule access, not just a
    * personal schedule) or the draft itself failed to load. Reaches THIS
-   * component for every manager who is NOT a permanent (קבע) manager --
-   * a permanent manager gets the same quick action on `PermanentManagerHome`
-   * instead; see `(dashboard)/page.tsx` for the routing.
+   * component (via `HomeQuickActions`) for every manager who is NOT a
+   * permanent (קבע) manager -- a permanent manager gets the same quick
+   * action on `PermanentManagerHome` instead; see `(dashboard)/page.tsx`
+   * for the routing.
    */
   reportOneDraft?: ReportOneDraft | null;
   /** Passed straight through to `ReportOneQuickAction` -- see `ReportOneEditorOverlay`'s own docs. `undefined`/omitted whenever `reportOneDraft` itself is `null`. */
@@ -129,9 +130,7 @@ export function Dashboard({
     <div className="flex flex-col gap-4">
       <Header personName={model.person.name} localNow={model.localNow} />
       <SetupSection userId={userId} calendarSyncEnabled={calendarSyncEnabled} eligibleForOnboarding={eligibleForOnboarding} />
-      {reportOneDraft ? (
-        <ReportOneQuickAction draft={reportOneDraft} reserveInclusionByPersonId={reportOneReserveInclusion} />
-      ) : null}
+      <HomeQuickActions reportOneDraft={reportOneDraft} reportOneReserveInclusion={reportOneReserveInclusion} />
       <DataFreshnessStatus fetchedAt={model.fetchedAt} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">

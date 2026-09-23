@@ -23,7 +23,12 @@ describe("ReportOneQuickAction", () => {
   it("opens the editor overlay on click", () => {
     render(<ReportOneQuickAction draft={draft()} />);
     expect(screen.queryByRole("dialog")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "פתיחה" }));
+    fireEvent.click(screen.getByRole("button", { name: /דוח 1 למחר/ }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("is a single whole-card button, not a nested control", () => {
+    render(<ReportOneQuickAction draft={draft()} />);
+    expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 });
