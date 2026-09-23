@@ -162,40 +162,42 @@ const PRESENT_STATUS = "נוכח";
  *   medical/day_off is still a genuine unresolved conflict ("?", no duty
  *   text appended), not silently combined.
  *
- *   A SECOND exception (see `PRESENCE_IMPLYING_DUTY_FAMILIES` below): when
- *   the primary itself is the bare unresolved "?" -- and ONLY the
- *   genuinely-no-data flavor of "?" (no shift event at all today; the
- *   blocking-absence-conflict and ambiguous-shift-wording flavors of "?"
- *   are structurally excluded, see `resolveRegularOrReserveStatus`'s own
- *   docs) -- a duty whose family INHERENTLY requires physically being on
- *   site synthesizes `PRESENT_STATUS` ("נוכח") as the primary, since a
- *   bare "?" next to e.g. "שמירה 1" was actively misleading: the duty
- *   itself already proves the person is physically present. A duty that
- *   does NOT inherently prove on-site presence (e.g. `evacuation_on_call`/
- *   `reserve` -- both genuinely on-call/standby concepts, reachable but
- *   not necessarily on site) leaves the bare "?" exactly as before.
+ *   A SECOND exception: ANY typed duty (every `DutyFamily` without
+ *   exception -- a typed duty always proves the person has a real,
+ *   concrete assignment that day, whether it is a physical post like
+ *   `guard`/kitchen/`rasar` or an on-call/standby commitment like
+ *   `reserve`/`evacuation_on_call`/`oxid`/`callup`) synthesizes
+ *   `PRESENT_STATUS` ("נוכח") as the primary when the primary itself is
+ *   the bare unresolved "?" -- and ONLY the genuinely-no-data flavor of
+ *   "?" (no shift event at all today; the blocking-absence-conflict and
+ *   ambiguous-shift-wording flavors of "?" are structurally excluded, see
+ *   `resolveRegularOrReserveStatus`'s own docs). A bare "?" next to e.g.
+ *   "עתודה 1" or "כונן פינויים" was actively misleading: the duty itself
+ *   already proves the person is expected/assigned, so Report 1 shows
+ *   "נוכח, עתודה 1" / "נוכח, כונן פינויים" instead.
  *
- * - category "other", ONLY the two specific keyword-matched activities
+ * - category "other", ONLY the three specific keyword-matched activities
  *   `isLogisticsWithdrawalEvent` (משיכות/משיכות מהלוגיסטיקה) already
  *   detects for the notifications engine
  *   (`lib/notifications/engine/logisticsWithdrawal.ts`) and its own
- *   sibling `isCertificationEvent` (הסמכה) detect below. Neither activity
- *   has a dedicated `DutyFamily`/column in the source Sheet (confirmed for
- *   `משיכות` by that module's own docs, PR #30) -- both are ordinary
- *   schedule-cell text that `classify()` has nothing more specific for, so
- *   they fall through to `category: "other"` exactly like any other
- *   unrecognized text. Both are ALSO physically on-site work (logistics
+ *   siblings `isCertificationEvent` (הסמכה) and `isShootingRangeEvent`
+ *   (מטווח/מטווחים) detect below. None of these activities has a dedicated
+ *   `DutyFamily`/column in the source Sheet (confirmed for `משיכות` by that
+ *   module's own docs, PR #30) -- all three are ordinary schedule-cell
+ *   text that `classify()` has nothing more specific for, so they fall
+ *   through to `category: "other"` exactly like any other unrecognized
+ *   text. All three are ALSO physically on-site work (logistics
  *   withdrawals happen in a fixed 13:00-14:00 on-site window, see
- *   `logisticsCoordination.ts`; a certification session is likewise
- *   attended in person), so both are additionally treated as
- *   presence-implying (see `resolveRegularOrReserveStatus`'s bare-"?"
- *   synthesis) -- the SAME treatment `PRESENCE_IMPLYING_DUTY_FAMILIES`
- *   already gives guard/kitchen/rasar duties, just reached via keyword
- *   match instead of a typed `DutyFamily` since none exists for these.
- *   Every OTHER "other"-category text still stays neither-primary-nor-
- *   additive, per the general rule below -- these two keywords are a
- *   narrow, explicit exception, never a blanket "surface all 'other'
- *   text" change.
+ *   `logisticsCoordination.ts`; a certification session and a shooting
+ *   range session are likewise attended in person), so all three are
+ *   additionally treated as presence-implying (see
+ *   `resolveRegularOrReserveStatus`'s bare-"?" synthesis) -- the SAME
+ *   treatment every typed duty now gets, just reached via keyword match
+ *   instead of a typed `DutyFamily` since none exists for these. Every
+ *   OTHER "other"-category text still stays neither-primary-nor-additive,
+ *   per the general rule below -- these three keywords are a narrow,
+ *   explicit exception, never a blanket "surface all 'other' text"
+ *   change.
  *
  * NEITHER (Report 1 never surfaces these -- not a person's own operational
  * presence fact):
@@ -206,7 +208,7 @@ const PRESENT_STATUS = "נוכח";
  * - category "change_note" -- its own docstring is explicit: "a note about
  *   a swap, not an active duty"
  * - category "other"/"unknown" -- unrecognized text; never guessed, except
- *   the two narrow keyword exceptions documented above
+ *   the three narrow keyword exceptions documented above
  */
 function isAdditiveDutyEvent(event: Event): event is Event & { dutyFamily: DutyFamily } {
   return event.category === "duty" && event.dutyFamily !== null;
@@ -225,6 +227,18 @@ function isAdditiveDutyEvent(event: Event): event is Event & { dutyFamily: DutyF
 const WITHDRAWAL_KEYWORD = "משיכות";
 /** "הסמכה" -- a certification activity. Same "other"-category situation as `WITHDRAWAL_KEYWORD` above: no dedicated `DutyFamily`/column exists for it either, so it's ordinary schedule-cell text `classify()` has nothing more specific for. */
 const CERTIFICATION_KEYWORD = "הסמכה";
+/**
+ * "מטווח" -- a shooting range activity. Same "other"-category situation as
+ * `WITHDRAWAL_KEYWORD`/`CERTIFICATION_KEYWORD` above: no dedicated
+ * `DutyFamily`/column exists for it either. Matched on the singular
+ * "מטווח" (a substring of the plural "מטווחים" too, so both spellings are
+ * caught by one `.includes()` check, exactly like `WITHDRAWAL_KEYWORD`
+ * matching both "משיכות" and "משיכות מהלוגיסטיקה"), but the Report 1
+ * addendum is always rendered as the plural `SHOOTING_RANGE_WORDING`
+ * regardless of which spelling the source cell used.
+ */
+const SHOOTING_RANGE_KEYWORD = "מטווח";
+const SHOOTING_RANGE_WORDING = "מטווחים";
 
 /** Mirrors `lib/notifications/engine/logisticsWithdrawal.ts`'s `isLogisticsWithdrawalEvent` exactly -- see `WITHDRAWAL_KEYWORD`'s own doc comment for why this is duplicated rather than imported. */
 function isWithdrawalEvent(event: Event): boolean {
@@ -234,6 +248,11 @@ function isWithdrawalEvent(event: Event): boolean {
 /** Same shape/rule as `isWithdrawalEvent`, for the sibling `הסמכה` keyword. */
 function isCertificationEvent(event: Event): boolean {
   return event.category === "other" && event.title.includes(CERTIFICATION_KEYWORD);
+}
+
+/** Same shape/rule as `isWithdrawalEvent`, for the sibling `מטווח`/`מטווחים` keyword. */
+function isShootingRangeEvent(event: Event): boolean {
+  return event.category === "other" && event.title.includes(SHOOTING_RANGE_KEYWORD);
 }
 
 const DUTY_FAMILY_WORDING: Record<DutyFamily, string> = {
@@ -262,43 +281,6 @@ const DUTY_FAMILY_ORDER: readonly DutyFamily[] = [
 ];
 
 /**
- * Audit of every `DutyFamily` for whether it INHERENTLY requires being
- * physically on site -- deliberately NOT "every duty implies presence"
- * (see `resolveRegularOrReserveStatus`'s own docs on why a bare "?" is
- * synthesized into `PRESENT_STATUS` only for these):
- *
- * PRESENCE-IMPLYING (structurally cannot be performed off site):
- * - `guard` (שמירה) -- a physical post.
- * - `full_kitchen`/`daily_kitchen`/`weekend_kitchen` (מטבח) -- kitchen
- *   duty is on-site food service work by definition.
- * - `rasar` (רס"ר) -- an on-base equipment/quartermaster role.
- *
- * NOT presence-implying (on-call/standby concepts, or too ambiguous to
- * assert on-site presence from the family alone -- left as bare "?" next
- * to the duty text unless another authoritative primary already applies):
- * - `evacuation_on_call` (כונן פינויים) -- "כונן" is Hebrew for on-call/
- *   standby: reachable, not necessarily on site. This is also the exact
- *   existing "נוכח, אחרי לילה" + "כונן פינויים" example this module's own
- *   docs already use -- that combination works today because the primary
- *   there comes from after-night carryover, never from this duty itself.
- * - `reserve` (עתודה) -- a backup/standby pool duty, same on-call
- *   reasoning as `evacuation_on_call`.
- * - `oxid`/`callup` (אוקסיד/הקפצה) -- no clear, unambiguous on-site
- *   signal from the family alone; never guessed.
- */
-const PRESENCE_IMPLYING_DUTY_FAMILIES: ReadonlySet<DutyFamily> = new Set([
-  "guard",
-  "full_kitchen",
-  "daily_kitchen",
-  "weekend_kitchen",
-  "rasar",
-]);
-
-function isPresenceImplyingDuty(dutyFamily: DutyFamily): boolean {
-  return PRESENCE_IMPLYING_DUTY_FAMILIES.has(dutyFamily);
-}
-
-/**
  * The `משיכות`/`הסמכה` additive text for the day, deduplicated exactly like
  * `resolveAdditiveDutyTexts` (a duplicate same-keyword event never doubles
  * the text) -- ONE combined array entry, never two separate ones, when both
@@ -317,6 +299,11 @@ function resolveWithdrawalAndCertificationTexts(eventsToday: readonly Event[]): 
   if (hasCertification) return [CERTIFICATION_KEYWORD];
   if (hasWithdrawal) return [WITHDRAWAL_KEYWORD];
   return [];
+}
+
+/** The `מטווחים` additive text for the day -- a single deduplicated entry (any number of same-day מטווח/מטווחים events still produce exactly one "מטווחים" addendum), matching `SHOOTING_RANGE_WORDING` regardless of which spelling the source cell(s) used. */
+function resolveShootingRangeTexts(eventsToday: readonly Event[]): string[] {
+  return eventsToday.some(isShootingRangeEvent) ? [SHOOTING_RANGE_WORDING] : [];
 }
 
 /** "שמירה 2" -- the duty family's Hebrew wording, with its slot appended only when the family actually has one. Deliberately duplicated from (never imported from) `lib/presentation/duty.ts`'s `dutyBlockTitle` -- this domain module never reaches into `lib/presentation` (see this repo's engineering rules on layer separation); the same duplication already exists between the parser's own duty phrase table and the presentation label table. */
@@ -429,20 +416,22 @@ function resolvePrimaryStatus(
  * `hasShiftEventToday` below -- since ANY shift event today means the "?"
  * instead came from an unresolved SHIFT ambiguity, e.g. two conflicting
  * shift wordings the same day, which must stay flagged exactly as before)
- * and at least one of today's additive activities inherently requires
- * being on site (`isPresenceImplyingDuty` -- guard/kitchen/rasar -- OR
- * `isWithdrawalEvent`/`isCertificationEvent` -- משיכות/הסמכה), the primary
- * is synthesized to `PRESENT_STATUS` ("נוכח") instead of staying "?": the
- * activity itself already proves the person is physically present, so "?,
- * שמירה 1" (or "?, משיכות") was actively misleading. This can never fire
- * for the blocking-absence-vs-assignment conflict above (that returns
- * early, before this point) or the referral-vs-shift conflict (both have a
- * shift event today, so `hasShiftEventToday` excludes them) -- every
- * existing contradiction stays exactly as unresolved as it was. משיכות/
- * הסמכה never participate in that top-level blocking-absence conflict
- * check either way (`assignmentsToday`/`isAssignmentEvent` above only ever
- * matches category "shift"/"duty", exactly matching `detectBlockingAbsenceIssues`'s
- * own notion of a conflicting assignment) -- category "other" was never a
+ * and at least one of today's additive activities proves the person has a
+ * real, concrete assignment (`isAdditiveDutyEvent` -- ANY `DutyFamily`,
+ * without exception -- OR `isWithdrawalEvent`/`isCertificationEvent`/
+ * `isShootingRangeEvent` -- משיכות/הסמכה/מטווחים), the primary is
+ * synthesized to `PRESENT_STATUS` ("נוכח") instead of staying "?": the
+ * activity itself already proves the person is present/assigned, so "?,
+ * עתודה 1" (or "?, כונן פינויים", or "?, משיכות") was actively misleading.
+ * This can never fire for the blocking-absence-vs-assignment conflict
+ * above (that returns early, before this point) or the referral-vs-shift
+ * conflict (both have a shift event today, so `hasShiftEventToday`
+ * excludes them) -- every genuine contradiction stays exactly as
+ * unresolved as it was. משיכות/הסמכה/מטווחים never participate in that
+ * top-level blocking-absence conflict check either way
+ * (`assignmentsToday`/`isAssignmentEvent` above only ever matches category
+ * "shift"/"duty", exactly matching `detectBlockingAbsenceIssues`'s own
+ * notion of a conflicting assignment) -- category "other" was never a
  * conflict signal there and this fix does not change that.
  */
 export function resolveRegularOrReserveStatus(
@@ -458,12 +447,17 @@ export function resolveRegularOrReserveStatus(
   }
 
   let primary = resolvePrimaryStatus(eventsToday, eventsPrevDay, blockingAbsencesToday, referralsToday);
-  const activityTexts = [...resolveAdditiveDutyTexts(eventsToday), ...resolveWithdrawalAndCertificationTexts(eventsToday)];
+  const activityTexts = [
+    ...resolveAdditiveDutyTexts(eventsToday),
+    ...resolveShootingRangeTexts(eventsToday),
+    ...resolveWithdrawalAndCertificationTexts(eventsToday),
+  ];
 
   if (primary === UNKNOWN_REPORT_ONE_STATUS && activityTexts.length > 0) {
     const hasShiftEventToday = eventsToday.some((event) => event.category === "shift");
     const hasPresenceImplyingActivityToday =
-      eventsToday.some((event) => isAdditiveDutyEvent(event) && isPresenceImplyingDuty(event.dutyFamily)) ||
+      eventsToday.some(isAdditiveDutyEvent) ||
+      eventsToday.some(isShootingRangeEvent) ||
       eventsToday.some(isWithdrawalEvent) ||
       eventsToday.some(isCertificationEvent);
     if (!hasShiftEventToday && hasPresenceImplyingActivityToday) {
@@ -480,8 +474,8 @@ export function resolveRegularOrReserveStatus(
  * assignment fact for the target date -- reuses `generatedStatus` exactly
  * as `resolveRegularOrReserveStatus` resolved it (a shift, a blocking
  * absence, a referral, after-night carryover, or ANY additive activity,
- * e.g. כונן פינויים/רס"ר/שמירה/משיכות/הסמכה -- see that function's own
- * audit of every case it covers), never a second/parallel rule system. The
+ * e.g. כונן פינויים/רס"ר/שמירה/משיכות/הסמכה/מטווחים -- see that function's
+ * own audit of every case it covers), never a second/parallel rule system. The
  * ONE case this deliberately does NOT flag as meaningful is the bare unresolved "?" --
  * including the blocking-absence-vs-assignment conflict case, which
  * `resolveRegularOrReserveStatus` itself already deliberately collapses
