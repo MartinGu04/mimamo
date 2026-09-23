@@ -74,19 +74,20 @@ function scheduleModel(overrides: Partial<ScheduleReadModel> = {}): ScheduleRead
   };
 }
 
-// Both fixture people carry at least one item on 2026-08-11 -- the default
-// team-week view is `?people=active` (see `lib/presentation/teamWeekFilter.ts`),
-// so a genuinely empty-celled fixture would have BOTH people silently
-// filtered out of the matrix by default, breaking every test below that
-// isn't specifically exercising the active/all filter itself.
+// Both fixture people are `serviceCategory: "regular"` AND carry at least
+// one item on 2026-08-11 -- the default team-week view is `?people=active`
+// (see `lib/presentation/teamWeekFilter.ts`), which always keeps regular
+// people visible regardless of activity, but the extra item is kept here
+// too so this fixture stays a faithful "normal populated week" regardless
+// of which filter/serviceCategory combination a future test might need.
 function teamWeekView(overrides: Partial<ScheduleTeamWeekView> = {}): ScheduleTeamWeekView {
   return {
     weekStart: "2026-08-09",
     weekEnd: "2026-08-15",
     dates: ["2026-08-09", "2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13", "2026-08-14", "2026-08-15"],
     people: [
-      { id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor" },
-      { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" },
+      { id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor", serviceCategory: "regular" },
+      { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician", serviceCategory: "regular" },
     ],
     cells: {
       p_eitan: {

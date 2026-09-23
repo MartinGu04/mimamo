@@ -68,7 +68,7 @@ function buildTeamWeekPeople(people: readonly Person[]): ScheduleTeamWeekPerson[
     // checker too.
     if (roleGroup === "other") continue;
 
-    const teamWeekPerson: ScheduleTeamWeekPerson = { id: person.id, name: person.name, roleGroup };
+    const teamWeekPerson: ScheduleTeamWeekPerson = { id: person.id, name: person.name, roleGroup, serviceCategory };
     if (roleGroup === "supervisor") supervisors.push(teamWeekPerson);
     else technicians.push(teamWeekPerson);
   }

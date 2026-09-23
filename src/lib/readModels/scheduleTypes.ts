@@ -58,11 +58,23 @@ export interface ScheduleEveryoneReadModel {
  * title-string match) -- someone who is neither is never a member of this
  * list at all (see `isShiftCapable`), so "other" is structurally
  * impossible here and deliberately not part of this union.
+ *
+ * `serviceCategory` is `buildScheduleTeamWeekView`'s already-computed
+ * `classifyPersonnelType(person.personnelType)` result, carried straight
+ * through -- narrowed to `"regular" | "reserve"` because a "permanent" or
+ * "unclassified" person is excluded from `people` entirely before this
+ * type is ever constructed (see `buildTeamWeekPeople`'s own docs). This
+ * is the canonical source `lib/presentation/teamWeekFilter.ts`'s
+ * `"active"` filter reads to decide who's ALWAYS shown (regular) vs. only
+ * shown when they have an item this week (reserve) -- the presentation
+ * layer must never re-classify or re-infer this itself from `roleGroup`,
+ * `name`, or anything else.
  */
 export interface ScheduleTeamWeekPerson {
   id: string;
   name: string;
   roleGroup: "supervisor" | "technician";
+  serviceCategory: "regular" | "reserve";
 }
 
 /**
