@@ -1,4 +1,11 @@
 import { nextCalendarDateString } from "./operationalWeek";
+import {
+  CERTIFICATION_KEYWORD,
+  WITHDRAWAL_KEYWORD,
+  isCertificationEvent,
+  isShootingRangeEvent,
+  isWithdrawalEvent,
+} from "./operationalActivityKeywords";
 import { classifyPersonnelType, classifyRoleGroup } from "./personnelType";
 import type { AbsenceKind, DutyFamily, Event } from "./event";
 import { BLOCKING_ABSENCE_KINDS } from "./operationalIssues";
@@ -177,11 +184,14 @@ const PRESENT_STATUS = "נוכח";
  *   "נוכח, עתודה 1" / "נוכח, כונן פינויים" instead.
  *
  * - category "other", ONLY the three specific keyword-matched activities
- *   `isLogisticsWithdrawalEvent` (משיכות/משיכות מהלוגיסטיקה) already
- *   detects for the notifications engine
- *   (`lib/notifications/engine/logisticsWithdrawal.ts`) and its own
- *   siblings `isCertificationEvent` (הסמכה) and `isShootingRangeEvent`
- *   (מטווח/מטווחים) detect below. None of these activities has a dedicated
+ *   `isWithdrawalEvent` (משיכות/משיכות מהלוגיסטיקה, mirroring the
+ *   notifications engine's own `isLogisticsWithdrawalEvent` --
+ *   `lib/notifications/engine/logisticsWithdrawal.ts`) and its siblings
+ *   `isCertificationEvent` (הסמכה) and `isShootingRangeEvent`
+ *   (מטווח/מטווחים) detect -- all three now shared from
+ *   `lib/domain/operationalActivityKeywords.ts`, reused as-is by the
+ *   team-week matrix (`lib/readModels/buildScheduleTeamWeekView.ts`).
+ *   None of these activities has a dedicated
  *   `DutyFamily`/column in the source Sheet (confirmed for `משיכות` by that
  *   module's own docs, PR #30) -- all three are ordinary schedule-cell
  *   text that `classify()` has nothing more specific for, so they fall
@@ -215,45 +225,12 @@ function isAdditiveDutyEvent(event: Event): event is Event & { dutyFamily: DutyF
 }
 
 /**
- * "משיכות" / "משיכות מהלוגיסטיקה" -- logistics withdrawals. Deliberately
- * duplicated here (never imported from `lib/notifications/engine`) for the
- * same layering reason `dutyAddendumText` below already duplicates from
- * `lib/presentation`: this domain module never reaches into a feature layer
- * built ON TOP of domain (see this repo's engineering rules on layer
- * separation) -- `lib/notifications/engine/logisticsWithdrawal.ts` is the
- * canonical source of this exact keyword and matching rule
- * (`isLogisticsWithdrawalEvent`), kept in sync by inspection, not import.
+ * The Report 1 addendum is always rendered as the plural "מטווחים"
+ * regardless of which spelling (מטווח/מטווחים) the source cell used --
+ * see `isShootingRangeEvent` (`lib/domain/operationalActivityKeywords.ts`)
+ * for the keyword match itself, now shared with the team-week matrix.
  */
-const WITHDRAWAL_KEYWORD = "משיכות";
-/** "הסמכה" -- a certification activity. Same "other"-category situation as `WITHDRAWAL_KEYWORD` above: no dedicated `DutyFamily`/column exists for it either, so it's ordinary schedule-cell text `classify()` has nothing more specific for. */
-const CERTIFICATION_KEYWORD = "הסמכה";
-/**
- * "מטווח" -- a shooting range activity. Same "other"-category situation as
- * `WITHDRAWAL_KEYWORD`/`CERTIFICATION_KEYWORD` above: no dedicated
- * `DutyFamily`/column exists for it either. Matched on the singular
- * "מטווח" (a substring of the plural "מטווחים" too, so both spellings are
- * caught by one `.includes()` check, exactly like `WITHDRAWAL_KEYWORD`
- * matching both "משיכות" and "משיכות מהלוגיסטיקה"), but the Report 1
- * addendum is always rendered as the plural `SHOOTING_RANGE_WORDING`
- * regardless of which spelling the source cell used.
- */
-const SHOOTING_RANGE_KEYWORD = "מטווח";
 const SHOOTING_RANGE_WORDING = "מטווחים";
-
-/** Mirrors `lib/notifications/engine/logisticsWithdrawal.ts`'s `isLogisticsWithdrawalEvent` exactly -- see `WITHDRAWAL_KEYWORD`'s own doc comment for why this is duplicated rather than imported. */
-function isWithdrawalEvent(event: Event): boolean {
-  return event.category === "other" && event.title.includes(WITHDRAWAL_KEYWORD);
-}
-
-/** Same shape/rule as `isWithdrawalEvent`, for the sibling `הסמכה` keyword. */
-function isCertificationEvent(event: Event): boolean {
-  return event.category === "other" && event.title.includes(CERTIFICATION_KEYWORD);
-}
-
-/** Same shape/rule as `isWithdrawalEvent`, for the sibling `מטווח`/`מטווחים` keyword. */
-function isShootingRangeEvent(event: Event): boolean {
-  return event.category === "other" && event.title.includes(SHOOTING_RANGE_KEYWORD);
-}
 
 const DUTY_FAMILY_WORDING: Record<DutyFamily, string> = {
   guard: "שמירה",

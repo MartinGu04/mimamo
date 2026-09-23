@@ -1,10 +1,12 @@
 import type { Event } from "@/lib/domain/event";
 import type { LocalNow } from "@/lib/domain/localNow";
+import type { OperationalWeek } from "@/lib/domain/operationalWeek";
 import type { PotentialAllocation } from "@/lib/domain/potentialAllocation";
 import { buildPotentialDutyEventsForRoster } from "@/lib/domain/potentialDutyEvents";
 import type { ShiftSchedule } from "@/lib/domain/shiftSchedule";
 import type { Person } from "@/lib/domain/types";
 import { buildPersonalScheduleReadModel } from "./buildPersonalScheduleReadModel";
+import { buildScheduleTeamWeekView } from "./buildScheduleTeamWeekView";
 import { buildManagerAbsenceEntries, buildManagerDutyEntries, buildShiftStaffingOverview } from "./managerEventProjections";
 import type { ScheduleReadModel, ScheduleRosterOption } from "./scheduleTypes";
 import type { PersonalScheduleReadModel } from "./types";
@@ -28,6 +30,7 @@ export function buildSelfOnlyScheduleReadModel(model: PersonalScheduleReadModel)
     selectedPersonName: null,
     personal: model,
     everyone: null,
+    teamWeek: null,
   };
 }
 
@@ -43,6 +46,8 @@ export interface BuildManagerScheduleReadModelInput {
   now: LocalNow;
   /** Every calendar date in the displayed month -- scopes "all" perspective's staffing/duties/absences. Unused for "self"/"person" (`PersonalScheduleReadModel` carries its own full, unscoped `calendarEvents`, filtered by month at the page like today). */
   monthDates: readonly string[];
+  /** The resolved Sunday-Saturday operational week -- scopes "all" perspective's `teamWeek` matrix ONLY (see `buildScheduleTeamWeekView`). Independent of `monthDates`/the displayed calendar month; unused for "self"/"person". */
+  week: OperationalWeek;
   /**
    * Raw, unvalidated `?person=` value -- `null`/omitted means "self", the
    * literal string `"all"` means "everyone", anything else is a candidate
@@ -139,6 +144,7 @@ export function buildManagerScheduleReadModel(input: BuildManagerScheduleReadMod
     fetchedAt,
     now,
     monthDates,
+    week,
     requestedPersonId,
     potentialAllocations,
   } = input;
@@ -178,6 +184,7 @@ export function buildManagerScheduleReadModel(input: BuildManagerScheduleReadMod
         duties: buildManagerDutyEntries(eventsWithPotentialDuties, peopleById, dates),
         absences: buildManagerAbsenceEntries(events, peopleById, dates),
       },
+      teamWeek: buildScheduleTeamWeekView(events, people, week),
     };
   }
 
@@ -202,5 +209,6 @@ export function buildManagerScheduleReadModel(input: BuildManagerScheduleReadMod
     selectedPersonName: perspective.kind === "person" ? targetPerson.name : null,
     personal,
     everyone: null,
+    teamWeek: null,
   };
 }

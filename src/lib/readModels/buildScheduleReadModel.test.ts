@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Event } from "@/lib/domain/event";
 import type { LocalNow } from "@/lib/domain/localNow";
+import type { OperationalWeek } from "@/lib/domain/operationalWeek";
 import type { PotentialAllocation } from "@/lib/domain/potentialAllocation";
 import { buildShiftSchedule } from "@/lib/domain/shiftSchedule";
 import type { Person } from "@/lib/domain/types";
@@ -64,6 +65,17 @@ function event(overrides: Partial<Event> = {}): Event {
 
 const AUGUST_DATES = Array.from({ length: 31 }, (_, i) => `2026-08-${String(i + 1).padStart(2, "0")}`);
 
+// The operational week containing `now` (2026-08-13, a Thursday) -- a
+// fixed fixture reused by every `buildManagerScheduleReadModel` call
+// below, since this file's suites are about perspective resolution, not
+// about the team-week matrix itself (see `buildScheduleTeamWeekView.test.ts`
+// for that).
+const WEEK: OperationalWeek = {
+  weekStart: "2026-08-09",
+  weekEnd: "2026-08-15",
+  dates: ["2026-08-09", "2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13", "2026-08-14", "2026-08-15"],
+};
+
 const PEOPLE: Person[] = [MANAGER, DANIEL, EITAN, NOA];
 
 function allocation(overrides: Partial<PotentialAllocation> = {}): PotentialAllocation {
@@ -91,6 +103,7 @@ describe("buildManagerScheduleReadModel — perspective resolution (PR #24 §9)"
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: null,
     });
     expect(model.perspective).toBe("self");
@@ -108,6 +121,7 @@ describe("buildManagerScheduleReadModel — perspective resolution (PR #24 §9)"
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: "all",
     });
     expect(model.perspective).toBe("all");
@@ -124,6 +138,7 @@ describe("buildManagerScheduleReadModel — perspective resolution (PR #24 §9)"
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: DANIEL.id,
     });
     expect(model.perspective).toBe("person");
@@ -141,6 +156,7 @@ describe("buildManagerScheduleReadModel — perspective resolution (PR #24 §9)"
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: "p_does_not_exist",
     });
     expect(model.perspective).toBe("self");
@@ -156,6 +172,7 @@ describe("buildManagerScheduleReadModel — perspective resolution (PR #24 §9)"
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: MANAGER.id,
     });
     expect(model.perspective).toBe("self");
@@ -173,6 +190,7 @@ describe("buildManagerScheduleReadModel — roster (PR #24 §6)", () => {
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: null,
     });
     expect(model.roster.map((p) => p.id)).not.toContain(MANAGER.id);
@@ -188,6 +206,7 @@ describe("buildManagerScheduleReadModel — roster (PR #24 §6)", () => {
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: null,
     });
     for (const option of model.roster) {
@@ -206,6 +225,7 @@ describe("buildManagerScheduleReadModel — roster (PR #24 §6)", () => {
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: null,
     });
     expect(model.roster.map((p) => p.id)).toEqual(["p_a", "p_b"]);
@@ -223,6 +243,7 @@ describe("buildManagerScheduleReadModel — self mode reuses buildPersonalSchedu
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: null,
     });
     const expected: PersonalScheduleReadModel = buildPersonalScheduleReadModel({
@@ -251,6 +272,7 @@ describe("buildManagerScheduleReadModel — person mode (PR #24 §10-12)", () =>
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: DANIEL.id,
     });
     expect(model.personal?.calendarEvents).toHaveLength(1);
@@ -266,6 +288,7 @@ describe("buildManagerScheduleReadModel — person mode (PR #24 §10-12)", () =>
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: DANIEL.id,
     });
     expect(model.personal?.calendarEvents).toEqual([]);
@@ -288,6 +311,7 @@ describe("buildManagerScheduleReadModel — everyone mode (PR #24 §14-19)", () 
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: "all",
     });
 
@@ -312,6 +336,7 @@ describe("buildManagerScheduleReadModel — everyone mode (PR #24 §14-19)", () 
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: "all",
     });
     const dayGroup = model.everyone?.staffing.find((g) => g.date === "2026-08-13" && g.period === "day");
@@ -338,6 +363,7 @@ describe("buildManagerScheduleReadModel — everyone mode (PR #24 §14-19)", () 
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: "all",
     });
     const dayGroup = model.everyone?.staffing.find((g) => g.date === "2026-08-13" && g.period === "day");
@@ -358,6 +384,7 @@ describe("buildManagerScheduleReadModel — everyone mode (PR #24 §14-19)", () 
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: "all",
     });
     const dayGroup = model.everyone?.staffing.find((g) => g.date === "2026-08-13" && g.period === "day");
@@ -396,6 +423,7 @@ describe("buildManagerScheduleReadModel — everyone mode (PR #24 §14-19)", () 
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: "all",
     });
     expect(model.everyone?.duties).toHaveLength(1);
@@ -422,6 +450,7 @@ describe("buildManagerScheduleReadModel — everyone mode (PR #24 §14-19)", () 
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: "all",
     });
     expect(model.everyone?.absences).toHaveLength(1);
@@ -459,6 +488,7 @@ describe("buildManagerScheduleReadModel — 'self'/'person' perspectives: תקש
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: DANIEL.id,
       potentialAllocations: [allocation({ date: "2026-08-20", dutyFamily: "guard", slot: 1 })],
     });
@@ -476,6 +506,7 @@ describe("buildManagerScheduleReadModel — 'self'/'person' perspectives: תקש
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: null,
       potentialAllocations: [allocation({ sourceAllocationLabel: MANAGER.name })],
     });
@@ -493,6 +524,7 @@ describe("buildManagerScheduleReadModel — 'self'/'person' perspectives: תקש
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: DANIEL.id,
       potentialAllocations: [allocation({ date: "2026-08-20", dutyFamily: "guard", slot: 1 })],
     });
@@ -511,6 +543,7 @@ describe("buildManagerScheduleReadModel — 'self'/'person' perspectives: תקש
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: DANIEL.id,
       potentialAllocations: [
         allocation({ date: "2026-08-20", dutyFamily: "full_kitchen", slot: null, sourceSlot: 3, columnLabel: "מטבח מלא 3" }),
@@ -530,6 +563,7 @@ describe("buildManagerScheduleReadModel — 'self'/'person' perspectives: תקש
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: nonShiftPerson.id,
       potentialAllocations: [allocation({ sourceAllocationLabel: nonShiftPerson.name })],
     });
@@ -547,6 +581,7 @@ describe("buildManagerScheduleReadModel — 'self'/'person' perspectives: תקש
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: "all",
       potentialAllocations: [allocation({ date: "2026-08-20", dutyFamily: "guard", slot: 1 })],
     });
@@ -565,6 +600,7 @@ describe("buildManagerScheduleReadModel — 'self'/'person' perspectives: תקש
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: "all",
       potentialAllocations: [allocation({ date: "2026-08-20", dutyFamily: "guard", slot: 1 })],
     });
@@ -583,6 +619,7 @@ describe("buildManagerScheduleReadModel — 'self'/'person' perspectives: תקש
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: "all",
       potentialAllocations: [allocation({ date: "2026-08-20", dutyFamily: "guard", slot: 1 })],
     });
@@ -599,6 +636,7 @@ describe("buildManagerScheduleReadModel — 'self'/'person' perspectives: תקש
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: "all",
       potentialAllocations: [allocation({ date: "2026-08-20", dutyFamily: "guard", slot: 1, sourceAllocationLabel: "דניאל" })],
     });
@@ -617,6 +655,7 @@ describe("buildManagerScheduleReadModel — 'self'/'person' perspectives: תקש
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: DANIEL.id,
       potentialAllocations: [allocation({ date: "2026-08-20", dutyFamily: "guard", slot: 1 })],
     });
@@ -644,6 +683,7 @@ describe("buildManagerScheduleReadModel — 'self'/'person' perspectives: תקש
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: "all",
       potentialAllocations: [allocation({ date: "2026-08-20", dutyFamily: "guard", slot: 1 })],
     });
@@ -661,6 +701,7 @@ describe("buildManagerScheduleReadModel — 'self'/'person' perspectives: תקש
       fetchedAt: "2026-08-13T08:00:00.000Z",
       now,
       monthDates: AUGUST_DATES,
+      week: WEEK,
       requestedPersonId: "all",
     });
     expect(model.perspective).toBe("all");

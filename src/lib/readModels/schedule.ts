@@ -1,6 +1,7 @@
 import "server-only";
 import { calendarMonthOfLocalNow, formatMonthParam, parseMonthParam } from "@/lib/domain/calendarMonth";
 import { resolveManagerDateRange } from "@/lib/domain/dateRange";
+import { getOperationalWeek, getOperationalWeekForDate } from "@/lib/domain/operationalWeek";
 import { ShiftConfigurationError, buildShiftSchedule, type ShiftSchedule } from "@/lib/domain/shiftSchedule";
 import { SHEET_SOURCES, type RawWorkbookSnapshot, type SheetSourceKey } from "@/lib/google";
 import { parseEvent } from "@/lib/parsers/event";
@@ -77,6 +78,8 @@ export interface ScheduleParams {
   rawMonth: string | null;
   /** Raw, unvalidated `?person=` value. Completely ignored for a normal (non-manager) user -- see `loadScheduleReadModel`. */
   personId: string | null;
+  /** Raw, unvalidated `?week=` value ("YYYY-MM-DD" anchor, or anything else) -- resolved through `getOperationalWeekForDate`, falling back to the operational week containing `localNow.date` for anything unparseable. Only ever affects the "all" perspective's `teamWeek` matrix; completely inert for a normal (non-manager) user, same as `personId`. */
+  rawWeek: string | null;
 }
 
 /**
@@ -166,6 +169,12 @@ export async function loadScheduleReadModel(params: ScheduleParams): Promise<Sch
 
   const range = resolveManagerDateRange("month", monthParam, selfModel.localNow);
 
+  // `?week=` resolves the SAME way `?month=` does above -- an explicit,
+  // parseable anchor wins, anything else (missing, malformed, an
+  // out-of-range date) falls back to the operational week containing
+  // "today", never a crash and never a fabricated week.
+  const week = (params.rawWeek ? getOperationalWeekForDate(params.rawWeek) : null) ?? getOperationalWeek(selfModel.localNow);
+
   const model = buildManagerScheduleReadModel({
     manager,
     people,
@@ -174,6 +183,7 @@ export async function loadScheduleReadModel(params: ScheduleParams): Promise<Sch
     fetchedAt: snapshot.fetchedAt,
     now: selfModel.localNow,
     monthDates: range.dates,
+    week,
     requestedPersonId: params.personId,
     potentialAllocations,
   });

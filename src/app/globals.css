@@ -1564,3 +1564,35 @@ html[data-a11y-text="xlarge"] {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* ---------------------------------------------------------------------- */
+/* Team Week matrix -- a quieter, thinner scrollbar for its own internal   */
+/* frozen-panes scroll viewport ONLY (`.team-week-scroll`, see             */
+/* TeamWeekMatrix.tsx). Deliberately scoped to this one class rather than  */
+/* a global `*`/`html` scrollbar restyle: the matrix is the one surface in */
+/* the app with a wide, dense horizontal scroll region where a bulky OS    */
+/* scrollbar competes with the content; everywhere else keeps the platform */
+/* default. Never fully hidden (`scrollbar-width: thin`, not `none`) -- a  */
+/* quieter scrollbar still has to stay visible/usable. */
+.team-week-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.team-week-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.team-week-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.team-week-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--border-strong);
+  border-radius: 9999px;
+}
+
+.team-week-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: var(--primary);
+}

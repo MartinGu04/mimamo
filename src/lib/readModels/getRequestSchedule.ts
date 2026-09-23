@@ -15,6 +15,6 @@ import { loadScheduleReadModel, type ScheduleLoadResult } from "./schedule";
  * equal even with identical field values.
  */
 export const getRequestSchedule = cache(
-  (rawMonth: string | null, personId: string | null): Promise<ScheduleLoadResult> =>
-    loadScheduleReadModel({ rawMonth, personId }),
+  (rawMonth: string | null, personId: string | null, rawWeek: string | null): Promise<ScheduleLoadResult> =>
+    loadScheduleReadModel({ rawMonth, personId, rawWeek }),
 );
