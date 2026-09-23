@@ -145,7 +145,7 @@ function okResult(model: ScheduleReadModel) {
   return { status: "ok" as const, model };
 }
 
-function searchParams(params: { month?: string; person?: string; view?: string; week?: string } = {}) {
+function searchParams(params: { month?: string; person?: string; view?: string; week?: string; people?: string } = {}) {
   return Promise.resolve(params);
 }
 
@@ -609,6 +609,97 @@ describe("SchedulePage — team-week URL behavior (nav preserves person=all&view
       ),
     );
     const element = await SchedulePage({ searchParams: searchParams({ person: "all", view: "team-week", week: "2026-08-09" }) });
+    render(element);
+    const monthTab = screen.getByText("חודש").closest("a");
+    expect(monthTab?.getAttribute("href")).toBe("/schedule?person=all");
+  });
+});
+
+describe("SchedulePage — team-week week navigation preserves the people filter (regression)", () => {
+  it("?people=all survives previous/next/today week navigation -- never silently falls back to 'active'", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(
+        managerSelfModel({
+          perspective: "all",
+          personal: null,
+          everyone: { staffing: [], duties: [], absences: [] },
+          teamWeek: teamWeekView(),
+        }),
+      ),
+    );
+    const element = await SchedulePage({
+      searchParams: searchParams({ person: "all", view: "team-week", week: "2026-08-09", people: "all" }),
+    });
+    render(element);
+
+    const nextLink = screen.getByRole("link", { name: "שבוע הבא" });
+    expect(nextLink.getAttribute("href")).toBe("/schedule?person=all&view=team-week&week=2026-08-16&people=all");
+    const prevLink = screen.getByRole("link", { name: "שבוע קודם" });
+    expect(prevLink.getAttribute("href")).toBe("/schedule?person=all&view=team-week&week=2026-08-02&people=all");
+    const todayLink = screen.getByRole("link", { name: "היום" });
+    expect(todayLink.getAttribute("href")).toBe("/schedule?person=all&view=team-week&people=all");
+  });
+
+  it("?people=active behaves the same as the default (omitted) -- 'active' is never written into a nav href", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(
+        managerSelfModel({
+          perspective: "all",
+          personal: null,
+          everyone: { staffing: [], duties: [], absences: [] },
+          teamWeek: teamWeekView(),
+        }),
+      ),
+    );
+    const element = await SchedulePage({
+      searchParams: searchParams({ person: "all", view: "team-week", week: "2026-08-09", people: "active" }),
+    });
+    render(element);
+
+    const nextLink = screen.getByRole("link", { name: "שבוע הבא" });
+    expect(nextLink.getAttribute("href")).toBe("/schedule?person=all&view=team-week&week=2026-08-16");
+    const prevLink = screen.getByRole("link", { name: "שבוע קודם" });
+    expect(prevLink.getAttribute("href")).toBe("/schedule?person=all&view=team-week&week=2026-08-02");
+    const todayLink = screen.getByRole("link", { name: "היום" });
+    expect(todayLink.getAttribute("href")).toBe("/schedule?person=all&view=team-week");
+  });
+
+  it("the פעילים השבוע/כולם filter switch itself preserves the currently displayed week anchor", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(
+        managerSelfModel({
+          perspective: "all",
+          personal: null,
+          everyone: { staffing: [], duties: [], absences: [] },
+          teamWeek: teamWeekView(),
+        }),
+      ),
+    );
+    const element = await SchedulePage({
+      searchParams: searchParams({ person: "all", view: "team-week", week: "2026-08-09" }),
+    });
+    render(element);
+
+    const allTab = screen.getByRole("link", { name: "כולם" });
+    expect(allTab.getAttribute("href")).toBe("/schedule?person=all&view=team-week&week=2026-08-09&people=all");
+    const activeTab = screen.getByRole("link", { name: "פעילים השבוע" });
+    expect(activeTab.getAttribute("href")).toBe("/schedule?person=all&view=team-week&week=2026-08-09");
+  });
+
+  it("switching back to 'חודש' still drops ?people=all along with view/week -- the month calendar never inherits the team-week-only filter", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(
+        managerSelfModel({
+          perspective: "all",
+          personal: null,
+          everyone: { staffing: [], duties: [], absences: [] },
+          teamWeek: teamWeekView(),
+        }),
+      ),
+    );
+    const element = await SchedulePage({
+      searchParams: searchParams({ person: "all", view: "team-week", week: "2026-08-09", people: "all" }),
+    });
     render(element);
     const monthTab = screen.getByText("חודש").closest("a");
     expect(monthTab?.getAttribute("href")).toBe("/schedule?person=all");

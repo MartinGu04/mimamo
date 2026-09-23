@@ -116,15 +116,29 @@ function scheduleEveryoneViewHref(view: ScheduleEveryoneView, weekStart: string 
 }
 
 /**
- * Builds a team-week matrix URL with a specific `?people=` filter, preserving
- * `person=all&view=team-week` and the currently displayed `week` (when one is
- * anchored) -- the same "only ever touch the ONE param this control owns"
- * convention `scheduleEveryoneViewHref`/`scheduleHref` already establish.
+ * Builds a team-week matrix URL for a given week anchor + people filter --
+ * always `person=all&view=team-week`. The ONE shared builder behind every
+ * team-week link on this page (week nav AND the people-filter switch), so
+ * the two controls can never drift apart: week navigation must carry the
+ * CURRENTLY selected filter forward (a prev/next/today click is a pure week
+ * change, never an implicit filter reset), and the filter switch must carry
+ * the CURRENTLY displayed week forward (switching פעילים/כולם is a pure
+ * filter change, never an implicit jump back to the current week) --
+ * both cases are just "this one param changes, everything else survives",
+ * the same convention `scheduleHref`/`scheduleEveryoneViewHref` already
+ * establish for their own params.
+ *
+ * `?people=` is OMITTED for the default `"active"` filter (never written
+ * as `people=active`) and only ever appears for `"all"` -- the same
+ * "omit the default" convention `scheduleHref` already uses for the "self"
+ * perspective (no `?person=self` either). `parseTeamWeekPeopleFilter`
+ * already treats a missing param as `"active"`, so this omission round-trips
+ * exactly.
  */
-function teamWeekPeopleFilterHref(filter: TeamWeekPeopleFilter, weekStart: string | null): string {
+function teamWeekHref(weekStart: string | null, peopleFilter: TeamWeekPeopleFilter): string {
   const params = new URLSearchParams({ person: "all", view: "team-week" });
   if (weekStart) params.set("week", weekStart);
-  params.set("people", filter);
+  if (peopleFilter !== "active") params.set("people", peopleFilter);
   return `/schedule?${params.toString()}`;
 }
 
@@ -249,14 +263,14 @@ export default async function SchedulePage({ searchParams }: SchedulePageProps) 
   const teamWeekLabel = model.teamWeek ? (formatHebrewWeekRangeLabel(model.teamWeek.weekStart, model.teamWeek.weekEnd) ?? "") : "";
   const isOnCurrentWeek = model.teamWeek ? model.teamWeek.weekStart === getOperationalWeek(model.localNow).weekStart : false;
   const prevWeekHref = model.teamWeek
-    ? scheduleEveryoneViewHref("team-week", getPreviousOperationalWeek(model.teamWeek).weekStart)
+    ? teamWeekHref(getPreviousOperationalWeek(model.teamWeek).weekStart, peopleFilter)
     : "/schedule";
   const nextWeekHref = model.teamWeek
-    ? scheduleEveryoneViewHref("team-week", getNextOperationalWeek(model.teamWeek).weekStart)
+    ? teamWeekHref(getNextOperationalWeek(model.teamWeek).weekStart, peopleFilter)
     : "/schedule";
-  const todayWeekHref = scheduleEveryoneViewHref("team-week", null);
-  const activePeopleFilterHref = teamWeekPeopleFilterHref("active", model.teamWeek?.weekStart ?? null);
-  const allPeopleFilterHref = teamWeekPeopleFilterHref("all", model.teamWeek?.weekStart ?? null);
+  const todayWeekHref = teamWeekHref(null, peopleFilter);
+  const activePeopleFilterHref = teamWeekHref(model.teamWeek?.weekStart ?? null, "active");
+  const allPeopleFilterHref = teamWeekHref(model.teamWeek?.weekStart ?? null, "all");
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6">
