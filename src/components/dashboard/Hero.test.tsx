@@ -572,3 +572,45 @@ describe("Hero — מי לפניי / מי אחריי", () => {
     expect(screen.getByText("אין מידע על אנשים נוספים במשמרת זו.")).toBeInTheDocument();
   });
 });
+
+describe("Hero — no redundant role/period line beneath a shift title (UX cleanup pass)", () => {
+  it("a current shift never repeats its role · period beneath the title -- the title already says it", () => {
+    render(<Hero {...defaultProps} currentAssignments={[baseAssignment()]} />);
+    expect(screen.getByText("טכנאי יום")).toBeInTheDocument();
+    expect(screen.queryByText("טכנאי · יום")).toBeNull();
+  });
+
+  it("an upcoming shift never repeats its role · period beneath the title either", () => {
+    const shiftEvent = baseAssignment({ temporalState: "upcoming", date: "2026-08-20" });
+    render(<Hero {...defaultProps} nextAssignmentGroup={nextGroup([shiftEvent])} localNowDate="2026-08-12" />);
+    expect(screen.queryByText("טכנאי · יום")).toBeNull();
+  });
+
+  it("a tentative current shift still shows משוער, even with the role/period line gone", () => {
+    const tentative = baseAssignment({ certainty: "tentative" });
+    render(<Hero {...defaultProps} currentAssignments={[tentative]} />);
+    expect(screen.getByText("משוער")).toBeInTheDocument();
+    expect(screen.queryByText("טכנאי · יום")).toBeNull();
+  });
+
+  it("a tentative upcoming shift still shows משוער", () => {
+    const tentative = baseAssignment({ certainty: "tentative", temporalState: "upcoming", date: "2026-08-20" });
+    render(<Hero {...defaultProps} nextAssignmentGroup={nextGroup([tentative])} localNowDate="2026-08-12" />);
+    expect(screen.getByText("משוער")).toBeInTheDocument();
+  });
+
+  it("duty presentation is unchanged -- a tentative current duty still shows no role/period line (it never had one)", () => {
+    const tentativeDuty = dutyAssignment({ certainty: "tentative" });
+    render(<Hero {...defaultProps} currentAssignments={[tentativeDuty]} />);
+    expect(screen.getByText("שומר 1")).toBeInTheDocument();
+    expect(screen.queryByText("משוער")).toBeNull();
+  });
+
+  it("still preserves the shift's time range beneath the title", () => {
+    const shiftEvent = baseAssignment({
+      timing: { status: "resolved", startLocalTime: "07:30", endLocalTime: "19:30", durationMinutes: 720, elapsedMinutesAtLoad: 0, remainingMinutesAtLoad: 720, progressPercentAtLoad: 0, minutesUntilStartAtLoad: 0 },
+    });
+    render(<Hero {...defaultProps} currentAssignments={[shiftEvent]} />);
+    expect(screen.getByText("07:30 — 19:30")).toBeInTheDocument();
+  });
+});

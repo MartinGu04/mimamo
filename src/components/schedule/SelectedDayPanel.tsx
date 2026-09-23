@@ -1,5 +1,5 @@
 import { assignmentEmoji, personalActivityEmoji } from "@/lib/presentation/emoji";
-import { absenceKindLabel, dutyFamilyLabel, periodLabel, roleLabel } from "@/lib/presentation/labels";
+import { absenceKindLabel, dutyFamilyLabel } from "@/lib/presentation/labels";
 import type { PersonalCalendarEventView, PersonalEventView, PersonalShiftCompanion } from "@/lib/readModels/types";
 import { Badge } from "@/components/ui/Badge";
 import { Panel } from "@/components/ui/Panel";
@@ -29,17 +29,15 @@ function eventEmoji(event: PersonalEventView): string | null {
 
 /**
  * The structured subtitle line for one event, distinct per category -- a
- * shift's own role/period, a duty's family+slot, an absence's kind. Never
- * re-derives these from `event.title`'s free text; every value here is a
- * typed field run through the app's existing label maps.
+ * duty's family+slot, an absence's kind. A shift never gets one here (UX
+ * cleanup pass): its role/period is already fully expressed by the
+ * shift's own title (e.g. `☀️ אחמ"ש יום`), so a second `אחמ"ש · יום` line
+ * beneath it said nothing new. Never re-derives these from `event.title`'s
+ * free text; every value here is a typed field run through the app's
+ * existing label maps.
  */
 function eventSubtitle(event: PersonalEventView): string | null {
-  if (event.category === "shift") {
-    const parts = [roleLabel(event.role), periodLabel(event.period)].filter(
-      (part): part is string => Boolean(part),
-    );
-    return parts.length > 0 ? parts.join(" · ") : null;
-  }
+  if (event.category === "shift") return null;
   if (event.category === "duty" && event.dutyFamily) {
     return event.slot !== null ? `${dutyFamilyLabel(event.dutyFamily)} ${event.slot}` : dutyFamilyLabel(event.dutyFamily);
   }

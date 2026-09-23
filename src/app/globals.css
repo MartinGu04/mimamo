@@ -827,6 +827,27 @@
   --shadow-login-cta-fixed: 0 10px 24px -10px rgba(0, 0, 0, 0.35);
   --shadow-login-cta-fixed-hover: 0 14px 30px -10px rgba(0, 0, 0, 0.4);
   --shadow-login-cta-fixed-active: 0 6px 14px -8px rgba(0, 0, 0, 0.3);
+
+  /* Accessibility-preferences FLOATING TRIGGER only (UX cleanup pass) --
+     a fixed, theme-independent saturated blue so the button reads as a
+     clear, unmissable action in both light and dark, same idea as the
+     login CTA tokens above. Deliberately NOT `--primary`: `--primary` is
+     an intentionally muted, theme-dependent interaction color used all
+     over the app (see the top-of-file note), and dimming/retuning it just
+     to make one fixed-position corner button pop would ripple into every
+     other control that reads it. A common saturated "primary action" web
+     blue, with a white icon/foreground and a darker hover step. Computed
+     WCAG contrast: ~5.2:1 for the white icon against the base fill (and
+     higher still against the hover fill) -- comfortably clears 3:1 for a
+     non-text UI component even before the ring/shadow add their own
+     boundary, so this never depends on the `--hc-*` high-contrast palette
+     to stay legible; the panel/popover this opens is intentionally left
+     on its ordinary `glass-medium`/`--surface-1` treatment. */
+  --a11y-trigger-bg: #2563eb;
+  --a11y-trigger-bg-hover: #1d4ed8;
+  --a11y-trigger-icon: #ffffff;
+  --a11y-trigger-ring: rgba(255, 255, 255, 0.3);
+  --shadow-a11y-trigger: 0 10px 24px -8px rgba(37, 99, 235, 0.45);
 }
 
 /* ---------------------------------------------------------------------- */

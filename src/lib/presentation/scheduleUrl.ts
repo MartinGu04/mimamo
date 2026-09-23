@@ -6,6 +6,19 @@
  * neither builder here needs to compute/pass a month separately.
  */
 
+interface ScheduleSelfHrefParams {
+  /** "YYYY-MM-DD" -- pre-selects that day in the viewer's OWN personal calendar. Omitted entirely lands on today's month with nothing pre-selected. */
+  date?: string | null;
+}
+
+/** Builds a plain `/schedule` URL -- the viewer's own personal calendar (no `?person=` at all, which `SchedulePage` already resolves to the "self" perspective). */
+export function scheduleSelfHref(params: ScheduleSelfHrefParams = {}): string {
+  const search = new URLSearchParams();
+  if (params.date) search.set("date", params.date);
+  const query = search.toString();
+  return query ? `/schedule?${query}` : "/schedule";
+}
+
 interface ScheduleEveryoneHrefParams {
   /** "YYYY-MM-DD" -- pre-selects that day in the team staffing calendar. Omitted entirely lands on today's month with nothing pre-selected. */
   date?: string | null;

@@ -11,7 +11,6 @@ import type { EventPeriod, EventRole } from "@/lib/domain/event";
 import { jerusalemLocalTimeToInstant } from "@/lib/time/jerusalemClock";
 import { relativeDayLabel, formatHebrewWeekdayAndDate } from "@/lib/presentation/hebrewDate";
 import { assignmentEmoji } from "@/lib/presentation/emoji";
-import { periodLabel, roleLabel } from "@/lib/presentation/labels";
 import { Badge } from "@/components/ui/Badge";
 import { Panel } from "@/components/ui/Panel";
 import { AdjacentShiftContextRow } from "./AdjacentShiftContext";
@@ -149,7 +148,6 @@ function CurrentHero({
 }) {
   const lead = assignments.find((a) => a.category === "shift") ?? assignments[0];
   const secondary = assignments.filter((a) => a !== lead);
-  const meta = describeAssignment(lead);
   const shiftContext = findMatchingShiftContext(lead, shiftContexts);
   const adjacentContext = findMatchingShiftContext(lead, adjacentShiftContexts);
   const emoji = assignmentEmoji(lead);
@@ -166,10 +164,9 @@ function CurrentHero({
         {lead.title}
       </h2>
 
-      {meta ? (
+      {lead.category === "shift" && lead.certainty === "tentative" ? (
         <p className="relative mt-1.5 flex flex-wrap items-center gap-2 text-sm text-muted">
-          <span>{meta}</span>
-          {lead.certainty === "tentative" ? <Badge tone="warning">משוער</Badge> : null}
+          <Badge tone="warning">משוער</Badge>
         </p>
       ) : null}
 
@@ -259,7 +256,6 @@ function NextHero({
 }) {
   const lead = group.events.find((e) => e.category === "shift" && e.timing.status === "resolved") ?? group.events[0];
   const others = group.events.filter((e) => e !== lead);
-  const meta = describeAssignment(lead);
   const shiftContext = findMatchingShiftContext(lead, shiftContexts);
   const emoji = assignmentEmoji(lead);
 
@@ -278,8 +274,6 @@ function NextHero({
         <EmojiAnchor emoji={emoji} />
         {lead.title}
       </h2>
-
-      {meta ? <p className="mt-1.5 text-sm text-muted">{meta}</p> : null}
 
       <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
         <span>{dateLabel}</span>
@@ -334,13 +328,4 @@ function EmptyHero() {
       <p className="mt-1.5 text-sm text-muted">אין לך שיבוצים קרובים בלוח.</p>
     </Panel>
   );
-}
-
-/** "אחמ״ש · יום" -- role/period metadata line for a shift; null for a duty (nothing meaningful to add beyond its title). */
-function describeAssignment(assignment: PersonalAssignmentView): string | null {
-  if (assignment.category !== "shift") return null;
-  const role = roleLabel(assignment.role);
-  const period = periodLabel(assignment.period);
-  const parts = [role, period].filter((part): part is string => Boolean(part));
-  return parts.length > 0 ? parts.join(" · ") : null;
 }

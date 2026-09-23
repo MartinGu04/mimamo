@@ -162,9 +162,10 @@ describe("SelectedDayPanel", () => {
     expect(screen.getByText("טכנאי לילה")).toBeInTheDocument();
   });
 
-  it("shows role/period as a subtitle line for a shift", () => {
-    render(<SelectedDayPanel dayMeta={meta()} events={[shiftEvent({ role: "technician", period: "day" })]} />);
-    expect(screen.getByText("טכנאי · יום")).toBeInTheDocument();
+  it("never shows role/period as a subtitle line for a shift -- the title already says it (UX cleanup pass)", () => {
+    render(<SelectedDayPanel dayMeta={meta()} events={[shiftEvent({ title: "טכנאי יום", role: "technician", period: "day" })]} />);
+    expect(screen.getByText("טכנאי יום")).toBeInTheDocument();
+    expect(screen.queryByText("טכנאי · יום")).toBeNull();
   });
 
   it("shows the semantic shift emoji from the typed period field", () => {
@@ -226,16 +227,39 @@ describe("SelectedDayPanel", () => {
       expect(screen.getAllByText("אפטר")).toHaveLength(1);
     });
 
-    it("still shows a genuinely different subtitle -- shift role/period is never suppressed", () => {
+    it("a shift's role/period subtitle is suppressed even though it differs from the title -- it's still redundant with it (UX cleanup pass)", () => {
       render(<SelectedDayPanel dayMeta={meta()} events={[shiftEvent({ title: "טכנאי יום", role: "technician", period: "day" })]} />);
       expect(screen.getByText("טכנאי יום")).toBeInTheDocument();
-      expect(screen.getByText("טכנאי · יום")).toBeInTheDocument();
+      expect(screen.queryByText("טכנאי · יום")).toBeNull();
     });
 
     it("still shows a genuinely different subtitle -- duty family/slot is never suppressed", () => {
       render(<SelectedDayPanel dayMeta={meta()} events={[dutyEvent({ title: "שומר 1", dutyFamily: "guard", slot: 1 })]} />);
       expect(screen.getByText("שומר 1")).toBeInTheDocument();
       expect(screen.getByText("שמירה 1")).toBeInTheDocument();
+    });
+
+    it("a shift still shows its tentative/shadow badges, change note, and companions with the redundant subtitle gone", () => {
+      render(
+        <SelectedDayPanel
+          dayMeta={meta()}
+          events={[
+            shiftEvent({
+              title: "טכנאי יום",
+              certainty: "tentative",
+              shadow: true,
+              changeNote: "הוחלף מלילה ליום",
+              shiftCompanions: [{ personId: "p_1", personName: "יובל ישראלי", shiftLabel: "טכנאי יום" }],
+            }),
+          ]}
+        />,
+      );
+      expect(screen.getByText("טכנאי יום")).toBeInTheDocument();
+      expect(screen.queryByText("טכנאי · יום")).toBeNull();
+      expect(screen.getByText("משוער")).toBeInTheDocument();
+      expect(screen.getByText("חפיפה / צל")).toBeInTheDocument();
+      expect(screen.getByText("הוחלף מלילה ליום")).toBeInTheDocument();
+      expect(screen.getByText("יובל ישראלי — טכנאי יום")).toBeInTheDocument();
     });
 
     it("still shows the tentative/shadow badges and change note even when the subtitle itself is suppressed", () => {
