@@ -33,8 +33,8 @@ function emptyCells(peopleIds: string[]): ScheduleTeamWeekView["cells"] {
 
 function teamWeek(overrides: Partial<ScheduleTeamWeekView> = {}): ScheduleTeamWeekView {
   const people = overrides.people ?? [
-    { id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor" as const },
-    { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" as const },
+    { id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor" as const, serviceCategory: "regular" as const },
+    { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" as const, serviceCategory: "regular" as const },
   ];
   return {
     weekStart: "2026-08-09",
@@ -152,9 +152,9 @@ describe("TeamWeekMatrix — supervisor/technician group divider (3)", () => {
   it("the group boundary column's header and body cells carry a visible divider border; the first supervisor column never does", () => {
     const view = teamWeek({
       people: [
-        { id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor" as const },
-        { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" as const },
-        { id: "p_noa", name: "נועה דוגמה", roleGroup: "technician" as const },
+        { id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor" as const, serviceCategory: "regular" as const },
+        { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" as const, serviceCategory: "regular" as const },
+        { id: "p_noa", name: "נועה דוגמה", roleGroup: "technician" as const, serviceCategory: "regular" as const },
       ],
     });
     render(<TeamWeekMatrix viewerPersonId="p_viewer_none" allPeopleFilterHref="/schedule?person=all&view=team-week" teamWeek={view} todayDate="2026-08-09" peopleFilter="all" />);
@@ -178,8 +178,8 @@ describe("TeamWeekMatrix — supervisor/technician group divider (3)", () => {
   it("the divider is a real border on each body row's boundary cell too, not just the header (survives vertical scroll -- it's part of the cell, not an overlay)", () => {
     const view = teamWeek({
       people: [
-        { id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor" as const },
-        { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" as const },
+        { id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor" as const, serviceCategory: "regular" as const },
+        { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" as const, serviceCategory: "regular" as const },
       ],
     });
     render(<TeamWeekMatrix viewerPersonId="p_viewer_none" allPeopleFilterHref="/schedule?person=all&view=team-week" teamWeek={view} todayDate="2026-08-09" peopleFilter="all" />);
@@ -192,8 +192,8 @@ describe("TeamWeekMatrix — supervisor/technician group divider (3)", () => {
   it("renders with a single group and no divider at all when only one role group is present", () => {
     const view = teamWeek({
       people: [
-        { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" as const },
-        { id: "p_noa", name: "נועה דוגמה", roleGroup: "technician" as const },
+        { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" as const, serviceCategory: "regular" as const },
+        { id: "p_noa", name: "נועה דוגמה", roleGroup: "technician" as const, serviceCategory: "regular" as const },
       ],
     });
     render(<TeamWeekMatrix viewerPersonId="p_viewer_none" allPeopleFilterHref="/schedule?person=all&view=team-week" teamWeek={view} todayDate="2026-08-09" peopleFilter="all" />);
@@ -203,50 +203,111 @@ describe("TeamWeekMatrix — supervisor/technician group divider (3)", () => {
   });
 });
 
-describe("TeamWeekMatrix — active-only people filter (5)", () => {
-  function activeFilterView(): ScheduleTeamWeekView {
+describe("TeamWeekMatrix — active-only people filter: regular (חובה) always visible, reserve (מילואים) activity-gated (5)", () => {
+  function mixedRosterView(): ScheduleTeamWeekView {
     return teamWeek({
       people: [
-        { id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor" as const },
-        { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" as const },
+        { id: "p_reg_sup", name: "אחמ\"ש חובה", roleGroup: "supervisor" as const, serviceCategory: "regular" as const },
+        { id: "p_reg_tech", name: "טכנאי חובה", roleGroup: "technician" as const, serviceCategory: "regular" as const },
+        { id: "p_res_inactive", name: "מילואים לא פעיל", roleGroup: "technician" as const, serviceCategory: "reserve" as const },
+        { id: "p_res_active", name: "מילואים פעיל", roleGroup: "technician" as const, serviceCategory: "reserve" as const },
       ],
       cells: {
-        ...emptyCells(["p_eitan", "p_daniel"]),
-        p_daniel: {
-          ...emptyCells(["p_daniel"]).p_daniel,
+        ...emptyCells(["p_reg_sup", "p_reg_tech", "p_res_inactive", "p_res_active"]),
+        p_res_active: {
+          ...emptyCells(["p_res_active"]).p_res_active,
           "2026-08-11": [item({ key: "a", title: "טכנאי יום" })],
         },
       },
     });
   }
 
-  it("peopleFilter='active' hides a zero-event eligible person's column entirely", () => {
-    render(<TeamWeekMatrix viewerPersonId="p_viewer_none" allPeopleFilterHref="/schedule?person=all&view=team-week" teamWeek={activeFilterView()} todayDate="2026-08-09" peopleFilter="active" />);
-    expect(screen.queryByRole("columnheader", { name: "איתן דוגמה" })).toBeNull();
-    expect(screen.getByRole("columnheader", { name: "דניאל כהן" })).toBeInTheDocument();
+  it("1/2. peopleFilter='active' keeps a zero-event regular supervisor AND technician visible", () => {
+    render(<TeamWeekMatrix viewerPersonId="p_viewer_none" allPeopleFilterHref="/schedule?person=all&view=team-week" teamWeek={mixedRosterView()} todayDate="2026-08-09" peopleFilter="active" />);
+    expect(screen.getByRole("columnheader", { name: 'אחמ"ש חובה' })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "טכנאי חובה" })).toBeInTheDocument();
   });
 
-  it("peopleFilter='all' shows every eligible person, including zero-event ones", () => {
-    render(<TeamWeekMatrix viewerPersonId="p_viewer_none" allPeopleFilterHref="/schedule?person=all&view=team-week" teamWeek={activeFilterView()} todayDate="2026-08-09" peopleFilter="all" />);
-    expect(screen.getByRole("columnheader", { name: "איתן דוגמה" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "דניאל כהן" })).toBeInTheDocument();
+  it("3/4. peopleFilter='active' hides a zero-event reserve person's column entirely", () => {
+    render(<TeamWeekMatrix viewerPersonId="p_viewer_none" allPeopleFilterHref="/schedule?person=all&view=team-week" teamWeek={mixedRosterView()} todayDate="2026-08-09" peopleFilter="active" />);
+    expect(screen.queryByRole("columnheader", { name: "מילואים לא פעיל" })).toBeNull();
+  });
+
+  it("5. peopleFilter='active' keeps a reserve person with an item this week visible", () => {
+    render(<TeamWeekMatrix viewerPersonId="p_viewer_none" allPeopleFilterHref="/schedule?person=all&view=team-week" teamWeek={mixedRosterView()} todayDate="2026-08-09" peopleFilter="active" />);
+    expect(screen.getByRole("columnheader", { name: "מילואים פעיל" })).toBeInTheDocument();
+  });
+
+  it("6. peopleFilter='all' shows every eligible person, including the inactive reserve", () => {
+    render(<TeamWeekMatrix viewerPersonId="p_viewer_none" allPeopleFilterHref="/schedule?person=all&view=team-week" teamWeek={mixedRosterView()} todayDate="2026-08-09" peopleFilter="all" />);
+    expect(screen.getByRole("columnheader", { name: 'אחמ"ש חובה' })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "טכנאי חובה" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "מילואים לא פעיל" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "מילואים פעיל" })).toBeInTheDocument();
   });
 
   it("filtering never mutates teamWeek.cells -- the underlying projection stays intact regardless of which filter is rendered", () => {
-    const view = activeFilterView();
+    const view = mixedRosterView();
     const before = JSON.stringify(view);
     render(<TeamWeekMatrix viewerPersonId="p_viewer_none" allPeopleFilterHref="/schedule?person=all&view=team-week" teamWeek={view} todayDate="2026-08-09" peopleFilter="active" />);
     expect(JSON.stringify(view)).toBe(before);
   });
 
-  it("shows a distinct, informative empty state when the active filter hides everyone, rather than the generic 'no shift-capable roster' message", () => {
+  it("shows a distinct, informative empty state only when the active filter hides EVERYONE (an all-inactive-reserve roster), rather than the generic 'no shift-capable roster' message", () => {
     const view = teamWeek({
-      people: [{ id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor" as const }],
-      cells: emptyCells(["p_eitan"]),
+      people: [{ id: "p_res_inactive", name: "מילואים לא פעיל", roleGroup: "supervisor" as const, serviceCategory: "reserve" as const }],
+      cells: emptyCells(["p_res_inactive"]),
     });
     render(<TeamWeekMatrix viewerPersonId="p_viewer_none" allPeopleFilterHref="/schedule?person=all&view=team-week" teamWeek={view} todayDate="2026-08-09" peopleFilter="active" />);
     expect(screen.queryByRole("table")).toBeNull();
     expect(screen.getByText(/אין אנשי צוות פעילים בשבוע זה/)).toBeInTheDocument();
+  });
+
+  it("a regular-only roster with zero events anywhere never hits the active-filter empty state -- regular people are never activity-gated", () => {
+    const view = teamWeek({
+      people: [{ id: "p_reg_sup", name: "אחמ\"ש חובה", roleGroup: "supervisor" as const, serviceCategory: "regular" as const }],
+      cells: emptyCells(["p_reg_sup"]),
+    });
+    render(<TeamWeekMatrix viewerPersonId="p_viewer_none" allPeopleFilterHref="/schedule?person=all&view=team-week" teamWeek={view} todayDate="2026-08-09" peopleFilter="active" />);
+    expect(screen.getByRole("table")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: 'אחמ"ש חובה' })).toBeInTheDocument();
+  });
+
+  it("9. a regular viewer with zero activity this week still has their own column and Find Me available under the default 'active' filter", () => {
+    const view = teamWeek({
+      people: [{ id: "p_reg_sup", name: "אחמ\"ש חובה", roleGroup: "supervisor" as const, serviceCategory: "regular" as const }],
+      cells: emptyCells(["p_reg_sup"]),
+    });
+    render(
+      <TeamWeekMatrix
+        teamWeek={view}
+        todayDate="2026-08-09"
+        peopleFilter="active"
+        viewerPersonId="p_reg_sup"
+        allPeopleFilterHref="/schedule?person=all&view=team-week"
+      />,
+    );
+    expect(screen.getByRole("columnheader", { name: 'אחמ"ש חובה, אני' })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /איפה אני/ })).toBeInTheDocument();
+    expect(screen.queryByText(/אין לך פעילות השבוע/)).toBeNull();
+  });
+
+  it("10. the 'אין לך פעילות השבוע · הצג את כולם' fallback now applies only to an eligible reserve viewer hidden by the active filter -- never a regular viewer", () => {
+    const view = mixedRosterView();
+    render(
+      <TeamWeekMatrix
+        teamWeek={view}
+        todayDate="2026-08-09"
+        peopleFilter="active"
+        viewerPersonId="p_res_inactive"
+        allPeopleFilterHref="/schedule?person=all&view=team-week"
+      />,
+    );
+    expect(screen.queryByRole("columnheader", { name: /מילואים לא פעיל/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /איפה אני/ })).toBeNull();
+    expect(screen.getByText(/אין לך פעילות השבוע/)).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "הצג את כולם" });
+    expect(link).toHaveAttribute("href", "/schedule?person=all&view=team-week");
   });
 });
 
@@ -384,8 +445,8 @@ describe("TeamWeekMatrix — 'איפה אני?' self orientation (viewerPersonId
   it("7. duplicate display names never confuse self detection -- only the id-matching column gets the badge", () => {
     const view = teamWeek({
       people: [
-        { id: "p_daniel_a", name: "דניאל כהן", roleGroup: "technician" as const },
-        { id: "p_daniel_b", name: "דניאל כהן", roleGroup: "technician" as const },
+        { id: "p_daniel_a", name: "דניאל כהן", roleGroup: "technician" as const, serviceCategory: "regular" as const },
+        { id: "p_daniel_b", name: "דניאל כהן", roleGroup: "technician" as const, serviceCategory: "regular" as const },
       ],
       cells: emptyCells(["p_daniel_a", "p_daniel_b"]),
     });
@@ -445,8 +506,8 @@ describe("TeamWeekMatrix — 'איפה אני?' self orientation (viewerPersonId
   it("13. a viewer eligible for Team Week but hidden by the active filter gets a clear fallback link, never a dead Find Me button", () => {
     const view = teamWeek({
       people: [
-        { id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor" as const },
-        { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" as const },
+        { id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor" as const, serviceCategory: "reserve" as const },
+        { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" as const, serviceCategory: "regular" as const },
       ],
       cells: {
         ...emptyCells(["p_eitan", "p_daniel"]),
@@ -456,8 +517,10 @@ describe("TeamWeekMatrix — 'איפה אני?' self orientation (viewerPersonId
         },
       },
     });
-    // The viewer is Eitan, who has zero events this week -- the active
-    // filter hides his column entirely, even though he IS eligible.
+    // The viewer is Eitan, a RESERVE person with zero events this week --
+    // the active filter hides his column entirely, even though he IS
+    // eligible. A regular (חובה) viewer would never hit this case, since
+    // "active" always keeps regular people visible regardless of activity.
     render(
       <TeamWeekMatrix
         teamWeek={view}
@@ -486,9 +549,9 @@ describe("TeamWeekMatrix — 'איפה אני?' self orientation (viewerPersonId
   it("20. the group divider survives when the viewer happens to be the first technician column", () => {
     const view = teamWeek({
       people: [
-        { id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor" as const },
-        { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" as const },
-        { id: "p_noa", name: "נועה דוגמה", roleGroup: "technician" as const },
+        { id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor" as const, serviceCategory: "regular" as const },
+        { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" as const, serviceCategory: "regular" as const },
+        { id: "p_noa", name: "נועה דוגמה", roleGroup: "technician" as const, serviceCategory: "regular" as const },
       ],
     });
     render(<TeamWeekMatrix teamWeek={view} todayDate="2026-08-09" peopleFilter="all" viewerPersonId="p_daniel" allPeopleFilterHref="/x" />);

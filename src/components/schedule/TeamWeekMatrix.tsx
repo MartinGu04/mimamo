@@ -12,7 +12,7 @@ interface TeamWeekMatrixProps {
   teamWeek: ScheduleTeamWeekView;
   /** "YYYY-MM-DD" -- the server-resolved "today", for the current-day row highlight. Never computed client-side. */
   todayDate: string;
-  /** "active" (default) shows only people with an item this week; "all" shows every eligible person. Presentation-only -- see `lib/presentation/teamWeekFilter.ts`. */
+  /** "active" (default) always shows regular (חובה) people, plus only reserve (מילואים) people with an item this week; "all" shows every eligible person regardless of activity. Presentation-only -- see `lib/presentation/teamWeekFilter.ts`. */
   peopleFilter: TeamWeekPeopleFilter;
   /**
    * The safe, explicit `ScheduleReadModel.viewerPersonId` -- who is
@@ -307,6 +307,11 @@ export function TeamWeekMatrix({ teamWeek, todayDate, peopleFilter, viewerPerson
   // viewer outside `teamWeek.people` entirely (e.g. permanent/קבע) never
   // gets a Find Me control or a fallback message, just silence (case C).
   const isViewerEligible = teamWeek.people.some((person) => person.id === viewerPersonId);
+  // Since `filterTeamWeekPeople`'s "active" filter now always keeps every
+  // regular (חובה) person, an eligible-but-hidden viewer here can only be
+  // an inactive reserve (מילואים) person -- this fallback is the correct,
+  // narrower case B outcome for exactly that situation, never triggered
+  // for a regular viewer.
   const showActiveFilterFallback = isViewerEligible && !viewerColumnVisible;
 
   return (

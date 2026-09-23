@@ -113,6 +113,15 @@ describe("buildScheduleTeamWeekView — personnel-type eligibility (permanent/ק
     expect(view.people.map((p) => p.id)).toEqual(["p_res_sup", "p_res_tech"]);
   });
 
+  it("populates serviceCategory from the already-computed classifyPersonnelType result, verbatim -- 'regular' for חובה, 'reserve' for מילואים", () => {
+    const regularSupervisor = person({ id: "p_reg_sup", name: "חובה אחמ\"ש", isSupervisor: true, personnelType: "חובה" });
+    const reserveTechnician = person({ id: "p_res_tech", name: "מילואים טכנאי", isTechnician: true, personnelType: "מילואים" });
+    const view = buildScheduleTeamWeekView([], [regularSupervisor, reserveTechnician], WEEK);
+    const bySpecId = new Map(view.people.map((p) => [p.id, p.serviceCategory]));
+    expect(bySpecId.get("p_reg_sup")).toBe("regular");
+    expect(bySpecId.get("p_res_tech")).toBe("reserve");
+  });
+
   it("excludes a non-operational person (neither isSupervisor nor isTechnician), regardless of personnelType", () => {
     const regularNonOperational = person({ id: "p_reg_other", name: "חובה לא תפעולי", personnelType: "חובה" });
     const view = buildScheduleTeamWeekView([], [regularNonOperational], WEEK);
@@ -291,9 +300,9 @@ describe("buildScheduleTeamWeekView — never leaks raw workbook/PII data (17)",
     );
   });
 
-  it("a person's own keys never include email or any other Person field beyond id/name/roleGroup", () => {
+  it("a person's own keys never include email or any other Person field beyond id/name/roleGroup/serviceCategory", () => {
     const view = buildScheduleTeamWeekView([], [DANIEL], WEEK);
-    expect(Object.keys(view.people[0]).sort()).toEqual(["id", "name", "roleGroup"]);
+    expect(Object.keys(view.people[0]).sort()).toEqual(["id", "name", "roleGroup", "serviceCategory"]);
   });
 });
 
