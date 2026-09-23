@@ -37,7 +37,7 @@ export function ReportOneQuickAction({ draft, reserveInclusionByPersonId }: Repo
       <button type="button" onClick={() => setOpen(true)} className={QUICK_ACTION_CARD_CLASS}>
         <p className="text-sm font-semibold text-foreground">🛰️ דוח 1 למחר</p>
         {targetDateLabel ? <p className="text-xs text-muted">מוכן עבור {targetDateLabel}</p> : null}
-        <span className="mt-auto flex items-center gap-0.5 pt-2 text-xs font-medium text-muted">
+        <span className="flex items-center gap-0.5 pt-2 text-xs font-medium text-muted">
           <span>פתיחה</span>
           <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" strokeWidth={2} />
         </span>

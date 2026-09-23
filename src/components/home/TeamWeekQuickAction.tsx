@@ -28,7 +28,7 @@ export function TeamWeekQuickAction() {
         צוות השבוע
       </p>
       <p className="text-xs text-muted">מי עובד השבוע</p>
-      <span className="mt-auto flex items-center gap-0.5 pt-2 text-xs font-medium text-muted">
+      <span className="flex items-center gap-0.5 pt-2 text-xs font-medium text-muted">
         <span>פתיחה</span>
         <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" strokeWidth={2} />
       </span>

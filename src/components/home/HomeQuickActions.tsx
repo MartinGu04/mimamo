@@ -11,13 +11,18 @@ interface HomeQuickActionsProps {
 
 /**
  * The Home "quick actions" row -- "דוח 1 למחר" + "צוות השבוע" as a
- * compact pair of whole-card actions, side by side on desktop
- * (`sm:flex-row`) and stacked on mobile. Replaces two previously
- * separate, low-discoverability entry points: a full-width
- * `ReportOneQuickAction` banner whose only clickable part was a small
- * trailing button, and a Team Week shortcut that read as a plain section
- * heading (`WeekOverviewSection`/`PermanentManagerHome`'s own former
- * heading-row `Link`, now `TeamWeekQuickAction`).
+ * compact pair of fixed-size navigation tiles (see
+ * `QUICK_ACTION_CARD_CLASS`'s own docs for the sizing rationale), side by
+ * side on desktop (`sm:flex-row`) and stacked full-width on mobile.
+ * Deliberately no `justify-between`/`w-full` here -- with neither card
+ * set to grow, the row packs the pair at its own start (this app's RTL
+ * document direction puts that at the right edge) rather than spanning
+ * the whole content column. Replaces two previously separate,
+ * low-discoverability entry points: a full-width `ReportOneQuickAction`
+ * banner whose only clickable part was a small trailing button, and a
+ * Team Week shortcut that read as a plain section heading
+ * (`WeekOverviewSection`/`PermanentManagerHome`'s own former heading-row
+ * `Link`, now `TeamWeekQuickAction`).
  *
  * `TeamWeekQuickAction` always renders -- every mapped viewer gets it,
  * same contract its former heading-row copies already had.
