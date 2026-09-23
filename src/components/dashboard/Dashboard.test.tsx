@@ -329,7 +329,7 @@ describe("Dashboard — 'השבוע הקרוב' weekly overview", () => {
     );
 
     expect(screen.getByText("פעיל עכשיו")).toBeInTheDocument(); // Hero
-    expect(screen.getByText("היום שלי")).toBeInTheDocument(); // TodayTimeline
+    expect(screen.queryByText("היום שלי")).toBeNull(); // TodayTimeline removed from Dashboard (UX cleanup pass)
     expect(screen.getByText("מה השתנה מאז הפעם הקודמת")).toBeInTheDocument(); // RecentChangesPanel
     expect(screen.getByText("הסידור שלך נראה תקין")).toBeInTheDocument(); // IssuesPanel (no issues)
     expect(screen.getByText("הקרובים שלי")).toBeInTheDocument(); // UpcomingSection

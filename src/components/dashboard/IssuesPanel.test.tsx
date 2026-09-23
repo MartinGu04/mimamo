@@ -85,3 +85,70 @@ describe("IssuesPanel", () => {
     expect(container.querySelector(".animate-issue-pulse")).toBeNull();
   });
 });
+
+describe("IssuesPanel — deep link to the issue's date", () => {
+  it("wraps a dated issue's whole card in a single link to /schedule?date=<the exact issue date>", () => {
+    render(<IssuesPanel issues={[issue({ date: "2026-09-23" })]} />);
+    const link = screen.getByRole("link");
+    expect(link).toHaveAttribute("href", "/schedule?date=2026-09-23");
+  });
+
+  it("uses each issue's own date, not a shared/default one, across multiple issues", () => {
+    render(
+      <IssuesPanel
+        issues={[
+          issue({ date: "2026-09-23", reason: "shift_coverage_missing" }),
+          issue({ date: "2026-10-05", reason: "invalid_shift_time" }),
+        ]}
+      />,
+    );
+    const links = screen.getAllByRole("link");
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([
+      "/schedule?date=2026-09-23",
+      "/schedule?date=2026-10-05",
+    ]);
+  });
+
+  it("the link's own text still shows the friendly reason label, the compact date, and a view affordance", () => {
+    render(<IssuesPanel issues={[issue({ date: "2026-09-23", reason: "shift_coverage_missing" })]} />);
+    const link = screen.getByRole("link");
+    expect(link).toHaveTextContent("חסר כיסוי למשמרת שלך");
+    expect(link).toHaveTextContent("23.9");
+    expect(link).toHaveTextContent("לצפייה בלוח");
+  });
+
+  it("preserves the card's severity ring/background classes on the link itself", () => {
+    render(<IssuesPanel issues={[issue({ severity: "critical" })]} />);
+    const link = screen.getByRole("link");
+    expect(link.className).toContain("ring-critical/20");
+    expect(link.className).toContain("bg-critical/[0.06]");
+  });
+
+  it("has a visible hover/focus-visible affordance and no nested interactive elements", () => {
+    render(<IssuesPanel issues={[issue()]} />);
+    const link = screen.getByRole("link");
+    expect(link.className).toMatch(/hover:bg-/);
+    expect(link.className).toContain("focus-visible:outline-2");
+    expect(link.querySelector("a, button")).toBeNull();
+  });
+
+  it("is keyboard-focusable (real <a>, not a click handler on a non-interactive element)", () => {
+    render(<IssuesPanel issues={[issue()]} />);
+    const link = screen.getByRole("link");
+    expect(link.tagName).toBe("A");
+    link.focus();
+    expect(link).toHaveFocus();
+  });
+
+  it("still renders as a plain, non-clickable card when the issue's date can't be parsed", () => {
+    render(<IssuesPanel issues={[issue({ date: "not-a-real-date" })]} />);
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getByText("חסר כיסוי למשמרת שלך")).toBeInTheDocument();
+  });
+
+  it("the quiet 'no issues' state stays untouched -- no links, no cards", () => {
+    render(<IssuesPanel issues={[]} />);
+    expect(screen.getByText("הסידור שלך נראה תקין")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+});

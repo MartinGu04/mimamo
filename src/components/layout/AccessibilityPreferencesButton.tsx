@@ -175,7 +175,7 @@ export function AccessibilityPreferencesButton() {
         aria-controls={open ? panelId : undefined}
         aria-label="אפשרויות נגישות"
         onClick={() => setOpen((prev) => !prev)}
-        className={`glass-medium relative flex h-11 w-11 items-center justify-center rounded-full bg-surface-1 text-foreground shadow-[var(--shadow-elevated)] ring-1 ring-border-strong transition-colors duration-150 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${EXPAND_HIT_AREA_CLASS}`}
+        className={`relative flex h-11 w-11 items-center justify-center rounded-full bg-[var(--a11y-trigger-bg)] text-[var(--a11y-trigger-icon)] shadow-[var(--shadow-a11y-trigger)] ring-1 ring-[var(--a11y-trigger-ring)] transition-colors duration-150 hover:bg-[var(--a11y-trigger-bg-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${EXPAND_HIT_AREA_CLASS}`}
       >
         <Accessibility className="h-5 w-5" aria-hidden="true" strokeWidth={1.75} />
       </button>

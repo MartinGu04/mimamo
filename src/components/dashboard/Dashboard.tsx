@@ -10,7 +10,6 @@ import { DashboardVisitSession } from "./DashboardVisitSession";
 import { Header } from "./Header";
 import { Hero } from "./Hero";
 import { IssuesPanel } from "./IssuesPanel";
-import { TodayTimeline } from "./TodayTimeline";
 import { UpcomingSection } from "./UpcomingSection";
 import { WeekOverviewSection } from "./WeekOverviewSection";
 
@@ -68,15 +67,21 @@ function findVacationEvent(todayEvents: readonly PersonalEventView[]): PersonalE
  * the already-safe `PersonalScheduleReadModel` -- no raw Events/People,
  * nothing re-derived from spreadsheet text here.
  *
- * Layout: a main narrative column (header, hero, today) plus a secondary
+ * Layout: a main narrative column (header, hero) plus a secondary
  * contextual column (issues, upcoming) on desktop; a single stacked column
- * on mobile, hero-first. Release-polish pass: the top-level Header/
- * freshness/content spacing was trimmed from `gap-6` down to `gap-4` (a
- * follow-up pass tightened it further from an intermediate `gap-5`) --
- * real vertical space this page didn't need, part of removing a small
- * unnecessary page scroll at normal desktop viewport heights, alongside
- * `AppShell`'s own top padding. The two-column grid's OWN internal `gap-6`
- * (between Hero/Timeline/etc.) is unchanged.
+ * on mobile, hero-first. `TodayTimeline` ("היום שלי") was removed from
+ * this composition (UX cleanup pass) -- Hero already answers what the
+ * user is doing now/next, including time, progress, and coworkers, so
+ * repeating that same active shift as a second "today" section was pure
+ * redundancy; the underlying `todayEvents`/`dutyActions` read-model data
+ * is untouched, only this page's rendering of it changed. Release-polish
+ * pass: the top-level Header/freshness/content spacing was trimmed from
+ * `gap-6` down to `gap-4` (a follow-up pass tightened it further from an
+ * intermediate `gap-5`) -- real vertical space this page didn't need,
+ * part of removing a small unnecessary page scroll at normal desktop
+ * viewport heights, alongside `AppShell`'s own top padding. The two-column
+ * grid's OWN internal `gap-6` (between Hero/DashboardVisitSession/etc.)
+ * is unchanged.
  *
  * "השבוע הקרוב" (`WeekOverviewSection`) sits BELOW that whole two-column
  * grid as its own full-width section -- deliberately not squeezed inside
@@ -118,8 +123,6 @@ export function Dashboard({
       ? (model.nextAssignmentGroup?.events ?? [])
       : [];
 
-  const todayDutyActions = model.dutyActions.filter((action) => action.date === model.localNow.date);
-
   const weekOverview = buildPersonalWeekOverview(model.calendarEvents, model.localNow);
 
   return (
@@ -144,14 +147,6 @@ export function Dashboard({
             fetchedAt={model.fetchedAt}
             localNowDate={model.localNow.date}
           />
-
-          <div className="animate-fade-up" style={{ animationDelay: "80ms" }}>
-            <TodayTimeline
-              todayEvents={model.todayEvents}
-              todayDutyActions={todayDutyActions}
-              localNow={model.localNow}
-            />
-          </div>
 
           {visitRecap ? <DashboardVisitSession visitRecap={visitRecap} /> : null}
         </div>

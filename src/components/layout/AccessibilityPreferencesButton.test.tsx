@@ -87,6 +87,28 @@ describe("AccessibilityPreferencesButton — trigger", () => {
   });
 });
 
+describe("AccessibilityPreferencesButton — trigger appearance", () => {
+  it("renders as a solid saturated-blue action button with a white icon, not the muted glass surface", () => {
+    renderWidget();
+    const trigger = screen.getByRole("button", { name: "אפשרויות נגישות" });
+
+    expect(trigger.className).toContain("bg-[var(--a11y-trigger-bg)]");
+    expect(trigger.className).toContain("text-[var(--a11y-trigger-icon)]");
+    expect(trigger.className).toContain("hover:bg-[var(--a11y-trigger-bg-hover)]");
+    expect(trigger.className).toContain("ring-[var(--a11y-trigger-ring)]");
+    expect(trigger.className).toContain("shadow-[var(--shadow-a11y-trigger)]");
+    expect(trigger.className).not.toContain("glass-medium");
+    expect(trigger.className).not.toContain("bg-surface-1");
+  });
+
+  it("never ties its own fill to the theme-dependent --primary token used elsewhere", () => {
+    renderWidget();
+    const trigger = screen.getByRole("button", { name: "אפשרויות נגישות" });
+    expect(trigger.className).not.toMatch(/bg-primary\b/);
+    expect(trigger.className).not.toContain("hover:text-primary");
+  });
+});
+
 describe("AccessibilityPreferencesButton — dismiss behavior", () => {
   it("Escape closes the panel and returns focus to the trigger", () => {
     renderWidget();
