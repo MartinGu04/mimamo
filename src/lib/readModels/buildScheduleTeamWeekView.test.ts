@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { Event } from "@/lib/domain/event";
 import type { OperationalWeek } from "@/lib/domain/operationalWeek";
 import type { Person } from "@/lib/domain/types";
+import { parseEvent } from "@/lib/parsers/event";
+import type { RawAssignment } from "@/lib/parsers/types";
 import { buildScheduleTeamWeekView } from "./buildScheduleTeamWeekView";
 
 const WEEK: OperationalWeek = {
@@ -189,6 +191,12 @@ describe("buildScheduleTeamWeekView — scope (week dates only, relevant categor
     expect(view.cells["p_daniel"]["2026-08-11"]).toEqual([]);
   });
 
+  it("still ignores an unrecognized category 'other' string -- 'other' is not blanket-included", () => {
+    const events = [event({ personId: "p_daniel", date: "2026-08-11", category: "other", title: "הערה כללית" })];
+    const view = buildScheduleTeamWeekView(events, [DANIEL], WEEK);
+    expect(view.cells["p_daniel"]["2026-08-11"]).toEqual([]);
+  });
+
   it("ignores an event for a person who isn't on the roster at all (defensive -- never crashes)", () => {
     const view = buildScheduleTeamWeekView([event({ personId: "p_ghost", date: "2026-08-11" })], [DANIEL], WEEK);
     expect(view.cells["p_ghost"]).toBeUndefined();
@@ -240,5 +248,135 @@ describe("buildScheduleTeamWeekView — tentative certainty", () => {
     const view = buildScheduleTeamWeekView(events, [DANIEL], WEEK);
     expect(view.cells["p_daniel"]["2026-08-11"][0].tentative).toBe(true);
     expect(view.cells["p_daniel"]["2026-08-12"][0].tentative).toBe(false);
+  });
+});
+
+// --- recognized "other"-category operational activities (מטווחים/משיכות/
+// הסמכה) -- a narrow, explicit exception to the shift/duty/absence-only
+// scope above, shared from lib/domain/operationalActivityKeywords.ts (the
+// same detectors lib/domain/reportOne.ts already relies on), never a
+// blanket "any 'other' text is fine" rule --------------------------------
+
+describe("buildScheduleTeamWeekView — recognized 'other'-category activities (מטווחים/משיכות/הסמכה)", () => {
+  it("מטווחים alone survives, as a category 'other' item", () => {
+    const view = buildScheduleTeamWeekView(
+      [event({ personId: "p_daniel", date: "2026-08-11", category: "other", title: "מטווחים" })],
+      [DANIEL],
+      WEEK,
+    );
+    const items = view.cells["p_daniel"]["2026-08-11"];
+    expect(items).toHaveLength(1);
+    expect(items[0].title).toBe("מטווחים");
+    expect(items[0].category).toBe("other");
+  });
+
+  it("the singular 'מטווח' spelling is recognized too, exactly like the plural", () => {
+    const view = buildScheduleTeamWeekView(
+      [event({ personId: "p_daniel", date: "2026-08-11", category: "other", title: "מטווח" })],
+      [DANIEL],
+      WEEK,
+    );
+    expect(view.cells["p_daniel"]["2026-08-11"]).toHaveLength(1);
+  });
+
+  it("משיכות is recognized (the sibling keyword reportOne.ts already relies on)", () => {
+    const view = buildScheduleTeamWeekView(
+      [event({ personId: "p_daniel", date: "2026-08-11", category: "other", title: "משיכות" })],
+      [DANIEL],
+      WEEK,
+    );
+    expect(view.cells["p_daniel"]["2026-08-11"]).toHaveLength(1);
+    expect(view.cells["p_daniel"]["2026-08-11"][0].title).toBe("משיכות");
+  });
+
+  it("הסמכה is recognized (the sibling keyword reportOne.ts already relies on)", () => {
+    const view = buildScheduleTeamWeekView(
+      [event({ personId: "p_daniel", date: "2026-08-11", category: "other", title: "הסמכה" })],
+      [DANIEL],
+      WEEK,
+    );
+    expect(view.cells["p_daniel"]["2026-08-11"]).toHaveLength(1);
+    expect(view.cells["p_daniel"]["2026-08-11"][0].title).toBe("הסמכה");
+  });
+
+  it('אחמ"ש יום - צל (shift) + מטווחים (other) on the same person/date: BOTH survive, neither dropped', () => {
+    const events = [
+      event({ personId: "p_daniel", date: "2026-08-11", category: "shift", title: 'אחמ"ש יום - צל', role: "supervisor", period: "day", shadow: true }),
+      event({ personId: "p_daniel", date: "2026-08-11", category: "other", title: "מטווחים" }),
+    ];
+    const view = buildScheduleTeamWeekView(events, [DANIEL], WEEK);
+    const items = view.cells["p_daniel"]["2026-08-11"];
+    expect(items).toHaveLength(2);
+    expect(items.map((i) => i.title)).toEqual(['אחמ"ש יום - צל', "מטווחים"]);
+  });
+
+  it("2 relevant items (one typed, one recognized 'other') both survive at the data layer -- overflow capping is a UI-only concern, never data loss here", () => {
+    const events = [
+      event({ personId: "p_daniel", date: "2026-08-11", category: "shift", title: "טכנאי יום" }),
+      event({ personId: "p_daniel", date: "2026-08-11", category: "duty", title: "שמירה 2", dutyFamily: "guard", role: null, period: "unspecified" }),
+      event({ personId: "p_daniel", date: "2026-08-11", category: "other", title: "מטווחים" }),
+    ];
+    const view = buildScheduleTeamWeekView(events, [DANIEL], WEEK);
+    const items = view.cells["p_daniel"]["2026-08-11"];
+    expect(items).toHaveLength(3);
+    expect(items.map((i) => i.title)).toEqual(["טכנאי יום", "שמירה 2", "מטווחים"]);
+  });
+});
+
+describe("buildScheduleTeamWeekView — real parsed-pipeline regression (parseEvent -> buildScheduleTeamWeekView)", () => {
+  function rawAssignment(rawValue: string, overrides: Partial<RawAssignment> = {}): RawAssignment {
+    return {
+      personId: "p_daniel",
+      personName: "דניאל כהן",
+      date: "2026-08-11",
+      rawValue,
+      sourceSheet: "משמרות + תורנויות",
+      sourceCell: "C7",
+      ...overrides,
+    };
+  }
+
+  it("'מטווחים' raw schedule-cell text parses to category 'other' and reaches the matrix", () => {
+    const parsed = parseEvent(rawAssignment("מטווחים"));
+    expect(parsed.category).toBe("other");
+    const view = buildScheduleTeamWeekView([parsed], [DANIEL], WEEK);
+    expect(view.cells["p_daniel"]["2026-08-11"]).toHaveLength(1);
+    expect(view.cells["p_daniel"]["2026-08-11"][0].title).toBe("מטווחים");
+  });
+
+  it('exact reported regression through the real parser: \'אחמ"ש יום - צל\' + \'מטווחים\' for the same person/date -> buildScheduleTeamWeekView() contains BOTH items', () => {
+    const shadowShift = parseEvent(rawAssignment('אחמ"ש יום - צל'));
+    const shootingRange = parseEvent(rawAssignment("מטווחים"));
+    expect(shadowShift.category).toBe("shift");
+    expect(shadowShift.shadow).toBe(true);
+    expect(shootingRange.category).toBe("other");
+
+    const view = buildScheduleTeamWeekView([shadowShift, shootingRange], [DANIEL], WEEK);
+    const items = view.cells["p_daniel"]["2026-08-11"];
+    expect(items).toHaveLength(2);
+    expect(items[0].title).toBe('אחמ"ש יום - צל');
+    expect(items[0].shadow).toBe(true);
+    expect(items[1].title).toBe("מטווחים");
+  });
+
+  it("unrelated free-text 'other' schedule-cell content still never reaches the matrix through the real parser", () => {
+    const parsed = parseEvent(rawAssignment("הערה כללית"));
+    expect(parsed.category).toBe("other");
+    const view = buildScheduleTeamWeekView([parsed], [DANIEL], WEEK);
+    expect(view.cells["p_daniel"]["2026-08-11"]).toEqual([]);
+  });
+
+  it("'משיכות' raw schedule-cell text also reaches the matrix through the real parser", () => {
+    const parsed = parseEvent(rawAssignment("משיכות"));
+    expect(parsed.category).toBe("other");
+    const view = buildScheduleTeamWeekView([parsed], [DANIEL], WEEK);
+    expect(view.cells["p_daniel"]["2026-08-11"]).toHaveLength(1);
+  });
+
+  it("'הסמכה' raw schedule-cell text also reaches the matrix through the real parser", () => {
+    const parsed = parseEvent(rawAssignment("הסמכה"));
+    expect(parsed.category).toBe("other");
+    const view = buildScheduleTeamWeekView([parsed], [DANIEL], WEEK);
+    expect(view.cells["p_daniel"]["2026-08-11"]).toHaveLength(1);
   });
 });

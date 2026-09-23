@@ -1,17 +1,40 @@
 import type { Event, EventCategory } from "@/lib/domain/event";
+import { isRecognizedOperationalActivityEvent } from "@/lib/domain/operationalActivityKeywords";
 import { classifyRoleGroup, isShiftCapable } from "@/lib/domain/personnelType";
 import type { OperationalWeek } from "@/lib/domain/operationalWeek";
 import type { Person } from "@/lib/domain/types";
 import type { ScheduleTeamWeekCellItem, ScheduleTeamWeekPerson, ScheduleTeamWeekView } from "./scheduleTypes";
 
 /**
- * The only Event categories a team-week cell ever shows -- the exact same
- * scope `ScheduleEveryoneReadModel` (staffing/duties/absences) already
- * covers, so "who's on the roster this week" never surfaces a category
- * (constraint/status/context/change_note/other/unknown) that isn't
+ * The three typed Event categories a team-week cell always shows -- the
+ * exact same scope `ScheduleEveryoneReadModel` (staffing/duties/absences)
+ * already covers, so "who's on the roster this week" never surfaces a
+ * category (constraint/status/context/change_note/unknown) that isn't
  * meaningful team-wide operational data.
+ *
+ * `category: "other"` is NOT blanket-included here -- most "other" text is
+ * genuinely not schedule-relevant. But a real schedule-cell activity like
+ * "מטווחים" (a shooting range session) IS meaningful operational
+ * information with no dedicated `DutyFamily`/category of its own (see
+ * `lib/domain/operationalActivityKeywords.ts`, the same narrow, explicit
+ * keyword detectors `lib/domain/reportOne.ts` already relies on for the
+ * exact same reason) -- see `isRelevantTeamWeekEvent` below for how the
+ * two checks combine.
  */
 const RELEVANT_CATEGORIES: ReadonlySet<EventCategory> = new Set(["shift", "duty", "absence"]);
+
+/**
+ * Whether one Event belongs in the team-week matrix at all: always true
+ * for the three typed categories above, PLUS the narrow, explicit set of
+ * recognized "other"-category operational activities (`isRecognizedOperationalActivityEvent`)
+ * -- never a blanket "any 'other' text is fine" rule. This is what lets
+ * "אחמ\"ש יום - צל" (shift) and "מטווחים" (other, but recognized) both
+ * survive in the same person/date cell, while an unrelated, unrecognized
+ * "other" string still never reaches the matrix.
+ */
+function isRelevantTeamWeekEvent(event: Event): boolean {
+  return RELEVANT_CATEGORIES.has(event.category) || isRecognizedOperationalActivityEvent(event);
+}
 
 /**
  * Every roster person who belongs on the matrix at all, in FINAL display
@@ -80,7 +103,7 @@ export function buildScheduleTeamWeekView(
 
   let itemIndex = 0;
   for (const event of events) {
-    if (!RELEVANT_CATEGORIES.has(event.category)) continue;
+    if (!isRelevantTeamWeekEvent(event)) continue;
     if (!weekDates.has(event.date)) continue;
 
     const personCells = cells[event.personId];
