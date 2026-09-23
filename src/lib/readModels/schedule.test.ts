@@ -341,6 +341,126 @@ describe("loadScheduleReadModel — manager authorization / fetch scope (PR #24 
   });
 });
 
+describe("loadScheduleReadModel — stale manager=true, fresh re-check returns 'forbidden' (edge case: forbidden still keeps Team Schedule access on ?person=all)", () => {
+  // 1. The stale PersonalScheduleReadModel says isManager: true (this is
+  //    what routes the request into the manager branch at all).
+  const STALE_MANAGER_PERSONAL_RESULT = () => okPersonalResult(true);
+
+  // 2. The fresh loadManagerWorkbookContext() re-check comes back
+  //    "forbidden": the SAME email still resolves to a real, uniquely
+  //    mapped person from this request's own fresh snapshot, just with
+  //    isManager: false now (e.g. their manager flag was revoked between
+  //    the two fetches).
+  function forbiddenManagerSnapshot() {
+    return managerSnapshot({
+      personnel: [
+        ["שם", "מייל", "מנהל"],
+        ["מרטין גוסין", "martin@example.invalid", false],
+        ["דניאל כהן", "daniel@example.invalid", false],
+      ],
+    });
+  }
+
+  it("3/4/5. ?person=all still resolves to the mapped-viewer 'all' projection, with manager === null and roster === []", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(STALE_MANAGER_PERSONAL_RESULT());
+    getWorkbookSnapshot.mockResolvedValue(forbiddenManagerSnapshot());
+
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.model.perspective).toBe("all");
+      expect(result.model.manager).toBeNull();
+      expect(result.model.roster).toEqual([]);
+      expect(result.model.everyone).not.toBeNull();
+      expect(result.model.teamWeek).not.toBeNull();
+    }
+  });
+
+  it("NOT a privilege escalation: the resulting 'all' projection is byte-identical in shape to what any other non-manager gets for the same request -- this branch grants nothing loadMappedEveryoneScheduleReadModel doesn't already grant every mapped viewer, and re-verifies identity completely independently of the failed manager check", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(STALE_MANAGER_PERSONAL_RESULT());
+    getWorkbookSnapshot.mockResolvedValue(forbiddenManagerSnapshot());
+    const forbiddenResult = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+
+    getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(false));
+    getWorkbookSnapshot.mockResolvedValue(managerSnapshot());
+    const ordinaryNonManagerResult = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+
+    expect(forbiddenResult.status).toBe("ok");
+    expect(ordinaryNonManagerResult.status).toBe("ok");
+    if (forbiddenResult.status === "ok" && ordinaryNonManagerResult.status === "ok") {
+      expect(forbiddenResult.model.manager).toBe(ordinaryNonManagerResult.model.manager); // both null
+      expect(forbiddenResult.model.roster).toEqual(ordinaryNonManagerResult.model.roster); // both []
+      expect(forbiddenResult.model.perspective).toBe(ordinaryNonManagerResult.model.perspective); // both "all"
+    }
+  });
+
+  it("6. an arbitrary colleague id in this same stale-manager-now-forbidden scenario still falls back to self -- never that colleague's schedule", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(STALE_MANAGER_PERSONAL_RESULT());
+    getWorkbookSnapshot.mockResolvedValue(forbiddenManagerSnapshot());
+
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "p_daniel", rawWeek: null });
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.model.perspective).toBe("self");
+      expect(result.model.manager).toBeNull();
+      expect(result.model.selectedPersonId).toBeNull();
+    }
+  });
+
+  it("7. plain self (no ?person= at all) in this same scenario stays self, exactly as before this fix", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(STALE_MANAGER_PERSONAL_RESULT());
+    getWorkbookSnapshot.mockResolvedValue(forbiddenManagerSnapshot());
+
+    const result = await loadScheduleReadModel(DEFAULT_PARAMS);
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.model.perspective).toBe("self");
+      expect(result.model.manager).toBeNull();
+    }
+  });
+
+  it("8a. a fresh re-check that comes back unmapped does NOT grant 'all' -- falls back to self, never Team Schedule access", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(STALE_MANAGER_PERSONAL_RESULT());
+    getWorkbookSnapshot.mockResolvedValue(
+      managerSnapshot({ personnel: [["שם", "מייל", "מנהל"], ["מישהו אחר", "other@example.invalid", true]] }),
+    );
+
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.model.perspective).toBe("self");
+      expect(result.model.everyone).toBeNull();
+      expect(result.model.teamWeek).toBeNull();
+    }
+  });
+
+  it("8b. a fresh re-check that comes back ambiguous_identity does NOT grant 'all' either -- same self-only fallback", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(STALE_MANAGER_PERSONAL_RESULT());
+    getWorkbookSnapshot.mockResolvedValue(
+      managerSnapshot({
+        personnel: [
+          ["שם", "מייל", "מנהל"],
+          ["דני א", "martin@example.invalid", true],
+          ["דני ב", "martin@example.invalid", true],
+        ],
+      }),
+    );
+
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.model.perspective).toBe("self");
+      expect(result.model.everyone).toBeNull();
+      expect(result.model.teamWeek).toBeNull();
+    }
+  });
+});
+
 describe("loadScheduleReadModel — success / privacy", () => {
   it("builds an ok ScheduleReadModel for an authorized manager, defaulting to self", async () => {
     getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(true));

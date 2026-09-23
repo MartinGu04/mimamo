@@ -115,7 +115,10 @@ export interface ScheduleParams {
  *    parse, fresh manager check) every other manager-only feature uses,
  *    unchanged from before this split. This is what still gates
  *    `manager`/`roster`/`perspective: "person"` -- nothing here broadens
- *    manager-only behavior.
+ *    manager-only behavior. If that fresh check comes back `"forbidden"`
+ *    (still authenticated + uniquely mapped, just not provably a manager
+ *    right now) on a `?person=all` request, it falls through to step 4's
+ *    path instead of self-only -- see that branch's own comment.
  * 3. A non-manager's `?person=` OTHER than `"all"` (missing, their own id,
  *    someone else's id, garbage) stays the existing zero-extra-fetch
  *    self-only path -- `buildSelfOnlyScheduleReadModel(selfModel)` directly
@@ -160,11 +163,16 @@ export async function loadScheduleReadModel(params: ScheduleParams): Promise<Sch
 }
 
 /**
- * The manager branch -- BYTE-FOR-BYTE the same authorization/fetch/parse
- * behavior this file always had, just extracted into its own function so
- * `loadScheduleReadModel` can dispatch to it explicitly instead of gating
- * everything else behind `!isManager`. Nothing about this function's own
- * behavior changed by that extraction.
+ * The manager branch -- dispatched to whenever the (possibly stale)
+ * `selfModel.person.isManager` said `true`. Fetch/parse/construction is
+ * BYTE-FOR-BYTE the same behavior this file always had, extracted into its
+ * own function so `loadScheduleReadModel` can dispatch to it explicitly
+ * instead of gating everything else behind `!isManager`. The one behavior
+ * that's NEW here is the fresh-re-verification-failure branch below: a
+ * `"forbidden"` result on a `?person=all` request now falls through to the
+ * normal mapped-viewer Team Schedule path instead of self-only -- see that
+ * branch's own comment for why that's correct under this PR's
+ * authorization split, not an expansion of manager-only behavior.
  */
 async function loadManagerScheduleReadModel(
   selfModel: PersonalScheduleReadModel,
@@ -176,11 +184,40 @@ async function loadManagerScheduleReadModel(
 
   const contextResult = await loadManagerWorkbookContext(SCHEDULE_MANAGER_SOURCES);
   if (contextResult.status !== "ok") {
-    // Fresh re-verification couldn't reconfirm manager status for THIS
-    // request (e.g. personnel changed between the two fetches) -- fail
-    // closed to the same self-only experience a normal user gets, rather
-    // than surfacing an error for someone who is still a fully authorized
-    // person, just not (right now) provably a manager.
+    // `"forbidden"` is a DIFFERENT case from every other non-ok status
+    // here: it means the fresh re-check succeeded at resolving a real,
+    // authenticated + uniquely mapped person from THIS request's own
+    // snapshot -- it just isn't currently provably a manager (e.g. the
+    // stale `selfModel.person.isManager === true` this branch dispatched
+    // on no longer holds; personnel changed between the two fetches).
+    // Manager-only affordances (the arbitrary-person picker, `manager`,
+    // `roster`, `perspective: "person"`) are correctly lost here -- but
+    // Team Schedule visibility ("all") is a SEPARATE, broader permission
+    // by this PR's own design (see `scheduleTypes.ts`'s authorization
+    // docs), granted to every authenticated + uniquely mapped viewer, not
+    // just managers. So a `?person=all` request in this exact situation
+    // must still resolve to the normal mapped-viewer "all" projection --
+    // falling all the way back to self-only here would be MORE
+    // restrictive than the product's own rule for a non-manager hitting
+    // this same URL directly. This is not a privilege escalation: it
+    // grants nothing `loadMappedEveryoneScheduleReadModel` doesn't already
+    // grant any other mapped viewer, and it still fetches/re-verifies
+    // identity completely independently (no data or authorization is
+    // carried over from the failed manager check).
+    //
+    // `unauthenticated`/`missing_email`/`unmapped`/`ambiguous_identity`
+    // are NOT this case: those mean the fresh re-check couldn't even
+    // prove "authenticated + uniquely mapped" for this request, so
+    // there's no basis for Team Schedule access either -- those keep the
+    // existing fail-closed self-only fallback, same as before.
+    //
+    // A non-"all" request (self, or an arbitrary colleague id) also keeps
+    // the existing self-only fallback regardless of which non-ok status
+    // this was -- never that other colleague's schedule, whatever the
+    // reason the manager check failed.
+    if (contextResult.status === "forbidden" && params.personId === "all") {
+      return loadMappedEveryoneScheduleReadModel(selfModel, params);
+    }
     return { status: "ok", model: buildSelfOnlyScheduleReadModel(selfModel) };
   }
 
