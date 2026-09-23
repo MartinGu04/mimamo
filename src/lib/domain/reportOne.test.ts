@@ -10,6 +10,8 @@ import {
 import type { Event } from "./event";
 import type { LocalNow } from "./localNow";
 import type { Person } from "./types";
+import { parseEvent } from "../parsers/event";
+import type { RawAssignment } from "../parsers/types";
 
 let cellCounter = 0;
 function nextCell(): string {
@@ -282,9 +284,9 @@ describe("resolveRegularOrReserveStatus — additive duty statuses (the Martin b
     expect(resolveRegularOrReserveStatus(events, [])).toBe('נוכח, אחמ"ש יום, שמירה 1, כונן פינויים, אוקסיד');
   });
 
-  it("duty-only, no other data -> the unresolved primary '?' still carries the duty fact: '?, כונן פינויים'", () => {
+  it("duty-only, no other data -> the duty itself synthesizes presence: 'נוכח, כונן פינויים' (product decision: ANY typed duty implies נוכח)", () => {
     const events = [dutyEvent("evacuation_on_call")];
-    expect(resolveRegularOrReserveStatus(events, [])).toBe("?, כונן פינויים");
+    expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, כונן פינויים");
   });
 
   it("every DutyFamily produces its own distinct additive wording", () => {
@@ -316,9 +318,29 @@ describe("resolveRegularOrReserveStatus — additive duty statuses (the Martin b
   });
 });
 
-// --- Presence-implying duties: a bare "?" primary is synthesized to "נוכח" --
+// --- ANY typed duty synthesizes "נוכח" when there is no other primary -----
+// (product decision: every DutyFamily -- not just the physically-on-site
+// ones -- proves the person has a real, concrete assignment that day)
 
-describe("resolveRegularOrReserveStatus — presence-implying duties synthesize 'נוכח' when there is no other primary", () => {
+describe("resolveRegularOrReserveStatus — ANY typed duty synthesizes 'נוכח' when there is no other primary", () => {
+  it("duty-only presence for EVERY DutyFamily value: each one alone (no shift, no absence) synthesizes 'נוכח, <wording>'", () => {
+    const cases: Array<[NonNullable<Event["dutyFamily"]>, string]> = [
+      ["guard", "שמירה"],
+      ["reserve", "עתודה"],
+      ["evacuation_on_call", "כונן פינויים"],
+      ["full_kitchen", "מטבח מלא"],
+      ["daily_kitchen", "מטבח יומי"],
+      ["weekend_kitchen", 'מטבח סופ"ש'],
+      ["rasar", 'רס"ר'],
+      ["oxid", "אוקסיד"],
+      ["callup", "הקפצה"],
+    ];
+    for (const [dutyFamily, wording] of cases) {
+      const events = [dutyEvent(dutyFamily)];
+      expect(resolveRegularOrReserveStatus(events, [])).toBe(`נוכח, ${wording}`);
+    }
+  });
+
   it("1. guard-only -> 'נוכח, שמירה 1'", () => {
     const events = [dutyEvent("guard", { slot: 1 })];
     expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, שמירה 1");
@@ -344,53 +366,58 @@ describe("resolveRegularOrReserveStatus — presence-implying duties synthesize 
     expect(resolveRegularOrReserveStatus(events, [])).toBe('נוכח, רס"ר');
   });
 
-  it("4. a non-presence-implying duty alone (כונן פינויים) stays '?, ...' -- never synthesized", () => {
+  it("4. כונן פינויים-only -> 'נוכח, כונן פינויים' (product change: on-call/standby duties now ALSO imply presence, not just physical-post duties)", () => {
     const events = [dutyEvent("evacuation_on_call")];
-    expect(resolveRegularOrReserveStatus(events, [])).toBe("?, כונן פינויים");
+    expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, כונן פינויים");
   });
 
-  it("4b. another non-presence-implying duty alone (עתודה) also stays '?, ...'", () => {
+  it("4b. עתודה-only -> 'נוכח, עתודה 1'", () => {
     const events = [dutyEvent("reserve", { slot: 1 })];
-    expect(resolveRegularOrReserveStatus(events, [])).toBe("?, עתודה 1");
+    expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, עתודה 1");
   });
 
-  it("4c. an ambiguous-family duty (אוקסיד) also stays '?, ...' -- never guessed presence-implying", () => {
+  it("4c. אוקסיד-only -> 'נוכח, אוקסיד'", () => {
     const events = [dutyEvent("oxid")];
-    expect(resolveRegularOrReserveStatus(events, [])).toBe("?, אוקסיד");
+    expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, אוקסיד");
   });
 
-  it("5. an existing real primary (day shift) is kept as-is, with the presence-implying duty simply appended -- never overwritten by synthesis", () => {
+  it("4d. הקפצה-only -> 'נוכח, הקפצה'", () => {
+    const events = [dutyEvent("callup")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, הקפצה");
+  });
+
+  it("5. an existing real primary (day shift) is kept as-is, with the duty simply appended -- never overwritten by synthesis", () => {
     const events = [shiftEvent("technician", "day"), dutyEvent("rasar")];
     expect(resolveRegularOrReserveStatus(events, [])).toBe('נוכח, טכנאי יום, רס"ר');
   });
 
-  it("5b. after-night carryover + a presence-implying duty also keeps the real primary, duty simply appended", () => {
+  it("5b. after-night carryover + a duty also keeps the real primary, duty simply appended", () => {
     const prevDay = [shiftEvent("technician", "night", { date: "2026-08-25" })];
     const today = [dutyEvent("guard", { slot: 3 })];
     expect(resolveRegularOrReserveStatus(today, prevDay)).toBe("נוכח, אחרי לילה, שמירה 3");
   });
 
-  it("6. a blocking absence (vacation) + a presence-implying duty (guard) is STILL a genuine unresolved conflict -- bare '?', never synthesized to 'נוכח'", () => {
+  it("6. a blocking absence (vacation) + a duty (guard) is STILL a genuine unresolved conflict -- bare '?', never synthesized to 'נוכח'", () => {
     const events = [absenceEvent("vacation"), dutyEvent("guard", { slot: 1 })];
     expect(resolveRegularOrReserveStatus(events, [])).toBe(UNKNOWN_REPORT_ONE_STATUS);
   });
 
-  it("6b. an ambiguous shift-wording conflict (two different shifts same day) + a presence-implying duty also stays a bare '?' primary -- the shift conflict is never silently resolved by the duty", () => {
+  it("6b. an ambiguous shift-wording conflict (two different shifts same day) + a duty also stays a bare '?' primary -- the shift conflict is never silently resolved by the duty", () => {
     const events = [shiftEvent("supervisor", "day"), shiftEvent("technician", "night"), dutyEvent("rasar")];
     expect(resolveRegularOrReserveStatus(events, [])).toBe('?, רס"ר');
   });
 
-  it("6c. a referral + shift conflict + a presence-implying duty also stays a bare '?' primary", () => {
+  it("6c. a referral + shift conflict + a duty also stays a bare '?' primary", () => {
     const events = [absenceEvent("referral"), shiftEvent("supervisor", "night"), dutyEvent("rasar")];
     expect(resolveRegularOrReserveStatus(events, [])).toBe('?, רס"ר');
   });
 
-  it("7. multiple presence-implying duties with no other primary -> exactly one synthesized 'נוכח', all duties appended in stable canonical order", () => {
+  it("7. multiple duties with no other primary -> exactly one synthesized 'נוכח', all duties appended in stable canonical order", () => {
     const events = [dutyEvent("rasar"), dutyEvent("guard", { slot: 2 }), dutyEvent("daily_kitchen")];
     expect(resolveRegularOrReserveStatus(events, [])).toBe('נוכח, שמירה 2, מטבח יומי, רס"ר');
   });
 
-  it("a mix of a presence-implying duty and a non-presence-implying duty, no other primary -> still synthesizes 'נוכח' (at least one presence-implying duty is enough)", () => {
+  it("a mix of duty families, no other primary -> still synthesizes exactly one 'נוכח'", () => {
     const events = [dutyEvent("evacuation_on_call"), dutyEvent("guard", { slot: 1 })];
     expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, שמירה 1, כונן פינויים");
   });
@@ -468,6 +495,94 @@ describe("resolveRegularOrReserveStatus — משיכות/הסמכה (category 'o
   it("duplicate משיכות events the same day are not doubled in the appended text", () => {
     const events = [shiftEvent("technician", "day"), otherEvent("משיכות"), otherEvent("משיכות מהלוגיסטיקה")];
     expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, טכנאי יום, משיכות");
+  });
+});
+
+// --- מטווחים: another category "other" activity with no dedicated DutyFamily,
+// but which is physically on-site work like משיכות/הסמכה -- same treatment,
+// reached via keyword match ("מטווח", covering both מטווח/מטווחים spellings)
+// instead of a typed DutyFamily since none exists for this activity either --
+
+describe("resolveRegularOrReserveStatus — מטווחים (category 'other' presence-implying activity)", () => {
+  it("מטווחים alone -> 'נוכח, מטווחים'", () => {
+    const events = [otherEvent("מטווחים")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, מטווחים");
+  });
+
+  it("the singular 'מטווח' text also renders as the plural 'מטווחים' addendum -- rendering is always the plural regardless of source spelling", () => {
+    const events = [otherEvent("מטווח")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, מטווחים");
+  });
+
+  it('אחמ"ש יום + מטווחים -> \'נוכח, אחמ"ש יום, מטווחים\' (an existing shift primary is preserved, with מטווחים simply appended)', () => {
+    const events = [shiftEvent("supervisor", "day"), otherEvent("מטווחים")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe('נוכח, אחמ"ש יום, מטווחים');
+  });
+
+  it('exact reported regression: אחמ"ש יום - צל (shadow shift) + מטווחים -> \'נוכח, אחמ"ש יום, מטווחים\' -- shadow never changes the primary\'s wording or blocks the addendum', () => {
+    const events = [shiftEvent("supervisor", "day", { shadow: true }), otherEvent("מטווחים")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe('נוכח, אחמ"ש יום, מטווחים');
+  });
+
+  it("מטווחים with no shift and no other primary synthesizes 'נוכח', never '?'", () => {
+    const events = [otherEvent("מטווחים")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, מטווחים");
+  });
+
+  it("duplicate מטווחים events (including a mix of the singular/plural spelling) the same day are not doubled in the appended text", () => {
+    const events = [otherEvent("מטווחים"), otherEvent("מטווח")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe("נוכח, מטווחים");
+  });
+
+  it("a blocking absence (vacation) + a real duty assignment is STILL a genuine unresolved conflict -- bare '?', unaffected by an unrelated מטווחים event elsewhere in the audit", () => {
+    const events = [absenceEvent("vacation"), dutyEvent("guard", { slot: 1 }), otherEvent("מטווחים")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe(UNKNOWN_REPORT_ONE_STATUS);
+  });
+
+  it("מטווחים combines with a duty family and with משיכות/הסמכה the same day, all appended", () => {
+    const events = [dutyEvent("rasar"), otherEvent("מטווחים"), otherEvent("משיכות")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe('נוכח, רס"ר, מטווחים, משיכות');
+  });
+
+  it("unrelated 'other'-category text is still never surfaced as מטווחים -- only the exact מטווח keyword is an exception", () => {
+    const events = [otherEvent("הערה כללית")];
+    expect(resolveRegularOrReserveStatus(events, [])).toBe(UNKNOWN_REPORT_ONE_STATUS);
+  });
+});
+
+// --- parsed/raw-pipeline regression: מטווחים really reaches Report 1 as a
+// typed "other" Event through parseEvent() itself, not only a hand-built
+// Event -- proves the exact reported regression (אחמ"ש יום - צל + מטווחים)
+// survives the full raw-text -> parseEvent() -> resolveRegularOrReserveStatus
+// pipeline, not just a synthetic Event object -----------------------------
+
+describe("resolveRegularOrReserveStatus — parsed pipeline regression (parseEvent -> resolveRegularOrReserveStatus)", () => {
+  function rawAssignment(rawValue: string, overrides: Partial<RawAssignment> = {}): RawAssignment {
+    return {
+      personId: "p_test",
+      personName: "דני בדיקה",
+      date: "2026-08-26",
+      rawValue,
+      sourceSheet: "משמרות + תורנויות",
+      sourceCell: nextCell(),
+      ...overrides,
+    };
+  }
+
+  it("'מטווחים' raw schedule-cell text parses to category 'other' (no dedicated DutyFamily, exactly like משיכות/הסמכה) and reaches Report 1 as 'נוכח, מטווחים'", () => {
+    const parsed = parseEvent(rawAssignment("מטווחים"));
+    expect(parsed.category).toBe("other");
+    expect(parsed.dutyFamily).toBeNull();
+    expect(resolveRegularOrReserveStatus([parsed], [])).toBe("נוכח, מטווחים");
+  });
+
+  it("exact reported regression through the real parser: 'אחמ\"ש יום - צל' + 'מטווחים' -> 'נוכח, אחמ\"ש יום, מטווחים'", () => {
+    const shadowShift = parseEvent(rawAssignment('אחמ"ש יום - צל'));
+    const shootingRange = parseEvent(rawAssignment("מטווחים"));
+    expect(shadowShift.category).toBe("shift");
+    expect(shadowShift.shadow).toBe(true);
+    expect(shootingRange.category).toBe("other");
+    expect(resolveRegularOrReserveStatus([shadowShift, shootingRange], [])).toBe('נוכח, אחמ"ש יום, מטווחים');
   });
 });
 
