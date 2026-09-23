@@ -84,7 +84,7 @@ function okPersonalResult(isManager: boolean) {
   };
 }
 
-const DEFAULT_PARAMS: ScheduleParams = { rawMonth: null, personId: null };
+const DEFAULT_PARAMS: ScheduleParams = { rawMonth: null, personId: null, rawWeek: null };
 
 beforeEach(() => {
   getRequestPersonalSchedule.mockReset();
@@ -141,7 +141,7 @@ describe("loadScheduleReadModel — auth pass-through states", () => {
 describe("loadScheduleReadModel — normal (non-manager) user (PR #24 §3)", () => {
   it("never fetches manager-wide data, always returns self, ignores any requested person", async () => {
     getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(false));
-    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all" });
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
     expect(getWorkbookSnapshot).not.toHaveBeenCalled();
     expect(result.status).toBe("ok");
     if (result.status === "ok") {
@@ -153,7 +153,7 @@ describe("loadScheduleReadModel — normal (non-manager) user (PR #24 §3)", () 
 
   it("still returns self even when a specific colleague id is requested", async () => {
     getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(false));
-    const result = await loadScheduleReadModel({ rawMonth: null, personId: "p_someone_else" });
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "p_someone_else", rawWeek: null });
     expect(getWorkbookSnapshot).not.toHaveBeenCalled();
     expect(result.status).toBe("ok");
     if (result.status === "ok") {
@@ -239,7 +239,7 @@ describe("loadScheduleReadModel — success / privacy", () => {
 
   it("resolves an explicit month param for the everyone perspective's scoped data", async () => {
     getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(true));
-    const result = await loadScheduleReadModel({ rawMonth: "2026-02", personId: "all" });
+    const result = await loadScheduleReadModel({ rawMonth: "2026-02", personId: "all", rawWeek: null });
     expect(result.status).toBe("ok");
     if (result.status === "ok") {
       expect(result.model.perspective).toBe("all");
@@ -248,7 +248,7 @@ describe("loadScheduleReadModel — success / privacy", () => {
 
   it("falls back to the current month for an invalid month param, never crashes", async () => {
     getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(true));
-    const result = await loadScheduleReadModel({ rawMonth: "not-a-month", personId: "all" });
+    const result = await loadScheduleReadModel({ rawMonth: "not-a-month", personId: "all", rawWeek: null });
     expect(result.status).toBe("ok");
   });
 
@@ -260,7 +260,7 @@ describe("loadScheduleReadModel — success / privacy", () => {
 
   it("does not leak a colleague's email anywhere in the serialized roster/personal result", async () => {
     getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(true));
-    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all" });
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
     expect(JSON.stringify(result)).not.toContain("daniel@example.invalid");
     expect(JSON.stringify(result)).not.toContain("@example.invalid");
   });
@@ -279,13 +279,13 @@ describe("loadScheduleReadModel — תקשא\"ס period (Potential) duty complet
 
     // Resolve דניאל כהן's real generated id from the roster first -- ids
     // come from `stableIdFromName` inside the real parser, never hardcoded.
-    const rosterResult = await loadScheduleReadModel({ rawMonth: null, personId: "all" });
+    const rosterResult = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
     expect(rosterResult.status).toBe("ok");
     const daniel =
       rosterResult.status === "ok" ? rosterResult.model.roster.find((p) => p.name === "דניאל כהן") : undefined;
     expect(daniel).toBeDefined();
 
-    const result = await loadScheduleReadModel({ rawMonth: null, personId: daniel!.id });
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: daniel!.id, rawWeek: null });
     expect(result.status).toBe("ok");
     if (result.status === "ok" && result.model.perspective === "person") {
       const dutyEntries = result.model.personal?.calendarEvents.filter((event) => event.category === "duty");
@@ -306,7 +306,7 @@ describe("loadScheduleReadModel — תקשא\"ס period (Potential) duty complet
       }),
     );
 
-    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all" });
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
     expect(result.status).toBe("ok");
     if (result.status === "ok" && result.model.perspective === "all") {
       expect(result.model.everyone?.duties).toEqual([
@@ -403,7 +403,7 @@ describe("loadScheduleReadModel — Emergency Mode", () => {
       fetchedAt: "2026-08-13T09:00:00.000Z",
     });
 
-    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all" });
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
 
     expect(result.status).toBe("emergency");
     if (result.status !== "emergency") throw new Error("unreachable");
@@ -425,7 +425,7 @@ describe("loadScheduleReadModel — Emergency Mode", () => {
       fetchedAt: "2026-08-13T09:00:00.000Z",
     });
 
-    const result = await loadScheduleReadModel({ rawMonth: null, personId: "daniel_id_nonexistent" });
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "daniel_id_nonexistent", rawWeek: null });
 
     // Not in `people` -> falls back to self, per resolvePerspective's fail-closed convention.
     expect(result.status).toBe("emergency");

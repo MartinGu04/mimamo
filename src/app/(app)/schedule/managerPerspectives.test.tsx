@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import type { ManagerAbsenceEntry, ManagerDutyEntry, ManagerShiftOverviewEntry } from "@/lib/readModels/managerTypes";
-import type { ScheduleReadModel, ScheduleRosterOption } from "@/lib/readModels/scheduleTypes";
+import type { ScheduleReadModel, ScheduleRosterOption, ScheduleTeamWeekView } from "@/lib/readModels/scheduleTypes";
 import type { PersonalScheduleReadModel } from "@/lib/readModels/types";
 
 const getRequestSchedule = vi.fn();
@@ -68,6 +68,32 @@ function scheduleModel(overrides: Partial<ScheduleReadModel> = {}): ScheduleRead
     selectedPersonName: null,
     personal: personalModel(),
     everyone: null,
+    teamWeek: null,
+    ...overrides,
+  };
+}
+
+function teamWeekView(overrides: Partial<ScheduleTeamWeekView> = {}): ScheduleTeamWeekView {
+  return {
+    weekStart: "2026-08-09",
+    weekEnd: "2026-08-15",
+    dates: ["2026-08-09", "2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13", "2026-08-14", "2026-08-15"],
+    people: [
+      { id: "p_eitan", name: "איתן דוגמה", roleGroup: "supervisor" },
+      { id: "p_daniel", name: "דניאל כהן", roleGroup: "technician" },
+    ],
+    cells: {
+      p_eitan: Object.fromEntries(
+        ["2026-08-09", "2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13", "2026-08-14", "2026-08-15"].map(
+          (date) => [date, []],
+        ),
+      ),
+      p_daniel: Object.fromEntries(
+        ["2026-08-09", "2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13", "2026-08-14", "2026-08-15"].map(
+          (date) => [date, []],
+        ),
+      ),
+    },
     ...overrides,
   };
 }
@@ -86,7 +112,7 @@ function okResult(model: ScheduleReadModel) {
   return { status: "ok" as const, model };
 }
 
-function searchParams(params: { month?: string; person?: string } = {}) {
+function searchParams(params: { month?: string; person?: string; view?: string; week?: string } = {}) {
   return Promise.resolve(params);
 }
 
@@ -431,5 +457,149 @@ describe('SchedulePage — "מי איתי במשמרת" works for whoever is sel
     expect(cell.textContent).not.toContain("איתן דוגמה");
     expect(cell.textContent).not.toContain("מי איתי במשמרת");
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});
+
+describe("SchedulePage — team-week matrix entry point (13/14 month default, view switch)", () => {
+  it("13. renders the month grid (not the matrix table) by default", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(
+        managerSelfModel({
+          perspective: "all",
+          personal: null,
+          everyone: { staffing: [staffingEntry()], duties: [], absences: [] },
+          teamWeek: teamWeekView(),
+        }),
+      ),
+    );
+    const element = await SchedulePage({ searchParams: searchParams({ month: "2026-08", person: "all" }) });
+    render(element);
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.getByRole("button", { name: /13 באוגוסט/ })).toBeInTheDocument();
+  });
+
+  it("shows the חודש | שבוע צוות switch only for the 'all' perspective, and shows the matrix once ?view=team-week is requested", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(
+        managerSelfModel({
+          perspective: "all",
+          personal: null,
+          everyone: { staffing: [], duties: [], absences: [] },
+          teamWeek: teamWeekView(),
+        }),
+      ),
+    );
+    const element = await SchedulePage({ searchParams: searchParams({ person: "all", view: "team-week" }) });
+    render(element);
+    expect(screen.getByText("חודש")).toBeInTheDocument();
+    expect(screen.getByText("שבוע צוות")).toBeInTheDocument();
+    expect(screen.getByRole("table")).toBeInTheDocument();
+    expect(screen.getByText("איתן דוגמה")).toBeInTheDocument();
+    expect(screen.getByText("דניאל כהן")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /13 באוגוסט/ })).toBeNull(); // the month grid never also renders
+  });
+
+  it("does not show the view switch for 'self'/'person' perspectives", async () => {
+    getRequestSchedule.mockResolvedValue(okResult(managerSelfModel()));
+    const element = await SchedulePage({ searchParams: searchParams() });
+    render(element);
+    expect(screen.queryByText("שבוע צוות")).toBeNull();
+  });
+
+  it("5. groups columns under אחמ\"שים / טכנאים headers", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(
+        managerSelfModel({
+          perspective: "all",
+          personal: null,
+          everyone: { staffing: [], duties: [], absences: [] },
+          teamWeek: teamWeekView(),
+        }),
+      ),
+    );
+    const element = await SchedulePage({ searchParams: searchParams({ person: "all", view: "team-week" }) });
+    render(element);
+    expect(screen.getByRole("columnheader", { name: 'אחמ"שים' })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "טכנאים" })).toBeInTheDocument();
+  });
+});
+
+describe("SchedulePage — team-week URL behavior (nav preserves person=all&view=team-week)", () => {
+  it("14/16. an unrecognized ?view= value safely falls back to the month calendar, never crashes", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(
+        managerSelfModel({
+          perspective: "all",
+          personal: null,
+          everyone: { staffing: [staffingEntry()], duties: [], absences: [] },
+          teamWeek: teamWeekView(),
+        }),
+      ),
+    );
+    const element = await SchedulePage({ searchParams: searchParams({ month: "2026-08", person: "all", view: "not-a-real-view" }) });
+    render(element);
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.getByRole("button", { name: /13 באוגוסט/ })).toBeInTheDocument();
+  });
+
+  it("week navigation links preserve person=all and view=team-week, only changing week", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(
+        managerSelfModel({
+          perspective: "all",
+          personal: null,
+          everyone: { staffing: [], duties: [], absences: [] },
+          teamWeek: teamWeekView(),
+        }),
+      ),
+    );
+    const element = await SchedulePage({ searchParams: searchParams({ person: "all", view: "team-week", week: "2026-08-09" }) });
+    render(element);
+
+    const nextLink = screen.getByRole("link", { name: "שבוע הבא" });
+    expect(nextLink.getAttribute("href")).toBe("/schedule?person=all&view=team-week&week=2026-08-16");
+    const prevLink = screen.getByRole("link", { name: "שבוע קודם" });
+    expect(prevLink.getAttribute("href")).toBe("/schedule?person=all&view=team-week&week=2026-08-02");
+    const todayLink = screen.getByRole("link", { name: "היום" });
+    expect(todayLink.getAttribute("href")).toBe("/schedule?person=all&view=team-week");
+  });
+
+  it("switching back to 'חודש' resets to a plain /schedule?person=all, dropping view/week entirely", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(
+        managerSelfModel({
+          perspective: "all",
+          personal: null,
+          everyone: { staffing: [], duties: [], absences: [] },
+          teamWeek: teamWeekView(),
+        }),
+      ),
+    );
+    const element = await SchedulePage({ searchParams: searchParams({ person: "all", view: "team-week", week: "2026-08-09" }) });
+    render(element);
+    const monthTab = screen.getByText("חודש").closest("a");
+    expect(monthTab?.getAttribute("href")).toBe("/schedule?person=all");
+  });
+});
+
+describe("SchedulePage — team-week authorization (15, byte-for-byte self-only for a non-manager)", () => {
+  it("15. a non-manager's ?person=all&view=team-week never renders the switch or the matrix, and the model the page trusts carries zero team data", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(
+        scheduleModel({
+          manager: null,
+          roster: [],
+          perspective: "self",
+          personal: personalModel({ person: { ...personalModel().person, isManager: false } }),
+          everyone: null,
+          teamWeek: null,
+        }),
+      ),
+    );
+    const element = await SchedulePage({ searchParams: searchParams({ person: "all", view: "team-week", week: "2026-08-09" }) });
+    render(element);
+    expect(screen.queryByText("שבוע צוות")).toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.queryByText("מציג לוח עבור")).toBeNull();
   });
 });

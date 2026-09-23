@@ -119,6 +119,30 @@ export function formatDateRange(startDate: string, endDate: string): string | nu
 }
 
 /**
+ * "20–26 בספטמבר 2026" -- a Sunday-Saturday operational week's label,
+ * ALWAYS with the year (unlike `formatDateRange`'s duty-block wording,
+ * which omits it -- a week label needs to disambiguate across years the
+ * way a single duty block never has to). Same month: "D–D בMonth Year".
+ * Crossing months in the same year: "D בMonth – D בMonth Year". Crossing
+ * years (e.g. the last week of December): "D בMonth Year – D בMonth
+ * Year", each end carrying its own year. Returns null for unparseable
+ * input, never throws.
+ */
+export function formatHebrewWeekRangeLabel(weekStart: string, weekEnd: string): string | null {
+  const start = parseCalendarDate(weekStart);
+  const end = parseCalendarDate(weekEnd);
+  if (!start || !end) return null;
+
+  if (start.year === end.year && start.month === end.month) {
+    return `${start.day}–${end.day} ב${MONTH_LABELS[start.month - 1]} ${start.year}`;
+  }
+  if (start.year === end.year) {
+    return `${start.day} ב${MONTH_LABELS[start.month - 1]} – ${end.day} ב${MONTH_LABELS[end.month - 1]} ${start.year}`;
+  }
+  return `${start.day} ב${MONTH_LABELS[start.month - 1]} ${start.year} – ${end.day} ב${MONTH_LABELS[end.month - 1]} ${end.year}`;
+}
+
+/**
  * The reverse of `formatHebrewWeekday`/`BARE_WEEKDAY_LABELS`: "יום חמישי"
  * or bare "חמישי" -> 4 (Sunday-first, matching `dayOfWeek`). Trims/collapses
  * whitespace and accepts either form; anything else (including a full

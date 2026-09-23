@@ -1,3 +1,4 @@
+import type { AbsenceKind, DutyFamily, EventCategory, EventPeriod } from "@/lib/domain/event";
 import type { LocalNow } from "@/lib/domain/localNow";
 import type { ManagerAbsenceEntry, ManagerDutyEntry, ManagerShiftOverviewEntry } from "./managerTypes";
 import type { PersonalScheduleReadModel } from "./types";
@@ -43,6 +44,74 @@ export interface ScheduleEveryoneReadModel {
 }
 
 /**
+ * One shift-capable roster member for the "שבוע צוות" team-week matrix
+ * (person × date, PR follow-up to PR #24's "all" perspective). `roleGroup`
+ * is the same canonical `classifyRoleGroup()` capability-flag grouping the
+ * rest of the app already uses for אחמ״שים/טכנאים sectioning (never a
+ * title-string match) -- someone who is neither is never a member of this
+ * list at all (see `isShiftCapable`), so "other" is structurally
+ * impossible here and deliberately not part of this union.
+ */
+export interface ScheduleTeamWeekPerson {
+  id: string;
+  name: string;
+  roleGroup: "supervisor" | "technician";
+}
+
+/**
+ * One typed Event rendered inside a team-week matrix cell -- never raw
+ * `rawValue`/`sourceSheet`/`sourceCell`. `title` is the SAME normalized,
+ * display-friendly `Event.title` the rest of the app already renders
+ * (e.g. `אחמ"ש יום`) -- this never reinvents its own wording. `period`/
+ * `dutyFamily`/`absenceKind` are carried through only so the presentation
+ * layer can derive the same semantic emoji/color every other surface uses
+ * (`lib/presentation/emoji.ts`/`eventColor.ts`), never a second mapping.
+ * `key` is a synthesized, purely positional identifier (never a raw
+ * sheet/cell reference) -- stable enough for a React list key within one
+ * render, nothing more.
+ */
+export interface ScheduleTeamWeekCellItem {
+  key: string;
+  title: string;
+  category: EventCategory;
+  period: EventPeriod;
+  dutyFamily: DutyFamily | null;
+  absenceKind: AbsenceKind | null;
+  tentative: boolean;
+  shadow: boolean;
+}
+
+/**
+ * The "שבוע צוות" matrix projection: an explicit person × date identity
+ * grid, built directly from the manager's already-authorized, UNSCOPED
+ * `Event[]`/`Person[]` snapshot (never reverse-engineered from the
+ * aggregated `ScheduleEveryoneReadModel` staffing/duties/absences lists
+ * above, which lose individual person identity by design). `weekStart`/
+ * `weekEnd`/`dates` may span two different Gregorian months (or even two
+ * years) -- deliberately independent of whatever calendar MONTH the
+ * "חודש" presentation happens to be showing, since a Sunday-Saturday
+ * operational week is its own date range (see
+ * `lib/domain/operationalWeek.ts`).
+ */
+export interface ScheduleTeamWeekView {
+  weekStart: string;
+  weekEnd: string;
+  /** All seven dates in the week, ascending (Sunday first). */
+  dates: string[];
+  /** Already in final display order: every supervisor (roster order preserved), then every technician (roster order preserved) -- never re-sorted by the UI. */
+  people: ScheduleTeamWeekPerson[];
+  /**
+   * `cells[personId][date]` -- densely populated for EVERY entry in
+   * `people` × EVERY entry in `dates` (an empty array for "nothing that
+   * day", never a missing/optional key), so a consumer never needs a
+   * defensive fallback lookup. Keyed by person ID, never by name --
+   * two roster members sharing a display name still get their own,
+   * independently correct column.
+   */
+  cells: Record<string, Record<string, ScheduleTeamWeekCellItem[]>>;
+}
+
+/**
  * The full server-computed `/schedule` read model -- safe to serialize to
  * the authenticated user's own browser session. For a normal user,
  * `manager`/`roster` are always null/empty and `perspective` is always
@@ -77,4 +146,17 @@ export interface ScheduleReadModel {
 
   /** Set only for `perspective === "all"`. Null otherwise. */
   everyone: ScheduleEveryoneReadModel | null;
+
+  /**
+   * The "שבוע צוות" team-week matrix, set only for `perspective === "all"`
+   * (same manager-only gate as `everyone` -- both are populated by the
+   * exact same authorized branch of `buildManagerScheduleReadModel`, so
+   * there is no separate authorization path to keep in sync). Always
+   * populated for that perspective regardless of which presentation the
+   * page is currently showing ("חודש" vs "שבוע צוות") -- computing it is
+   * pure, in-memory work over data already fetched for `everyone`, never
+   * a second Google request, so there's no cost to always having it ready
+   * for an instant client-side-free toggle. Null otherwise.
+   */
+  teamWeek: ScheduleTeamWeekView | null;
 }

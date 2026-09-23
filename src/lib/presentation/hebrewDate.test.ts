@@ -7,6 +7,7 @@ import {
   formatHebrewMonthYear,
   formatHebrewWeekday,
   formatHebrewWeekdayAndDate,
+  formatHebrewWeekRangeLabel,
   formatShortWeekday,
   parseHebrewWeekdayName,
   relativeDayLabel,
@@ -106,6 +107,25 @@ describe("formatDateRange", () => {
   it("returns null for an unparseable date, never throws", () => {
     expect(formatDateRange("not-a-date", "2026-08-21")).toBeNull();
     expect(formatDateRange("2026-08-19", "bad")).toBeNull();
+  });
+});
+
+describe("formatHebrewWeekRangeLabel", () => {
+  it("formats a week within the same month, always with the year", () => {
+    expect(formatHebrewWeekRangeLabel("2026-09-20", "2026-09-26")).toBe("20–26 בספטמבר 2026");
+  });
+
+  it("formats a week crossing a Gregorian month, each end its own month name, one shared year", () => {
+    expect(formatHebrewWeekRangeLabel("2026-08-30", "2026-09-05")).toBe("30 באוגוסט – 5 בספטמבר 2026");
+  });
+
+  it("formats a week crossing a year boundary, each end its own year", () => {
+    expect(formatHebrewWeekRangeLabel("2026-12-27", "2027-01-02")).toBe("27 בדצמבר 2026 – 2 בינואר 2027");
+  });
+
+  it("returns null for an unparseable date, never throws", () => {
+    expect(formatHebrewWeekRangeLabel("not-a-date", "2026-09-26")).toBeNull();
+    expect(formatHebrewWeekRangeLabel("2026-09-20", "bad")).toBeNull();
   });
 });
 

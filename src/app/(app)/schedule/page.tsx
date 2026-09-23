@@ -6,8 +6,11 @@ import { EmergencyPersonalScheduleList } from "@/components/schedule/EmergencyPe
 import { EmergencyScheduleRangeSelector } from "@/components/schedule/EmergencyScheduleRangeSelector";
 import { ScheduleCalendar } from "@/components/schedule/ScheduleCalendar";
 import { ScheduleEveryoneCalendar } from "@/components/schedule/ScheduleEveryoneCalendar";
+import { ScheduleEveryoneViewSwitch, type ScheduleEveryoneView } from "@/components/schedule/ScheduleEveryoneViewSwitch";
 import { ScheduleHeader } from "@/components/schedule/ScheduleHeader";
 import { ScheduleManagerSelector } from "@/components/schedule/ScheduleManagerSelector";
+import { TeamWeekMatrix } from "@/components/schedule/TeamWeekMatrix";
+import { TeamWeekNav } from "@/components/schedule/TeamWeekNav";
 import type { DayMeta } from "@/components/schedule/types";
 import { DataFreshnessStatus } from "@/components/ui/DataFreshnessStatus";
 import { Panel } from "@/components/ui/Panel";
@@ -21,8 +24,9 @@ import {
   type CalendarMonthKey,
 } from "@/lib/domain/calendarMonth";
 import { parseCalendarDate } from "@/lib/domain/dutyBlocks";
+import { getNextOperationalWeek, getOperationalWeek, getPreviousOperationalWeek } from "@/lib/domain/operationalWeek";
 import { formatHebrewCalendarDate, formatHebrewMonthRange, getHolidayContext } from "@/lib/presentation/hebrewCalendar";
-import { formatHebrewMonthYear, formatHebrewWeekdayAndDate } from "@/lib/presentation/hebrewDate";
+import { formatHebrewMonthYear, formatHebrewWeekRangeLabel, formatHebrewWeekdayAndDate } from "@/lib/presentation/hebrewDate";
 import { parseEmergencyScheduleRangeParam, type EmergencyScheduleRangeKey } from "@/lib/presentation/emergencyAgenda";
 import { buildScheduleEveryoneDayViews } from "@/lib/presentation/scheduleEveryone";
 import { getRequestSchedule } from "@/lib/readModels/getRequestSchedule";
@@ -49,7 +53,16 @@ function buildDayMeta(date: string, todayDate: string): DayMeta {
 type SearchParamValue = string | string[] | undefined;
 
 interface SchedulePageProps {
-  searchParams: Promise<{ month?: SearchParamValue; person?: SearchParamValue; date?: SearchParamValue; range?: SearchParamValue }>;
+  searchParams: Promise<{
+    month?: SearchParamValue;
+    person?: SearchParamValue;
+    date?: SearchParamValue;
+    range?: SearchParamValue;
+    /** "team-week" opts the "כולם" perspective into the team-week matrix; anything else (including missing) means the existing month calendar. Only ever consulted when `model.perspective === "all"` -- see `SchedulePage`. */
+    view?: SearchParamValue;
+    /** "YYYY-MM-DD" week anchor for the team-week matrix -- see `ScheduleParams.rawWeek`. Ignored outside `view=team-week`. */
+    week?: SearchParamValue;
+  }>;
 }
 
 function firstParam(value: SearchParamValue): string | undefined {
@@ -79,6 +92,26 @@ function scheduleHref(
 }
 
 /**
+ * Builds a "כולם" perspective URL for either presentation -- always
+ * `person=all` (this is only ever reachable once the page already
+ * resolved perspective "all", i.e. an already-verified manager), and for
+ * "team-week" an explicit `?week=` anchor when given (omitted entirely
+ * resolves through the loader's own "today" fallback, exactly like
+ * `scheduleHref`'s `monthKey: null`/`todayHref` convention above). The
+ * "month" target never carries `view`/`week` at all -- switching back to
+ * the calendar is a full reset of this presentation's own state, not a
+ * merge with whatever week was selected.
+ */
+function scheduleEveryoneViewHref(view: ScheduleEveryoneView, weekStart: string | null): string {
+  const params = new URLSearchParams({ person: "all" });
+  if (view === "team-week") {
+    params.set("view", "team-week");
+    if (weekStart) params.set("week", weekStart);
+  }
+  return `/schedule?${params.toString()}`;
+}
+
+/**
  * "הלוח שלי" -- the personal monthly calendar (formerly "לוח משמרות", a
  * shift-only calendar; see `CalendarGrid`/`SelectedDayPanel`/
  * `calendarEvents` for the shift+duty+absence+holiday widening, and
@@ -99,12 +132,28 @@ function scheduleHref(
  * renders the dedicated team-staffing `ScheduleEveryoneCalendar` instead,
  * since "who staffs day/night" is a different question than "what are
  * MY shifts" (PR #24 §14).
+ *
+ * "all" additionally gets an OPTIONAL second presentation, "שבוע צוות"
+ * (`?view=team-week`, `TeamWeekMatrix`) -- a person × date roster matrix
+ * inspired by the original Sheet's own weekly layout, never a replacement
+ * for the month calendar (`ScheduleEveryoneViewSwitch` toggles between the
+ * two; "חודש" stays the default). `model.teamWeek` is populated by the
+ * SAME already-verified-manager branch of `buildManagerScheduleReadModel`
+ * that populates `model.everyone`, so there is no separate authorization
+ * path for `?view=`/`?week=` to bypass -- a non-manager (or a manager not
+ * currently on "all") always gets `teamWeek: null` and this page never
+ * renders the matrix or its view switch for them, whatever the URL says.
  */
 export default async function SchedulePage({ searchParams }: SchedulePageProps) {
   const params = await searchParams;
   const rawMonth = firstParam(params.month) ?? null;
   const rawPerson = firstParam(params.person) ?? null;
   const rawDate = firstParam(params.date) ?? null;
+  const rawWeek = firstParam(params.week) ?? null;
+  // Unknown/malformed values (or plain absence) both safely mean "month" --
+  // this is a strict equality check, never a fuzzy parse, so there is
+  // nothing here that could crash or fall through unexpectedly.
+  const requestedTeamWeekView = firstParam(params.view) === "team-week";
 
   // `?date=` is self-sufficient: when a valid date is supplied and no
   // explicit `?month=` overrides it, the displayed/requested month is
@@ -120,7 +169,7 @@ export default async function SchedulePage({ searchParams }: SchedulePageProps) 
     : null;
   const effectiveRawMonth = dateMonthOverride ?? rawMonth;
 
-  const result = await getRequestSchedule(effectiveRawMonth, rawPerson);
+  const result = await getRequestSchedule(effectiveRawMonth, rawPerson, rawWeek);
   if (result.status === "emergency_unavailable") {
     return <EmergencyUnavailableState />;
   }
@@ -169,37 +218,76 @@ export default async function SchedulePage({ searchParams }: SchedulePageProps) 
   // `formatHebrewMonthYear`'s defensive `string | null` return type.
   const monthLabel = formatHebrewMonthYear(displayMonthKey.year, displayMonthKey.month) ?? "";
 
+  // Only ever meaningful for `perspective === "all"` -- `model.teamWeek` is
+  // null for every other perspective (see `buildScheduleReadModel.ts`), so
+  // this is the SAME server-side floor `model.everyone`/`ScheduleEveryoneCalendar`
+  // already relies on: a non-manager (or a manager not currently viewing
+  // "all") can never reach this branch no matter what `?view=`/`?week=` the
+  // URL carries.
+  const isTeamWeekView = model.perspective === "all" && model.teamWeek !== null && requestedTeamWeekView;
+
+  const teamWeekLabel = model.teamWeek ? (formatHebrewWeekRangeLabel(model.teamWeek.weekStart, model.teamWeek.weekEnd) ?? "") : "";
+  const isOnCurrentWeek = model.teamWeek ? model.teamWeek.weekStart === getOperationalWeek(model.localNow).weekStart : false;
+  const prevWeekHref = model.teamWeek
+    ? scheduleEveryoneViewHref("team-week", getPreviousOperationalWeek(model.teamWeek).weekStart)
+    : "/schedule";
+  const nextWeekHref = model.teamWeek
+    ? scheduleEveryoneViewHref("team-week", getNextOperationalWeek(model.teamWeek).weekStart)
+    : "/schedule";
+  const todayWeekHref = scheduleEveryoneViewHref("team-week", null);
+
   return (
     <div className="flex flex-col gap-4 sm:gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <ScheduleHeader
-          monthLabel={monthLabel}
-          monthRangeSubtitle={formatHebrewMonthRange(displayMonthKey.year, displayMonthKey.month)}
+          monthLabel={isTeamWeekView ? teamWeekLabel : monthLabel}
+          monthRangeSubtitle={isTeamWeekView ? "תצוגת מטריצה שבועית" : formatHebrewMonthRange(displayMonthKey.year, displayMonthKey.month)}
         />
-        <MonthNav
-          prevHref={prevHref}
-          nextHref={nextHref}
-          todayHref={todayHref}
-          isOnCurrentMonth={isOnCurrentMonth}
-          monthLabel={monthLabel}
-        />
+        {isTeamWeekView ? (
+          <TeamWeekNav
+            prevHref={prevWeekHref}
+            nextHref={nextWeekHref}
+            todayHref={todayWeekHref}
+            isOnCurrentWeek={isOnCurrentWeek}
+            weekLabel={teamWeekLabel}
+          />
+        ) : (
+          <MonthNav
+            prevHref={prevHref}
+            nextHref={nextHref}
+            todayHref={todayHref}
+            isOnCurrentMonth={isOnCurrentMonth}
+            monthLabel={monthLabel}
+          />
+        )}
       </div>
 
       {model.manager ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <ScheduleManagerSelector
-            managerName={model.manager.name}
-            people={model.roster}
-            perspective={model.perspective}
-            selectedPersonId={model.selectedPersonId}
-          />
+          <div className="flex flex-wrap items-center gap-3">
+            <ScheduleManagerSelector
+              managerName={model.manager.name}
+              people={model.roster}
+              perspective={model.perspective}
+              selectedPersonId={model.selectedPersonId}
+            />
+            {model.perspective === "all" ? (
+              <ScheduleEveryoneViewSwitch
+                activeView={isTeamWeekView ? "team-week" : "month"}
+                monthHref={scheduleEveryoneViewHref("month", null)}
+                teamWeekHref={scheduleEveryoneViewHref("team-week", null)}
+              />
+            ) : null}
+          </div>
           <DataFreshnessStatus fetchedAt={model.fetchedAt} className="sm:w-auto" />
         </div>
       ) : (
         <DataFreshnessStatus fetchedAt={model.fetchedAt} />
       )}
 
-      {model.perspective === "all" && model.everyone ? (
+      {isTeamWeekView && model.teamWeek ? (
+        <TeamWeekMatrix teamWeek={model.teamWeek} todayDate={model.localNow.date} />
+      ) : model.perspective === "all" && model.everyone ? (
         <ScheduleEveryoneCalendar
           grid={grid}
           days={days}
