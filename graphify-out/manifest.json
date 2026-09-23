@@ -156,9 +156,9 @@
     "semantic_hash": ""
   },
   "src/app/(app)/schedule/managerPerspectives.test.tsx": {
-    "mtime": 1790168875.374226,
-    "seen": 1790169082.934311,
-    "ast_hash": "fa87686a07a83f9fcaccaad96395d200",
+    "mtime": 1790174410.742025,
+    "seen": 1790175369.1151028,
+    "ast_hash": "7e697b373415dc6504c6225b13282a9c",
     "semantic_hash": ""
   },
   "src/app/(app)/schedule/page.test.tsx": {
@@ -168,9 +168,9 @@
     "semantic_hash": ""
   },
   "src/app/(app)/schedule/page.tsx": {
-    "mtime": 1790168602.87821,
-    "seen": 1790169082.9343152,
-    "ast_hash": "1e641cb1199faeaa5ee07e648c6aabd1",
+    "mtime": 1790174596.942036,
+    "seen": 1790175369.1151078,
+    "ast_hash": "8960f522ff2ded91cab72dfdfef8168d",
     "semantic_hash": ""
   },
   "src/app/(app)/settings/loading.tsx": {
@@ -3582,15 +3582,15 @@
     "semantic_hash": ""
   },
   "src/lib/readModels/buildScheduleReadModel.test.ts": {
-    "mtime": 1790153133.585772,
-    "seen": 1790153879.117418,
-    "ast_hash": "a1fa1673b5c3f68573eaac07e083116e",
+    "mtime": 1790174442.5340269,
+    "seen": 1790175369.1163273,
+    "ast_hash": "7f876dd8cd7a58577f9ab9e3031ece43",
     "semantic_hash": ""
   },
   "src/lib/readModels/buildScheduleReadModel.ts": {
-    "mtime": 1790168224.4541874,
-    "seen": 1790169082.9353201,
-    "ast_hash": "09a7f9235346bb4b8303a60f2f5a96f1",
+    "mtime": 1790174367.9260223,
+    "seen": 1790175369.1163285,
+    "ast_hash": "8bad84e0b403d3b513512af5f9fcbbbc",
     "semantic_hash": ""
   },
   "src/lib/readModels/buildSearchReadModel.test.ts": {
@@ -3894,21 +3894,21 @@
     "semantic_hash": ""
   },
   "src/lib/readModels/schedule.test.ts": {
-    "mtime": 1790172317.3988783,
-    "seen": 1790172739.4245863,
-    "ast_hash": "b803f7f19e13330c7b289715c74ba9a9",
+    "mtime": 1790174454.2580276,
+    "seen": 1790175369.1164122,
+    "ast_hash": "e18bf6404ffbdaac7866856e0a64fb13",
     "semantic_hash": ""
   },
   "src/lib/readModels/schedule.ts": {
-    "mtime": 1790172254.9108746,
-    "seen": 1790172739.4245877,
-    "ast_hash": "e3675d37094480449e846c81b3beb9da",
+    "mtime": 1790174374.5980227,
+    "seen": 1790175369.1164134,
+    "ast_hash": "d1e9174d2db6416a7a3febc71af06e90",
     "semantic_hash": ""
   },
   "src/lib/readModels/scheduleTypes.ts": {
-    "mtime": 1790168255.9421895,
-    "seen": 1790169082.9354262,
-    "ast_hash": "23e21714844a235af4de0b64e5303fcf",
+    "mtime": 1790174350.2300212,
+    "seen": 1790175369.1164145,
+    "ast_hash": "8a13fcd3976012861c470a12b8406c31",
     "semantic_hash": ""
   },
   "src/lib/readModels/search.test.ts": {
@@ -6042,15 +6042,15 @@
     "semantic_hash": ""
   },
   "src/components/schedule/TeamWeekMatrix.test.tsx": {
-    "mtime": 1790158474.2999427,
-    "seen": 1790164673.188766,
-    "ast_hash": "b43834560c4df9d73fd6b563ad6e5ebe",
+    "mtime": 1790174764.990046,
+    "seen": 1790175369.1155117,
+    "ast_hash": "9490bea8aa601880512a13c583a5cc7c",
     "semantic_hash": ""
   },
   "src/components/schedule/TeamWeekMatrix.tsx": {
-    "mtime": 1790158385.3136027,
-    "seen": 1790164673.1887672,
-    "ast_hash": "7e912d465b9817ab5794ecc5f6384da9",
+    "mtime": 1790174527.142032,
+    "seen": 1790175369.1155126,
+    "ast_hash": "2c82697dc3c4231aa08ee9a06e4aff35",
     "semantic_hash": ""
   },
   "src/components/schedule/TeamWeekNav.test.tsx": {
@@ -6090,9 +6090,9 @@
     "semantic_hash": ""
   },
   "src/components/schedule/ScrollFadeViewport.tsx": {
-    "mtime": 1790164489.3379655,
-    "seen": 1790164673.188762,
-    "ast_hash": "9161534ad4451fd2e0c0f8cfb1cde2d9",
+    "mtime": 1790174569.9900343,
+    "seen": 1790175369.1155074,
+    "ast_hash": "41e599d5ef6c0e934900c4e6b02ca370",
     "semantic_hash": ""
   },
   "src/components/schedule/TeamWeekPeopleFilterSwitch.tsx": {
@@ -6135,6 +6135,12 @@
     "mtime": 1790168186.4621851,
     "seen": 1790169082.9354289,
     "ast_hash": "cdf5bc1ea92f07920060e740e18c4bf4",
+    "semantic_hash": ""
+  },
+  "src/components/schedule/ScrollFadeViewport.test.tsx": {
+    "mtime": 1790174885.9940531,
+    "seen": 1790175369.1155055,
+    "ast_hash": "cba337b34750cd2dc4f5f111f9de9a26",
     "semantic_hash": ""
   }
 }

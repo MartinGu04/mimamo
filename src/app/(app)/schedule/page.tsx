@@ -361,7 +361,13 @@ export default async function SchedulePage({ searchParams }: SchedulePageProps) 
       </Panel>
 
       {isTeamWeekView && model.teamWeek ? (
-        <TeamWeekMatrix teamWeek={model.teamWeek} todayDate={model.localNow.date} peopleFilter={peopleFilter} />
+        <TeamWeekMatrix
+          teamWeek={model.teamWeek}
+          todayDate={model.localNow.date}
+          peopleFilter={peopleFilter}
+          viewerPersonId={model.viewerPersonId}
+          allPeopleFilterHref={allPeopleFilterHref}
+        />
       ) : model.perspective === "all" && model.everyone ? (
         <ScheduleEveryoneCalendar
           grid={grid}

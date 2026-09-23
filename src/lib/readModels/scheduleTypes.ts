@@ -150,6 +150,37 @@ export interface ScheduleReadModel {
   fetchedAt: string;
   localNow: LocalNow;
 
+  /**
+   * The internal personnel `Person.id` of whoever is actually looking at
+   * this read model -- the authenticated, uniquely-mapped viewer. This is
+   * a THIRD, orthogonal concept alongside the two documented above ("who
+   * can see the Team Schedule" / "who is a manager"): it answers "who is
+   * looking", never "what can they see" or "what's currently displayed".
+   *
+   * Always populated, for every branch that builds a `ScheduleReadModel`:
+   * - self-only (non-manager, no `person=all`) -- the authenticated
+   *   person's own id.
+   * - manager, any perspective (self / an arbitrary selected person /
+   *   all) -- always the authenticated MANAGER's own id, even while
+   *   `personal` shows a different, selected person's schedule. A manager
+   *   looking at someone else's schedule is still the viewer, not the
+   *   person being viewed -- never `selectedPersonId`/`targetPerson.id`.
+   * - mapped non-manager "all" (including the stale-manager ->
+   *   `"forbidden"` -> mapped-viewer fallback in `schedule.ts`) -- the
+   *   mapped viewer's own id.
+   *
+   * Deliberately NEVER "the currently displayed person" -- that's what
+   * `selectedPersonId`/`personal.person.id` are for. Do not repurpose
+   * this field for that; a manager viewing a colleague must keep
+   * `viewerPersonId` pointed at themselves.
+   *
+   * Only source of "is this rendered Team Week column mine?" -- compare
+   * `person.id === viewerPersonId`, never by display name (duplicate
+   * names must stay safe) and never by re-deriving identity from
+   * `manager`, `selectedPersonId`, client auth, or email.
+   */
+  viewerPersonId: string;
+
   /** Null for any viewer who isn't an actual manager -- the manager selector (and every manager-only affordance) must never render for them, REGARDLESS of `perspective`. */
   manager: { id: string; name: string } | null;
   /** The manager-visible roster for the arbitrary-person selector, EXCLUDING the manager's own entry (they already have the explicit "אני" option). Always empty for a non-manager viewer -- Team Schedule visibility never implies this roster. */

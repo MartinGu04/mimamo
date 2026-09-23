@@ -26,6 +26,7 @@ export function buildSelfOnlyScheduleReadModel(model: PersonalScheduleReadModel)
   return {
     fetchedAt: model.fetchedAt,
     localNow: model.localNow,
+    viewerPersonId: model.person.id,
     manager: null,
     roster: [],
     perspective: "self",
@@ -208,6 +209,7 @@ export function buildManagerScheduleReadModel(input: BuildManagerScheduleReadMod
     return {
       fetchedAt,
       localNow: now,
+      viewerPersonId: manager.id,
       manager: { id: manager.id, name: manager.name },
       roster,
       perspective: "all",
@@ -233,6 +235,11 @@ export function buildManagerScheduleReadModel(input: BuildManagerScheduleReadMod
   return {
     fetchedAt,
     localNow: now,
+    // Always the authenticated manager's own id, even in "person"
+    // perspective -- a manager viewing a colleague's schedule is still
+    // the VIEWER, never `targetPerson.id` (see `ScheduleReadModel.
+    // viewerPersonId`'s own docs for why these must never be conflated).
+    viewerPersonId: manager.id,
     manager: { id: manager.id, name: manager.name },
     roster,
     perspective: perspective.kind === "person" ? "person" : "self",
@@ -258,6 +265,8 @@ export interface BuildMappedEveryoneScheduleReadModelInput {
   week: OperationalWeek;
   /** Same contract as `BuildManagerScheduleReadModelInput.potentialAllocations` -- feeds ONLY `everyone.duties`, never `everyone.staffing`. */
   potentialAllocations?: readonly PotentialAllocation[];
+  /** The authenticated, mapped viewer's own id -- see `ScheduleReadModel.viewerPersonId`'s docs. This function never has a manager in scope, so the caller (`schedule.ts`) must supply it directly. */
+  viewerPersonId: string;
 }
 
 /**
@@ -289,6 +298,7 @@ export function buildMappedEveryoneScheduleReadModel(input: BuildMappedEveryoneS
   return {
     fetchedAt: input.fetchedAt,
     localNow: input.now,
+    viewerPersonId: input.viewerPersonId,
     manager: null,
     roster: [],
     perspective: "all",

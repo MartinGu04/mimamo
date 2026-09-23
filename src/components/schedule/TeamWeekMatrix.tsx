@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { isWeekendColumn } from "@/lib/domain/calendarMonth";
 import { assignmentEmoji } from "@/lib/presentation/emoji";
 import { eventColorBgClassName } from "@/lib/presentation/eventColor";
@@ -13,6 +14,21 @@ interface TeamWeekMatrixProps {
   todayDate: string;
   /** "active" (default) shows only people with an item this week; "all" shows every eligible person. Presentation-only -- see `lib/presentation/teamWeekFilter.ts`. */
   peopleFilter: TeamWeekPeopleFilter;
+  /**
+   * The safe, explicit `ScheduleReadModel.viewerPersonId` -- who is
+   * actually looking at this matrix. Used ONLY to mark the viewer's own
+   * column ("אני" badge, "איפה אני?" Find Me target) -- compared strictly
+   * by `person.id`, NEVER by display name (duplicate names must stay
+   * safe) and never re-derived from anything else.
+   */
+  viewerPersonId: string;
+  /**
+   * The already-built canonical href for this same week with
+   * `people=all` -- reused verbatim for the "אין לך פעילות השבוע" fallback
+   * link (see `page.tsx`'s `teamWeekHref`) so this component never builds
+   * its own URL.
+   */
+  allPeopleFilterHref: string;
 }
 
 /** At most this many items render directly in a cell before collapsing into a "+N" overflow -- never a taller cell. */
@@ -81,6 +97,28 @@ const MATRIX_MAX_HEIGHT = "max-h-[75vh]";
  * `groupBoundaryPersonIds` below.
  */
 const GROUP_DIVIDER_CLASS = "border-s-2 border-s-primary/40";
+
+/**
+ * Marks the viewer's own column -- the person-name header AND all seven
+ * body cells for that person -- so `globals.css`'s scoped
+ * `.team-week-locating-self .team-week-self-column` pulse/glow animation
+ * (toggled by `ScrollFadeViewport`'s Find Me control) can target the whole
+ * column via a plain descendant selector, never per-cell inline styling.
+ * Always composed onto the existing class string (template literal),
+ * never replacing it -- must coexist with `GROUP_DIVIDER_CLASS` and the
+ * per-row today tint.
+ */
+const SELF_COLUMN_CLASS = "team-week-self-column";
+
+/**
+ * The single, unambiguous query target `ScrollFadeViewport`'s locate logic
+ * uses to find the viewer's own header cell inside the scroll viewport --
+ * deliberately a dedicated data attribute (present ONLY on the header
+ * `<th>`, never on the body `<td>`s that also carry `SELF_COLUMN_CLASS`)
+ * rather than relying on "first `.team-week-self-column` match happens to
+ * be the header" DOM-order assumptions.
+ */
+const SELF_HEADER_ATTRIBUTE = "data-team-week-self-header";
 
 function rowBgClassName(isToday: boolean, isWeekend: boolean): string {
   if (isToday) return "bg-primary/[0.06]";
@@ -226,7 +264,7 @@ function TeamWeekCell({ items }: { items: ScheduleTeamWeekCellItem[] }) {
  * only re-groups the filtered list by `roleGroup` to compute each group
  * header's `colSpan`.
  */
-export function TeamWeekMatrix({ teamWeek, todayDate, peopleFilter }: TeamWeekMatrixProps) {
+export function TeamWeekMatrix({ teamWeek, todayDate, peopleFilter, viewerPersonId, allPeopleFilterHref }: TeamWeekMatrixProps) {
   const visiblePeople = filterTeamWeekPeople(teamWeek, peopleFilter);
   const supervisors = visiblePeople.filter((person) => person.roleGroup === "supervisor");
   const technicians = visiblePeople.filter((person) => person.roleGroup === "technician");
@@ -259,11 +297,33 @@ export function TeamWeekMatrix({ teamWeek, todayDate, peopleFilter }: TeamWeekMa
     );
   }
 
+  // Case A: the viewer's own column is among the currently RENDERED
+  // (filtered) columns -- Find Me has a real target.
+  const viewerColumnVisible = columns.some((person) => person.id === viewerPersonId);
+  // Case B vs C: is the viewer eligible for the Team Week matrix AT ALL
+  // (the FULL, unfiltered roster), regardless of whether the active
+  // filter currently hides their column? Team Week matrix membership is a
+  // separate concept from general viewer eligibility (PR #160) -- a
+  // viewer outside `teamWeek.people` entirely (e.g. permanent/קבע) never
+  // gets a Find Me control or a fallback message, just silence (case C).
+  const isViewerEligible = teamWeek.people.some((person) => person.id === viewerPersonId);
+  const showActiveFilterFallback = isViewerEligible && !viewerColumnVisible;
+
   return (
-    <ScrollFadeViewport
-      ariaLabel="לוח צוות שבועי, גלילה אופקית ואנכית"
-      className={`team-week-scroll overflow-auto rounded-xl ring-1 ring-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${MATRIX_MAX_HEIGHT}`}
-    >
+    <div className="flex flex-col gap-1.5">
+      {showActiveFilterFallback ? (
+        <p className="text-xs text-muted">
+          אין לך פעילות השבוע ·{" "}
+          <Link href={allPeopleFilterHref} className="font-medium text-primary underline-offset-2 hover:underline">
+            הצג את כולם
+          </Link>
+        </p>
+      ) : null}
+      <ScrollFadeViewport
+        ariaLabel="לוח צוות שבועי, גלילה אופקית ואנכית"
+        className={`team-week-scroll overflow-auto rounded-xl ring-1 ring-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${MATRIX_MAX_HEIGHT}`}
+        enableFindMe={viewerColumnVisible}
+      >
       <table className="w-full border-separate border-spacing-0 text-sm">
         <caption className="sr-only">
           לוח צוות שבועי, {teamWeek.people.length} אנשי צוות, {teamWeek.dates.length} ימים
@@ -289,15 +349,34 @@ export function TeamWeekMatrix({ teamWeek, todayDate, peopleFilter }: TeamWeekMa
             ))}
           </tr>
           <tr>
-            {columns.map((person) => (
-              <th
-                key={person.id}
-                scope="col"
-                className={`${HEADER_CELL_BASE} ${HEADER_ROW_HEIGHT} ${HEADER_ROW_2_TOP} z-20 min-w-[128px] bg-surface-2 text-center font-medium ${groupBoundaryPersonIds.has(person.id) ? GROUP_DIVIDER_CLASS : ""}`}
-              >
-                {person.name}
-              </th>
-            ))}
+            {columns.map((person) => {
+              const isSelf = person.id === viewerPersonId;
+              return (
+                <th
+                  key={person.id}
+                  scope="col"
+                  {...(isSelf ? { [SELF_HEADER_ATTRIBUTE]: "true" } : {})}
+                  className={`${HEADER_CELL_BASE} ${HEADER_ROW_HEIGHT} ${HEADER_ROW_2_TOP} z-20 min-w-[128px] bg-surface-2 text-center font-medium ${groupBoundaryPersonIds.has(person.id) ? GROUP_DIVIDER_CLASS : ""} ${isSelf ? SELF_COLUMN_CLASS : ""}`}
+                >
+                  {isSelf ? (
+                    <>
+                      <span aria-hidden="true">{person.name}</span>
+                      <span
+                        aria-hidden="true"
+                        className="ms-1 inline-block rounded-full bg-primary/10 px-1.5 py-0.5 align-middle text-[9px] font-medium text-primary"
+                      >
+                        אני
+                      </span>
+                      <span className="sr-only">
+                        {person.name}, אני
+                      </span>
+                    </>
+                  ) : (
+                    person.name
+                  )}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
@@ -338,7 +417,7 @@ export function TeamWeekMatrix({ teamWeek, todayDate, peopleFilter }: TeamWeekMa
                 {columns.map((person) => (
                   <td
                     key={person.id}
-                    className={`border-b border-border px-1.5 py-2 align-top ${rowBg} ${groupBoundaryPersonIds.has(person.id) ? GROUP_DIVIDER_CLASS : ""}`}
+                    className={`border-b border-border px-1.5 py-2 align-top ${rowBg} ${groupBoundaryPersonIds.has(person.id) ? GROUP_DIVIDER_CLASS : ""} ${person.id === viewerPersonId ? SELF_COLUMN_CLASS : ""}`}
                   >
                     <TeamWeekCell items={teamWeek.cells[person.id]?.[date] ?? []} />
                   </td>
@@ -348,6 +427,7 @@ export function TeamWeekMatrix({ teamWeek, todayDate, peopleFilter }: TeamWeekMa
           })}
         </tbody>
       </table>
-    </ScrollFadeViewport>
+      </ScrollFadeViewport>
+    </div>
   );
 }

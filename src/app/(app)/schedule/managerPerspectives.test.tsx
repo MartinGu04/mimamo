@@ -61,6 +61,7 @@ function scheduleModel(overrides: Partial<ScheduleReadModel> = {}): ScheduleRead
   return {
     fetchedAt: "2026-08-12T08:00:00.000Z",
     localNow: { date: "2026-08-12", minuteOfDay: 600 },
+    viewerPersonId: "p_self",
     manager: null,
     roster: [],
     perspective: "self",
@@ -133,6 +134,7 @@ function teamWeekView(overrides: Partial<ScheduleTeamWeekView> = {}): ScheduleTe
 
 function managerSelfModel(overrides: Partial<ScheduleReadModel> = {}): ScheduleReadModel {
   return scheduleModel({
+    viewerPersonId: "p_martin",
     manager: { id: "p_martin", name: "מרטין גוסין" },
     roster: roster(),
     perspective: "self",
