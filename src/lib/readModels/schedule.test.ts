@@ -377,6 +377,18 @@ describe("loadScheduleReadModel — stale manager=true, fresh re-check returns '
     }
   });
 
+  it("6 (viewerPersonId). the stale-manager fallback still carries the authenticated viewer's own canonical id -- same identity the ordinary self-only/manager paths would report, never left unset by this fallback branch", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(STALE_MANAGER_PERSONAL_RESULT());
+    getWorkbookSnapshot.mockResolvedValue(forbiddenManagerSnapshot());
+
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.model.viewerPersonId).toBe("p_martin");
+    }
+  });
+
   it("NOT a privilege escalation: the resulting 'all' projection is byte-identical in shape to what any other non-manager gets for the same request -- this branch grants nothing loadMappedEveryoneScheduleReadModel doesn't already grant every mapped viewer, and re-verifies identity completely independently of the failed manager check", async () => {
     getRequestPersonalSchedule.mockResolvedValue(STALE_MANAGER_PERSONAL_RESULT());
     getWorkbookSnapshot.mockResolvedValue(forbiddenManagerSnapshot());

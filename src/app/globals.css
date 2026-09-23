@@ -1596,3 +1596,75 @@ html[data-a11y-text="xlarge"] {
 .team-week-scroll::-webkit-scrollbar-thumb:hover {
   background-color: var(--primary);
 }
+
+/* ---------------------------------------------------------------------- */
+/* Team Week matrix -- "איפה אני?" (Find Me) self-column pulse/glow.       */
+/* `.team-week-self-column` marks the viewer's own header + all seven      */
+/* body cells (see TeamWeekMatrix.tsx); `.team-week-locating-self` is      */
+/* toggled on the scroll viewport itself by ScrollFadeViewport.tsx once    */
+/* the target has been reached, so the descendant selector below animates  */
+/* the WHOLE column at once, never per-cell inline styling. `box-shadow:   */
+/* inset 0 0 0 9999px COLOR` fills each cell with a soft primary tint      */
+/* regardless of border-radius, WITHOUT affecting layout/geometry -- it    */
+/* composes cleanly with the real border `GROUP_DIVIDER_CLASS` may already */
+/* apply (supervisor/technician boundary) and with the today row's own     */
+/* `bg-primary/[0.06]` tint, since box-shadow/border/background are        */
+/* independent, non-conflicting properties. The keyframe alternates the    */
+/* tint on/off three times over ~2s for a gentle, refined pulse -- never   */
+/* opacity flashing, never a white flash, never changing text visibility.  */
+/*                                                                         */
+/* Deliberately NO `.team-week-self-column { position: relative; }` rule   */
+/* here -- `box-shadow` needs no positioning context on its own element to */
+/* render, and this file's plain (unlayered) CSS sits ABOVE every          */
+/* `@layer`-wrapped Tailwind utility in cascade priority regardless of     */
+/* source order (`@import "tailwindcss"` at the top of this file pulls     */
+/* Tailwind's utilities in as `@layer utilities`). A same-specificity      */
+/* `position: relative` here would have silently beaten the person-name    */
+/* header's own `.sticky` utility (`position: sticky`, from                */
+/* `HEADER_CELL_BASE` in TeamWeekMatrix.tsx) whenever a header also carries */
+/* `.team-week-self-column` -- the viewer's own column header would stop   */
+/* sticking during vertical scroll while every other header keeps sticking.*/
+/* Regression test: TeamWeekMatrix.test.tsx's "self column marker never    */
+/* drops the sticky utility" case.                                        */
+/* ---------------------------------------------------------------------- */
+
+@keyframes team-week-self-pulse {
+  0%,
+  33%,
+  67%,
+  100% {
+    box-shadow:
+      inset 0 0 0 9999px transparent,
+      0 0 0 0 transparent;
+  }
+  16%,
+  50%,
+  84% {
+    box-shadow:
+      inset 0 0 0 9999px color-mix(in srgb, var(--primary) 14%, transparent),
+      0 0 8px 1px color-mix(in srgb, var(--primary) 30%, transparent);
+  }
+}
+
+.team-week-locating-self .team-week-self-column {
+  animation: team-week-self-pulse 2s ease-in-out;
+}
+
+/* Reduced motion: no pulse animation at all -- a STATIC highlight for the
+   same ~2s window instead (the JS side still toggles/removes the class on
+   the same timer either way; only the CSS treatment differs here). This
+   must be an explicit override, not just relying on the existing global
+   `animation-duration: 0.01ms !important` reset below -- that alone would
+   only compress this keyframe animation into an imperceptible flash, not
+   produce the required static highlight. */
+@media (prefers-reduced-motion: reduce) {
+  .team-week-locating-self .team-week-self-column {
+    animation: none;
+    box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--primary) 12%, transparent);
+  }
+}
+
+[data-a11y-reduce-motion="true"] .team-week-locating-self .team-week-self-column {
+  animation: none;
+  box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--primary) 12%, transparent);
+}

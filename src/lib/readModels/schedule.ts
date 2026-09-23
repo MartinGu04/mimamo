@@ -334,6 +334,12 @@ async function loadMappedEveryoneScheduleReadModel(
     monthDates: range.dates,
     week,
     potentialAllocations,
+    // Same `selfModel` this function's own caller(s) already resolved --
+    // both the direct non-manager `?person=all` request and the
+    // stale-manager `"forbidden"` fallback (see `loadManagerScheduleReadModel`)
+    // pass the SAME already-fetched, freshly-identified viewer through, so
+    // `selfModel.person.id` is correct for both without any special-casing.
+    viewerPersonId: selfModel.person.id,
   });
 
   return { status: "ok", model };

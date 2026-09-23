@@ -5,7 +5,7 @@ import type { OperationalWeek } from "@/lib/domain/operationalWeek";
 import type { PotentialAllocation } from "@/lib/domain/potentialAllocation";
 import { buildShiftSchedule } from "@/lib/domain/shiftSchedule";
 import type { Person } from "@/lib/domain/types";
-import { buildManagerScheduleReadModel, buildSelfOnlyScheduleReadModel } from "./buildScheduleReadModel";
+import { buildManagerScheduleReadModel, buildMappedEveryoneScheduleReadModel, buildSelfOnlyScheduleReadModel } from "./buildScheduleReadModel";
 import { buildPersonalScheduleReadModel } from "./buildPersonalScheduleReadModel";
 import type { PersonalScheduleReadModel } from "./types";
 
@@ -706,5 +706,86 @@ describe("buildManagerScheduleReadModel — 'self'/'person' perspectives: תקש
     });
     expect(model.perspective).toBe("all");
     expect(model.everyone?.duties).toEqual([]);
+  });
+});
+
+describe("viewerPersonId — safe, explicit viewer identity (never inferred from manager/selection/name)", () => {
+  it("1. self-only carries the authenticated person's own id", () => {
+    const personal = buildPersonalScheduleReadModel({
+      person: DANIEL,
+      people: PEOPLE,
+      events: [],
+      shiftSchedule: schedule,
+      fetchedAt: "2026-08-13T08:00:00.000Z",
+      now,
+    });
+    const model = buildSelfOnlyScheduleReadModel(personal);
+    expect(model.viewerPersonId).toBe(DANIEL.id);
+  });
+
+  it("2. manager self carries the manager's own id", () => {
+    const model = buildManagerScheduleReadModel({
+      manager: MANAGER,
+      people: PEOPLE,
+      events: [],
+      shiftSchedule: schedule,
+      fetchedAt: "2026-08-13T08:00:00.000Z",
+      now,
+      monthDates: AUGUST_DATES,
+      week: WEEK,
+      requestedPersonId: null,
+    });
+    expect(model.perspective).toBe("self");
+    expect(model.viewerPersonId).toBe(MANAGER.id);
+  });
+
+  it("3. manager viewing another person (person perspective) still carries the authenticated MANAGER's id, never the selected person's id", () => {
+    const model = buildManagerScheduleReadModel({
+      manager: MANAGER,
+      people: PEOPLE,
+      events: [],
+      shiftSchedule: schedule,
+      fetchedAt: "2026-08-13T08:00:00.000Z",
+      now,
+      monthDates: AUGUST_DATES,
+      week: WEEK,
+      requestedPersonId: DANIEL.id,
+    });
+    expect(model.perspective).toBe("person");
+    expect(model.selectedPersonId).toBe(DANIEL.id);
+    expect(model.viewerPersonId).toBe(MANAGER.id);
+    expect(model.viewerPersonId).not.toBe(DANIEL.id);
+  });
+
+  it("4. manager all carries the manager's own id", () => {
+    const model = buildManagerScheduleReadModel({
+      manager: MANAGER,
+      people: PEOPLE,
+      events: [],
+      shiftSchedule: schedule,
+      fetchedAt: "2026-08-13T08:00:00.000Z",
+      now,
+      monthDates: AUGUST_DATES,
+      week: WEEK,
+      requestedPersonId: "all",
+    });
+    expect(model.perspective).toBe("all");
+    expect(model.viewerPersonId).toBe(MANAGER.id);
+  });
+
+  it("5. mapped non-manager all carries the mapped viewer's own id", () => {
+    const model = buildMappedEveryoneScheduleReadModel({
+      people: PEOPLE,
+      events: [],
+      shiftSchedule: schedule,
+      fetchedAt: "2026-08-13T08:00:00.000Z",
+      now,
+      monthDates: AUGUST_DATES,
+      week: WEEK,
+      viewerPersonId: DANIEL.id,
+    });
+    expect(model.perspective).toBe("all");
+    expect(model.manager).toBeNull();
+    expect(model.viewerPersonId).toBe(DANIEL.id);
   });
 });

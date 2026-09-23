@@ -41,3 +41,33 @@ describe("globals.css motion system", () => {
     }
   });
 });
+
+describe("globals.css Team Week self-column pulse -- cascade-layering regression", () => {
+  // This file's plain, unlayered rules (everything after `@import
+  // "tailwindcss"`) sit ABOVE every `@layer`-wrapped Tailwind utility in
+  // cascade priority regardless of source order. A same-specificity
+  // `.team-week-self-column { position: ... }` rule here would therefore
+  // silently beat the person-name header's own `.sticky` utility
+  // (`position: sticky`, from `HEADER_CELL_BASE` in TeamWeekMatrix.tsx)
+  // whenever a header also carries `.team-week-self-column` -- the
+  // viewer's own column header would stop sticking during vertical scroll
+  // while every other header keeps sticking. `box-shadow` (what this
+  // selector is actually for) needs no positioning context of its own, so
+  // this rule must never declare `position` at all.
+  it("the plain, unscoped .team-week-self-column rule never sets its own `position` (would silently override the header's Tailwind `sticky` utility)", () => {
+    const ruleMatch = css.match(/(?:^|\n)\.team-week-self-column\s*\{([^}]*)\}/);
+    if (ruleMatch) {
+      expect(ruleMatch[1]).not.toMatch(/position\s*:/);
+    }
+    // If the selector has no standalone rule at all (e.g. folded into the
+    // pulse rule below), there is nothing that could override `sticky` --
+    // also a pass.
+  });
+
+  it("the pulse animation itself only ever touches box-shadow, never position/top/left/transform (which could fight the header's own sticky offset)", () => {
+    const pulseRuleMatch = css.match(/\.team-week-locating-self \.team-week-self-column\s*\{([^}]*)\}/);
+    expect(pulseRuleMatch).not.toBeNull();
+    const declarations = pulseRuleMatch?.[1] ?? "";
+    expect(declarations).not.toMatch(/\b(position|top|left|right|bottom|transform)\s*:/);
+  });
+});
