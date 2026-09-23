@@ -112,11 +112,11 @@ describe("parseEvent — shift", () => {
 
   // Shadow ("צל") is a modifier of the underlying shift ROLE, never a
   // technician-specific concept -- `parseShift` derives `role` from
-  // whichever leading token matched (`SUPERVISOR_TOKEN`/`TECHNICIAN_TOKENS`)
-  // and `shadow` from the trailing `SHADOW_SUFFIX` completely independently
-  // of that role, so אחמ"ש must support the SAME "- צל" modifier a
-  // technician shift does. These four cases are the full role × period
-  // matrix the shadow modifier must generalize across.
+  // whichever leading token matched (`isShiftLeadRoleToken`/
+  // `TECHNICIAN_TOKENS`) and `shadow` from the trailing `SHADOW_MODIFIER_RE`
+  // completely independently of that role, so אחמ"ש must support the SAME
+  // "- צל" modifier a technician shift does. These four cases are the full
+  // role × period matrix the shadow modifier must generalize across.
   it('10b. אחמ"ש day shadow shift -- role stays "supervisor", never falls back to "technician"', () => {
     const event = parseEvent(rawAssignment('אחמ"ש יום - צל'));
     expect(event).toMatchObject({ category: "shift", role: "supervisor", period: "day", shadow: true });
@@ -144,6 +144,64 @@ describe("parseEvent — shift", () => {
       (event) => `${event.role}:${event.period}`,
     );
     expect(new Set(combos).size).toBe(4); // every combination is genuinely distinguishable
+  });
+
+  // Regression: a shift-lead role written in the FEMININE form (אחמשית /
+  // אחמ"שית) was silently dropped -- classify() only ever recognized the
+  // single masculine spelling 'אחמ"ש', so a feminine shift lead's Event
+  // never got role: "supervisor" and she never showed up as a shift
+  // companion. `isShiftLeadRoleToken` (lib/domain/shiftLeadRole.ts) is now
+  // the ONE place that decides which spellings belong to this role family,
+  // covering masculine/feminine, any quote-character variant or none, and
+  // an optional hyphen in the quote's place.
+  it('10e. feminine shift-lead form "אחמשית יום צל" (no hyphen before צל) is recognized exactly like the masculine form', () => {
+    const event = parseEvent(rawAssignment("אחמשית יום צל"));
+    expect(event).toMatchObject({ category: "shift", role: "supervisor", period: "day", shadow: true });
+    expect(event.role).not.toBe("technician");
+  });
+
+  it.each([
+    // masculine
+    ['אחמ"ש', "unspecified", false],
+    ["אחמש", "unspecified", false],
+    ['אחמ"ש יום', "day", false],
+    ["אחמש לילה", "night", false],
+    ['אחמ"ש יום - צל', "day", true],
+    ["אחמש לילה - צל", "night", true],
+    ["אחמש יום צל", "day", true],
+    // feminine
+    ['אחמ"שית', "unspecified", false],
+    ["אחמשית", "unspecified", false],
+    ['אחמ"שית יום', "day", false],
+    ["אחמשית לילה", "night", false],
+    ['אחמ"שית יום - צל', "day", true],
+    ["אחמשית לילה - צל", "night", true],
+    ["אחמשית יום צל", "day", true],
+    // alternate quote characters around the masculine/feminine forms
+    ["אחמ״ש יום", "day", false],
+    ["אחמ׳ש לילה", "night", false],
+    ["אחמ״שית יום - צל", "day", true],
+  ] as const)("10f. shift-lead variant '%s' -> role=supervisor, period=%s, shadow=%s", (cellText, expectedPeriod, expectedShadow) => {
+    const event = parseEvent(rawAssignment(cellText));
+    expect(event).toMatchObject({
+      category: "shift",
+      role: "supervisor",
+      period: expectedPeriod,
+      shadow: expectedShadow,
+    });
+  });
+
+  it("10g. the ORIGINAL raw text is preserved untouched for display -- normalization is for classification only", () => {
+    const event = parseEvent(rawAssignment("אחמשית   יום   צל"));
+    expect(event.role).toBe("supervisor");
+    expect(event.shadow).toBe(true);
+    expect(event.rawValue).toBe("אחמשית   יום   צל");
+  });
+
+  it("10h. an unrelated word sharing the אחמ prefix is never misclassified as a shift-lead role", () => {
+    const event = parseEvent(rawAssignment("אחמד"));
+    expect(event.role).not.toBe("supervisor");
+    expect(event.category).not.toBe("shift");
   });
 });
 

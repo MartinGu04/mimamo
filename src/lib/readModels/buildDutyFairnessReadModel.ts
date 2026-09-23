@@ -24,6 +24,7 @@ import {
   type FairnessPeriodIdentity,
 } from "@/lib/domain/fairnessPeriod";
 import type { FairnessPersonRow, FairnessTableParseResult, FairnessTargets } from "@/lib/domain/fairnessTable";
+import { isShiftLeadRoleToken } from "@/lib/domain/shiftLeadRole";
 import {
   computePeriodElapsedPercentExcludingDates,
   resolveDutyPaceStatus,
@@ -317,25 +318,27 @@ function periodOverlapsExcludedDates(periodStartDate: string, periodEndDate: str
 
 const GROUP_ORDER: readonly DutyFairnessGroupKey[] = ["supervisor", "technician", "other"];
 
+const RESERVIST_SUPERVISOR_LABEL = 'ר"צ';
+const TECHNICIAN_LABEL = "טכנאי";
+
 /**
  * Duty Fairness PRESENTATION grouping -- a decided domain rule, and a
  * DELIBERATELY SEPARATE classifier from `resolveFairnessAllocationRole`'s
- * target-eligibility mapping (`fairnessAnalysis.ts`, unchanged): 'ר"צ' is
- * part of the supervisor duty population, same as 'אחמ"ש', but it is NOT
- * one of the two labels that carries a deterministic X/2X target, so it
- * must not be classified with the SAME function used to decide target
+ * target-eligibility mapping (`fairnessAnalysis.ts`): 'ר"צ' is part of the
+ * supervisor duty population, same as the whole אחמ"ש spelling family, but
+ * it is NOT one of the labels that carries a deterministic X/2X target, so
+ * it must not be classified with the SAME function used to decide target
  * eligibility (that would silently grant it a target it was never proven
- * to have). Every other unrecognized/non-target-bearing label (הסמכה,
- * משתחרר, ...) falls to `"other"`, same as before.
+ * to have). The אחמ"ש side of this grouping shares `isShiftLeadRoleToken`
+ * with `resolveFairnessAllocationRole` (masculine/feminine, any
+ * quote/hyphen variant), so a feminine shift lead lands in the same group
+ * as her masculine counterpart. Every other unrecognized/non-target-bearing
+ * label (הסמכה, משתחרר, ...) falls to `"other"`, same as before.
  */
-const DUTY_GROUP_BY_LABEL: Readonly<Record<string, DutyFairnessGroupKey>> = {
-  'אחמ"ש': "supervisor",
-  'ר"צ': "supervisor",
-  טכנאי: "technician",
-};
-
 function resolveDutyFairnessGroupKey(allocationLabel: string): DutyFairnessGroupKey {
-  return DUTY_GROUP_BY_LABEL[allocationLabel] ?? "other";
+  if (isShiftLeadRoleToken(allocationLabel) || allocationLabel === RESERVIST_SUPERVISOR_LABEL) return "supervisor";
+  if (allocationLabel === TECHNICIAN_LABEL) return "technician";
+  return "other";
 }
 
 /**

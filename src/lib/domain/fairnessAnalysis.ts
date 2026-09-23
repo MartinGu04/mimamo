@@ -1,21 +1,26 @@
 import type { FairnessStatus } from "./fairnessFoundation";
 import type { FairnessPersonRow, FairnessTargets } from "./fairnessTable";
+import { isShiftLeadRoleToken } from "./shiftLeadRole";
 
 export type FairnessAllocationRole = "supervisor" | "technician";
+
+const TECHNICIAN_ALLOCATION_LABEL = "טכנאי";
 
 /**
  * The ONLY verified deterministic allocation-label -> target-role mapping
  * (PR #15 §14). Every other allocation label (ר"צ, הסמכה, משתחרר, ...) gets
  * no target -- never an invented one -- unless a future deterministic
- * domain/personnel rule proves one.
+ * domain/personnel rule proves one. The supervisor side recognizes the
+ * whole shift-lead spelling family via `isShiftLeadRoleToken` (masculine
+ * AND feminine, any quote/hyphen variant) -- the same canonical classifier
+ * `lib/parsers/event.ts` uses -- rather than a single hard-coded label, so
+ * a feminine shift lead's Duty Fairness row is never silently excluded
+ * from its target the way her schedule Event once was.
  */
-const ALLOCATION_ROLE_BY_LABEL: Readonly<Record<string, FairnessAllocationRole>> = {
-  טכנאי: "technician",
-  'אחמ"ש': "supervisor",
-};
-
 export function resolveFairnessAllocationRole(allocationLabel: string): FairnessAllocationRole | null {
-  return ALLOCATION_ROLE_BY_LABEL[allocationLabel] ?? null;
+  if (isShiftLeadRoleToken(allocationLabel)) return "supervisor";
+  if (allocationLabel === TECHNICIAN_ALLOCATION_LABEL) return "technician";
+  return null;
 }
 
 /**
