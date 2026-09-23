@@ -44,4 +44,10 @@ describe("ScheduleHeader", () => {
     const subtitle = container.querySelector("h1 + p + p");
     expect(subtitle).not.toHaveAttribute("aria-hidden");
   });
+
+  it("renders a contextual title override -- e.g. 'לוח הצוות' for the team month, or 'צוות השבוע' for Team Week -- instead of the default 'הלוח שלי'", () => {
+    render(<ScheduleHeader title="לוח הצוות" monthLabel="אוגוסט 2026" monthRangeSubtitle={null} />);
+    expect(screen.getByRole("heading", { name: "לוח הצוות" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "הלוח שלי" })).toBeNull();
+  });
 });

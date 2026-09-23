@@ -9,6 +9,7 @@ import { ScheduleEveryoneCalendar } from "@/components/schedule/ScheduleEveryone
 import { ScheduleEveryoneViewSwitch, type ScheduleEveryoneView } from "@/components/schedule/ScheduleEveryoneViewSwitch";
 import { ScheduleHeader } from "@/components/schedule/ScheduleHeader";
 import { ScheduleManagerSelector } from "@/components/schedule/ScheduleManagerSelector";
+import { SchedulePerspectiveSwitch } from "@/components/schedule/SchedulePerspectiveSwitch";
 import { TeamWeekMatrix } from "@/components/schedule/TeamWeekMatrix";
 import { TeamWeekNav } from "@/components/schedule/TeamWeekNav";
 import { TeamWeekPeopleFilterSwitch } from "@/components/schedule/TeamWeekPeopleFilterSwitch";
@@ -143,37 +144,59 @@ function teamWeekHref(weekStart: string | null, peopleFilter: TeamWeekPeopleFilt
 }
 
 /**
- * "הלוח שלי" -- the personal monthly calendar (formerly "לוח משמרות", a
+ * Contextual page title (Team Schedule visibility is no longer manager-only,
+ * so the page must never keep saying "הלוח שלי" while actually showing the
+ * team's data): "self" stays "הלוח שלי" for every viewer, "all" + month is
+ * "לוח הצוות", "all" + team-week is "צוות השבוע". Never three separate page
+ * shells -- only this one string, fed into the same `ScheduleHeader`.
+ */
+function scheduleTitle(perspective: SchedulePerspective, isTeamWeekView: boolean): string {
+  if (perspective !== "all") return "הלוח שלי";
+  return isTeamWeekView ? "צוות השבוע" : "לוח הצוות";
+}
+
+/**
+ * `/schedule` -- the personal monthly calendar (formerly "לוח משמרות", a
  * shift-only calendar; see `CalendarGrid`/`SelectedDayPanel`/
  * `calendarEvents` for the shift+duty+absence+holiday widening, and
  * `isPersonalCalendarActivityEvent` for the further display-only-activity
- * widening -- e.g. סוגר/שלב 9/כנס בטיחות). For a
- * normal user this is still exactly the personal calendar it always was:
- * `model.manager` is always null, `model.perspective` is always "self",
- * and no manager UI ever renders, no matter what `?person=` the URL
- * carries (the server-side floor lives in `getRequestSchedule` and its
- * orchestration layer, never here).
+ * widening -- e.g. סוגר/שלב 9/כנס בטיחות) PLUS the read-only Team Schedule
+ * ("all") perspective, available to EVERY authenticated, uniquely-mapped
+ * viewer -- a deliberate authorization change, no longer manager-only. Two
+ * SEPARATE authorization concepts decide what renders here, matching
+ * `ScheduleReadModel`'s own docs:
  *
- * For an authorized manager, `getRequestSchedule` additionally resolves
- * which of the three perspectives (self / everyone / one person) to show,
- * already fail-closed-validated against the manager's own authorized
- * roster -- this page never re-validates `?person=` itself. "self" and
- * "person" both reuse the exact same `ScheduleCalendar` the normal
- * personal experience uses (never a separate "manager calendar"); "all"
- * renders the dedicated team-staffing `ScheduleEveryoneCalendar` instead,
- * since "who staffs day/night" is a different question than "what are
- * MY shifts" (PR #24 §14).
+ * 1. **Team Schedule visibility** (`model.perspective === "all"`,
+ *    `model.everyone`, `model.teamWeek`) -- every mapped viewer gets this;
+ *    the server-side floor lives entirely in `getRequestSchedule`'s
+ *    orchestration layer (`schedule.ts`), never here. `"self"` (the
+ *    default, no `?person=`) always reuses the exact same `ScheduleCalendar`
+ *    the personal experience always used; `"all"` renders the dedicated
+ *    team-staffing `ScheduleEveryoneCalendar` instead, since "who staffs
+ *    day/night" is a different question than "what are MY shifts".
+ * 2. **Manager authorization** (`model.manager !== null`, `model.roster`,
+ *    `model.perspective === "person"`) -- strictly narrower, unchanged: an
+ *    authorized manager ADDITIONALLY gets the arbitrary-person
+ *    `ScheduleManagerSelector` (a non-manager instead gets the compact
+ *    `SchedulePerspectiveSwitch`, "שלי | כולם" -- never both, see the
+ *    toolbar below); `"person"` reuses the same `ScheduleCalendar` too.
+ *    This page never re-validates `?person=` itself either way -- both
+ *    paths are already fail-closed-validated by the read-model layer.
  *
  * "all" additionally gets an OPTIONAL second presentation, "שבוע צוות"
  * (`?view=team-week`, `TeamWeekMatrix`) -- a person × date roster matrix
  * inspired by the original Sheet's own weekly layout, never a replacement
  * for the month calendar (`ScheduleEveryoneViewSwitch` toggles between the
  * two; "חודש" stays the default). `model.teamWeek` is populated by the
- * SAME already-verified-manager branch of `buildManagerScheduleReadModel`
- * that populates `model.everyone`, so there is no separate authorization
- * path for `?view=`/`?week=` to bypass -- a non-manager (or a manager not
- * currently on "all") always gets `teamWeek: null` and this page never
- * renders the matrix or its view switch for them, whatever the URL says.
+ * SAME "all"-branch projection that populates `model.everyone` (see
+ * `buildEveryoneTeamView` in `buildScheduleReadModel.ts`), for EVERY mapped
+ * viewer -- so there is no separate authorization path for `?view=`/
+ * `?week=` to bypass -- a viewer not currently on "all" always gets
+ * `teamWeek: null` and this page never renders the matrix or its view
+ * switch for them, whatever the URL says. `scheduleTitle` picks the page's
+ * contextual title from `perspective`/`isTeamWeekView` alone, independent
+ * of `model.manager` -- the title reflects WHAT is showing, never WHO is
+ * looking at it.
  */
 export default async function SchedulePage({ searchParams }: SchedulePageProps) {
   const params = await searchParams;
@@ -275,38 +298,46 @@ export default async function SchedulePage({ searchParams }: SchedulePageProps) 
   return (
     <div className="flex flex-col gap-4 sm:gap-6">
       <ScheduleHeader
+        title={scheduleTitle(model.perspective, isTeamWeekView)}
         monthLabel={isTeamWeekView ? teamWeekLabel : monthLabel}
         monthRangeSubtitle={isTeamWeekView ? "תצוגת מטריצה שבועית" : formatHebrewMonthRange(displayMonthKey.year, displayMonthKey.month)}
       />
 
-      {/* One consolidated toolbar: perspective selector, view switch, people
+      {/* One consolidated toolbar: perspective control, view switch, people
           filter, and date navigation all read as one set of controls, with
-          data freshness visually separated but still in this same region. */}
+          data freshness visually separated but still in this same region.
+          Exactly ONE of ScheduleManagerSelector (an actual manager) or
+          SchedulePerspectiveSwitch (every other mapped viewer) ever renders
+          -- never both, never neither, for a mapped viewer. */}
       <Panel variant="inline" className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           {model.manager ? (
-            <>
-              <ScheduleManagerSelector
-                managerName={model.manager.name}
-                people={model.roster}
-                perspective={model.perspective}
-                selectedPersonId={model.selectedPersonId}
-              />
-              {model.perspective === "all" ? (
-                <ScheduleEveryoneViewSwitch
-                  activeView={isTeamWeekView ? "team-week" : "month"}
-                  monthHref={scheduleEveryoneViewHref("month", null)}
-                  teamWeekHref={scheduleEveryoneViewHref("team-week", null)}
-                />
-              ) : null}
-              {isTeamWeekView ? (
-                <TeamWeekPeopleFilterSwitch
-                  activeFilter={peopleFilter}
-                  activeHref={activePeopleFilterHref}
-                  allHref={allPeopleFilterHref}
-                />
-              ) : null}
-            </>
+            <ScheduleManagerSelector
+              managerName={model.manager.name}
+              people={model.roster}
+              perspective={model.perspective}
+              selectedPersonId={model.selectedPersonId}
+            />
+          ) : (
+            <SchedulePerspectiveSwitch
+              activePerspective={model.perspective === "all" ? "all" : "self"}
+              selfHref={scheduleHref(null, "self", null)}
+              allHref={scheduleHref(null, "all", null)}
+            />
+          )}
+          {model.perspective === "all" ? (
+            <ScheduleEveryoneViewSwitch
+              activeView={isTeamWeekView ? "team-week" : "month"}
+              monthHref={scheduleEveryoneViewHref("month", null)}
+              teamWeekHref={scheduleEveryoneViewHref("team-week", null)}
+            />
+          ) : null}
+          {isTeamWeekView ? (
+            <TeamWeekPeopleFilterSwitch
+              activeFilter={peopleFilter}
+              activeHref={activePeopleFilterHref}
+              allHref={allPeopleFilterHref}
+            />
           ) : null}
           {isTeamWeekView ? (
             <TeamWeekNav

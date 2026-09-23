@@ -11,12 +11,18 @@ import { parseScheduleSheet } from "@/lib/parsers/schedule";
 import { parseSettingsSheet } from "@/lib/parsers/settings";
 import { getWorkbookSnapshot } from "@/lib/sync";
 import { getJerusalemLocalNow } from "@/lib/time/jerusalemClock";
-import { buildManagerScheduleReadModel, buildSelfOnlyScheduleReadModel } from "./buildScheduleReadModel";
+import {
+  buildManagerScheduleReadModel,
+  buildMappedEveryoneScheduleReadModel,
+  buildSelfOnlyScheduleReadModel,
+} from "./buildScheduleReadModel";
 import { buildEmergencyScheduleReadModel } from "./buildEmergencyScheduleReadModel";
 import { resolveOperationalRoster } from "./operationalMode";
 import { getManagerWorkbookSheet, loadManagerWorkbookContext } from "./managerWorkbookContext";
+import { getScheduleWorkbookSheet, loadScheduleWorkbookContext } from "./scheduleWorkbookContext";
 import { getRequestPersonalSchedule } from "./getRequestPersonalSchedule";
 import type { EmergencyScheduleReadModel } from "./emergencyScheduleTypes";
+import type { PersonalScheduleReadModel } from "./types";
 import type { ScheduleReadModel } from "./scheduleTypes";
 
 export type ScheduleLoadResult =
@@ -32,37 +38,35 @@ export type ScheduleLoadResult =
   | { status: "emergency_unavailable"; message: string };
 
 /**
- * Everything the Schedule feature ever needs, for a normal user OR a
- * manager in any of the three perspectives -- personnel + schedule +
- * settings + potentialH1/H2. PR #24 §25 originally kept this narrower than
- * `MANAGER_WORKBOOK_SOURCES` (no Potential at all) since only Manager
- * Overview's reconciliation section needed it; a later duty-completeness
- * pass (see `buildPersonalScheduleReadModel.ts`) reuses the SAME Potential
- * data for the "self"/"person" perspectives (never "all" -- unit-wide
- * staffing/coverage stays out of scope for this source), so it's fetched
- * here too now.
+ * Everything a MANAGER's Schedule request needs, across all three
+ * perspectives (self/person/all) -- personnel + schedule + settings +
+ * potentialH1/H2, PLUS `shootingRanges` for cache-key alignment (see
+ * below). Used ONLY by `loadManagerScheduleReadModel` -- the non-manager
+ * "all" path (`loadMappedEveryoneScheduleReadModel`) deliberately uses a
+ * DIFFERENT, narrower source set; see `scheduleWorkbookContext.ts`'s
+ * `SCHEDULE_WORKBOOK_SOURCES` for why.
  *
- * ALSO includes `shootingRanges` -- unused by anything in this file, kept
- * ONLY so `getWorkbookSnapshot`'s canonical (sorted+deduped) source-set
- * cache key resolves to the EXACT SAME entry `MANAGER_WORKBOOK_SOURCES`
- * does (Manager Overview, Home, Report 1 -- see
- * `managerWorkbookContext.ts`'s own constant). Before this, the Schedule
- * page's own `getWorkbookSnapshot` call was keyed on a genuinely DIFFERENT
- * canonical string (missing `shootingRanges`), so it landed in its own,
- * independently-`unstable_cache`d 30s window -- meaning this page and
- * every `MANAGER_WORKBOOK_SOURCES` caller could each be serving a
- * DIFFERENT point-in-time read of the identical "schedule" sheet
- * (whichever one last happened to revalidate), even though both requests
- * fetch the exact same underlying Google Sheets tab. A manager who just
- * edited an assignment and immediately compared this page against, say,
- * Report 1 could see the edit on one and not (yet) on the other purely
- * from that cache-key mismatch -- never from any actual parsing/
- * classification difference between the two features (see
+ * `shootingRanges` itself is unused by anything in this file, kept ONLY so
+ * `getWorkbookSnapshot`'s canonical (sorted+deduped) source-set cache key
+ * resolves to the EXACT SAME entry `MANAGER_WORKBOOK_SOURCES` does
+ * (Manager Overview, Home, Report 1 -- see `managerWorkbookContext.ts`'s
+ * own constant). Before this, the Schedule page's own `getWorkbookSnapshot`
+ * call was keyed on a genuinely DIFFERENT canonical string (missing
+ * `shootingRanges`), so it landed in its own, independently-`unstable_cache`d
+ * 30s window -- meaning this page and every `MANAGER_WORKBOOK_SOURCES`
+ * caller could each be serving a DIFFERENT point-in-time read of the
+ * identical "schedule" sheet (whichever one last happened to revalidate),
+ * even though both requests fetch the exact same underlying Google Sheets
+ * tab. A manager who just edited an assignment and immediately compared
+ * this page against, say, Report 1 could see the edit on one and not (yet)
+ * on the other purely from that cache-key mismatch -- never from any
+ * actual parsing/classification difference between the two features (see
  * `reportOneShadowRoleRawPipelineRegression.test.ts` for the proof that
  * layer is correct). Matching the key here removes that class of
- * cross-feature staleness entirely, the same "deliberately over-request
- * to land on a shared cache entry" convention `reportOneTomorrow.ts`
- * already documents for its own relationship to the Home page.
+ * cross-feature staleness entirely, for a MANAGER specifically, the same
+ * "deliberately over-request to land on a shared cache entry" convention
+ * `reportOneTomorrow.ts` already documents for its own relationship to the
+ * Home page.
  */
 const SCHEDULE_MANAGER_SOURCES: SheetSourceKey[] = [
   "personnel",
@@ -76,37 +80,57 @@ const SCHEDULE_MANAGER_SOURCES: SheetSourceKey[] = [
 export interface ScheduleParams {
   /** Raw, unvalidated `?month=` value ("YYYY-MM" or anything else) -- this loader resolves the "today" fallback itself from the shared personal read model's own `localNow`, the same `calendarMonthOfLocalNow` convention the page uses for display. Never trusted without `parseMonthParam`. */
   rawMonth: string | null;
-  /** Raw, unvalidated `?person=` value. Completely ignored for a normal (non-manager) user -- see `loadScheduleReadModel`. */
+  /**
+   * Raw, unvalidated `?person=` value. `"all"` resolves to the "all"
+   * perspective for EVERY authenticated, uniquely-mapped viewer (manager
+   * or not -- see `loadScheduleReadModel`). Any OTHER non-null value (an
+   * arbitrary person id) is honored ONLY for an actual manager
+   * (`buildManagerScheduleReadModel`'s own fail-closed
+   * `resolveSchedulePerspective`); for a non-manager it always
+   * normalizes/falls back to "self", the exact same server-side floor as
+   * before -- never that other person's schedule.
+   */
   personId: string | null;
-  /** Raw, unvalidated `?week=` value ("YYYY-MM-DD" anchor, or anything else) -- resolved through `getOperationalWeekForDate`, falling back to the operational week containing `localNow.date` for anything unparseable. Only ever affects the "all" perspective's `teamWeek` matrix; completely inert for a normal (non-manager) user, same as `personId`. */
+  /** Raw, unvalidated `?week=` value ("YYYY-MM-DD" anchor, or anything else) -- resolved through `getOperationalWeekForDate`, falling back to the operational week containing `localNow.date` for anything unparseable. Only ever affects the "all" perspective's `teamWeek` matrix; completely inert for "self"/"person". */
   rawWeek: string | null;
 }
 
 /**
- * Server-only orchestration for `ScheduleReadModel` (PR #24). Mirrors
+ * Server-only orchestration for `ScheduleReadModel`. Mirrors
  * `managerOverview.ts`'s split between authorization/fetch (this file) and
- * pure construction (`buildScheduleReadModel.ts`):
+ * pure construction (`buildScheduleReadModel.ts`).
+ *
+ * Two SEPARATE authorization paths past the shared personal-schedule gate,
+ * matching the two concepts `ScheduleReadModel` itself now documents:
  *
  * 1. Reuses `getRequestPersonalSchedule()` -- the SAME request-scoped
  *    result the protected layout and `/schedule` itself already compute
  *    (react `cache()` dedupes this to zero extra calls) -- as the FIRST
- *    authorization gate, exactly like `managerWorkbookContext.ts`.
- * 2. A normal (non-manager) user's `?person=` is never even inspected --
- *    the server-side floor is unconditional, not merely a UI choice. This
- *    is what PR #24 §3 requires: `?person=all` or `?person=<id>` must
- *    still only ever return that person's own schedule.
- * 3. Only once `person.isManager === true` does this fetch anything more
- *    -- `loadManagerWorkbookContext(SCHEDULE_MANAGER_SOURCES)`, ONE
- *    additional Google request, going through the exact same fail-closed
- *    re-verification (fresh identity, fresh personnel parse, fresh
- *    manager check) every other manager-only feature uses. If that fresh
- *    check can't be re-proven for this request (e.g. a race between the
- *    two fetches), this fails closed to the exact same self-only
- *    experience a normal user gets -- never a manager selector/data the
- *    fresh check couldn't currently verify.
- * 4. Parses schedule + settings + potentialH1/H2 from the authorized
- *    manager snapshot, resolves the displayed month's dates, and delegates
- *    all read-model construction to the pure `buildManagerScheduleReadModel`.
+ *    gate for every caller, manager or not: it's how "authenticated +
+ *    uniquely mapped" itself gets proven, before anything else.
+ * 2. A manager (`selfModel.person.isManager === true`) always goes through
+ *    `loadManagerScheduleReadModel` -- ONE additional Google request
+ *    (`loadManagerWorkbookContext(SCHEDULE_MANAGER_SOURCES)`), the exact
+ *    same fail-closed re-verification (fresh identity, fresh personnel
+ *    parse, fresh manager check) every other manager-only feature uses,
+ *    unchanged from before this split. This is what still gates
+ *    `manager`/`roster`/`perspective: "person"` -- nothing here broadens
+ *    manager-only behavior. If that fresh check comes back `"forbidden"`
+ *    (still authenticated + uniquely mapped, just not provably a manager
+ *    right now) on a `?person=all` request, it falls through to step 4's
+ *    path instead of self-only -- see that branch's own comment.
+ * 3. A non-manager's `?person=` OTHER than `"all"` (missing, their own id,
+ *    someone else's id, garbage) stays the existing zero-extra-fetch
+ *    self-only path -- `buildSelfOnlyScheduleReadModel(selfModel)` directly
+ *    from the already-fetched `selfModel`, exactly as before this change.
+ * 4. A non-manager's `?person=all` is the NEW path:
+ *    `loadMappedEveryoneScheduleReadModel` -- reuses
+ *    `loadScheduleWorkbookContext()`'s narrower, non-manager-gated fetch
+ *    (see that function's own docs), which is deliberately keyed to match
+ *    `getRequestPersonalSchedule()`'s own 5-source set exactly, so it
+ *    resolves to the SAME `getWorkbookSnapshot` cache entry step 1 already
+ *    populated for this request -- no second Google batch introduced by
+ *    this new path for the common case.
  */
 export async function loadScheduleReadModel(params: ScheduleParams): Promise<ScheduleLoadResult> {
   const personalResult = await getRequestPersonalSchedule();
@@ -127,21 +151,73 @@ export async function loadScheduleReadModel(params: ScheduleParams): Promise<Sch
 
   const { model: selfModel } = personalResult;
 
-  if (!selfModel.person.isManager) {
+  if (selfModel.person.isManager) {
+    return loadManagerScheduleReadModel(selfModel, params);
+  }
+
+  if (params.personId !== "all") {
     return { status: "ok", model: buildSelfOnlyScheduleReadModel(selfModel) };
   }
 
+  return loadMappedEveryoneScheduleReadModel(selfModel, params);
+}
+
+/**
+ * The manager branch -- dispatched to whenever the (possibly stale)
+ * `selfModel.person.isManager` said `true`. Fetch/parse/construction is
+ * BYTE-FOR-BYTE the same behavior this file always had, extracted into its
+ * own function so `loadScheduleReadModel` can dispatch to it explicitly
+ * instead of gating everything else behind `!isManager`. The one behavior
+ * that's NEW here is the fresh-re-verification-failure branch below: a
+ * `"forbidden"` result on a `?person=all` request now falls through to the
+ * normal mapped-viewer Team Schedule path instead of self-only -- see that
+ * branch's own comment for why that's correct under this PR's
+ * authorization split, not an expansion of manager-only behavior.
+ */
+async function loadManagerScheduleReadModel(
+  selfModel: PersonalScheduleReadModel,
+  params: ScheduleParams,
+): Promise<ScheduleLoadResult> {
   const currentMonthKey = calendarMonthOfLocalNow(selfModel.localNow);
   const displayMonthKey = parseMonthParam(params.rawMonth) ?? currentMonthKey;
   const monthParam = formatMonthParam(displayMonthKey);
 
   const contextResult = await loadManagerWorkbookContext(SCHEDULE_MANAGER_SOURCES);
   if (contextResult.status !== "ok") {
-    // Fresh re-verification couldn't reconfirm manager status for THIS
-    // request (e.g. personnel changed between the two fetches) -- fail
-    // closed to the same self-only experience a normal user gets, rather
-    // than surfacing an error for someone who is still a fully authorized
-    // person, just not (right now) provably a manager.
+    // `"forbidden"` is a DIFFERENT case from every other non-ok status
+    // here: it means the fresh re-check succeeded at resolving a real,
+    // authenticated + uniquely mapped person from THIS request's own
+    // snapshot -- it just isn't currently provably a manager (e.g. the
+    // stale `selfModel.person.isManager === true` this branch dispatched
+    // on no longer holds; personnel changed between the two fetches).
+    // Manager-only affordances (the arbitrary-person picker, `manager`,
+    // `roster`, `perspective: "person"`) are correctly lost here -- but
+    // Team Schedule visibility ("all") is a SEPARATE, broader permission
+    // by this PR's own design (see `scheduleTypes.ts`'s authorization
+    // docs), granted to every authenticated + uniquely mapped viewer, not
+    // just managers. So a `?person=all` request in this exact situation
+    // must still resolve to the normal mapped-viewer "all" projection --
+    // falling all the way back to self-only here would be MORE
+    // restrictive than the product's own rule for a non-manager hitting
+    // this same URL directly. This is not a privilege escalation: it
+    // grants nothing `loadMappedEveryoneScheduleReadModel` doesn't already
+    // grant any other mapped viewer, and it still fetches/re-verifies
+    // identity completely independently (no data or authorization is
+    // carried over from the failed manager check).
+    //
+    // `unauthenticated`/`missing_email`/`unmapped`/`ambiguous_identity`
+    // are NOT this case: those mean the fresh re-check couldn't even
+    // prove "authenticated + uniquely mapped" for this request, so
+    // there's no basis for Team Schedule access either -- those keep the
+    // existing fail-closed self-only fallback, same as before.
+    //
+    // A non-"all" request (self, or an arbitrary colleague id) also keeps
+    // the existing self-only fallback regardless of which non-ok status
+    // this was -- never that other colleague's schedule, whatever the
+    // reason the manager check failed.
+    if (contextResult.status === "forbidden" && params.personId === "all") {
+      return loadMappedEveryoneScheduleReadModel(selfModel, params);
+    }
     return { status: "ok", model: buildSelfOnlyScheduleReadModel(selfModel) };
   }
 
@@ -185,6 +261,78 @@ export async function loadScheduleReadModel(params: ScheduleParams): Promise<Sch
     monthDates: range.dates,
     week,
     requestedPersonId: params.personId,
+    potentialAllocations,
+  });
+
+  return { status: "ok", model };
+}
+
+/**
+ * The NEW path: a non-manager's `?person=all` -- the "all" perspective's
+ * safe, read-only `everyone`/`teamWeek` projection for ANY authenticated,
+ * uniquely-mapped viewer. Deliberately does NOT use
+ * `loadManagerWorkbookContext`/`SCHEDULE_MANAGER_SOURCES` -- this is the
+ * whole point of the split: Team Schedule visibility is never gated on
+ * `person.isManager`. `manager`/`roster` are unconditionally null/empty on
+ * the result (`buildMappedEveryoneScheduleReadModel` never sets them) --
+ * an actual manager visiting `/schedule?person=all` never reaches this
+ * function at all (see `loadScheduleReadModel`'s own dispatch), so this
+ * function itself never needs to check `isManager` either.
+ */
+async function loadMappedEveryoneScheduleReadModel(
+  selfModel: PersonalScheduleReadModel,
+  params: ScheduleParams,
+): Promise<ScheduleLoadResult> {
+  const currentMonthKey = calendarMonthOfLocalNow(selfModel.localNow);
+  const displayMonthKey = parseMonthParam(params.rawMonth) ?? currentMonthKey;
+  const monthParam = formatMonthParam(displayMonthKey);
+
+  const contextResult = await loadScheduleWorkbookContext();
+  if (contextResult.status !== "ok") {
+    // Fresh re-verification couldn't reconfirm this request's identity
+    // (e.g. an extremely rare race where personnel changed between the two
+    // fetches within the same request) -- fail closed to the same
+    // self-only experience, rather than surfacing an error for someone
+    // whose own personal schedule already loaded successfully moments ago.
+    return { status: "ok", model: buildSelfOnlyScheduleReadModel(selfModel) };
+  }
+
+  const { people, snapshot } = contextResult.context;
+
+  const settings = parseSettingsSheet(getScheduleWorkbookSheet(snapshot, "settings"));
+
+  let shiftSchedule: ShiftSchedule;
+  try {
+    shiftSchedule = buildShiftSchedule(settings.shiftStartTimeDay);
+  } catch (error) {
+    if (error instanceof ShiftConfigurationError) {
+      return { status: "configuration_error", message: error.message };
+    }
+    throw error;
+  }
+
+  const rawAssignments = parseScheduleSheet(getScheduleWorkbookSheet(snapshot, "schedule"), people);
+  const events = rawAssignments.map(parseEvent);
+
+  const potentialAllocations = [
+    ...parsePotentialSheet(getScheduleWorkbookSheet(snapshot, "potentialH1"), people),
+    ...parsePotentialSheet(getScheduleWorkbookSheet(snapshot, "potentialH2"), people),
+  ];
+
+  const range = resolveManagerDateRange("month", monthParam, selfModel.localNow);
+
+  // Same `?week=` resolution as the manager path -- see
+  // `loadManagerScheduleReadModel`'s identical comment.
+  const week = (params.rawWeek ? getOperationalWeekForDate(params.rawWeek) : null) ?? getOperationalWeek(selfModel.localNow);
+
+  const model = buildMappedEveryoneScheduleReadModel({
+    people,
+    events,
+    shiftSchedule,
+    fetchedAt: snapshot.fetchedAt,
+    now: selfModel.localNow,
+    monthDates: range.dates,
+    week,
     potentialAllocations,
   });
 

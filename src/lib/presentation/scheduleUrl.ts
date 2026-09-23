@@ -31,6 +31,20 @@ export function scheduleEveryoneHref(params: ScheduleEveryoneHrefParams = {}): s
   return `/schedule?${search.toString()}`;
 }
 
+/**
+ * The canonical "צוות השבוע" (Team Week) URL -- `/schedule?person=all&view=team-week`,
+ * deliberately with no `?week=` anchor, resolving through the read model's
+ * own "current operational week" fallback (see `schedule.ts`'s `rawWeek`
+ * handling). Available to EVERY authenticated, uniquely-mapped viewer, not
+ * manager-only -- see `scheduleTypes.ts`'s own docs. The ONE constant
+ * behind every one-click Team Week shortcut in the app (Home's
+ * `WeekOverviewSection`, `PermanentManagerHome`) so they can never drift
+ * apart from each other or from `/schedule` itself.
+ */
+export function scheduleTeamWeekHref(): string {
+  return "/schedule?person=all&view=team-week";
+}
+
 interface SchedulePersonHrefParams {
   personId: string;
   /** "YYYY-MM-DD", same contract as `ScheduleEveryoneHrefParams.date`. */

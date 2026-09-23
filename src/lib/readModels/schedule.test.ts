@@ -138,10 +138,10 @@ describe("loadScheduleReadModel — auth pass-through states", () => {
   });
 });
 
-describe("loadScheduleReadModel — normal (non-manager) user (PR #24 §3)", () => {
-  it("never fetches manager-wide data, always returns self, ignores any requested person", async () => {
+describe("loadScheduleReadModel — normal (non-manager) user, default/self (1)", () => {
+  it("1. defaults to self with no ?person= at all, no extra fetch", async () => {
     getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(false));
-    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+    const result = await loadScheduleReadModel(DEFAULT_PARAMS);
     expect(getWorkbookSnapshot).not.toHaveBeenCalled();
     expect(result.status).toBe("ok");
     if (result.status === "ok") {
@@ -151,7 +151,7 @@ describe("loadScheduleReadModel — normal (non-manager) user (PR #24 §3)", () 
     }
   });
 
-  it("still returns self even when a specific colleague id is requested", async () => {
+  it("still returns self, no extra fetch, when a specific colleague id is requested (9/10. never that other person's schedule -- falls back to self)", async () => {
     getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(false));
     const result = await loadScheduleReadModel({ rawMonth: null, personId: "p_someone_else", rawWeek: null });
     expect(getWorkbookSnapshot).not.toHaveBeenCalled();
@@ -160,6 +160,122 @@ describe("loadScheduleReadModel — normal (non-manager) user (PR #24 §3)", () 
       expect(result.model.perspective).toBe("self");
       expect(result.model.manager).toBeNull();
     }
+  });
+
+  it("14. an unknown/malformed person id also falls back to self, no extra fetch, never crashes", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(false));
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "<script>garbage", rawWeek: null });
+    expect(getWorkbookSnapshot).not.toHaveBeenCalled();
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") expect(result.model.perspective).toBe("self");
+  });
+});
+
+describe("loadScheduleReadModel — normal (non-manager) user, ?person=all (2, 3, 4, 5, 6, security boundary)", () => {
+  it("2. ?person=all resolves to perspective 'all' for a non-manager", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(false));
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") expect(result.model.perspective).toBe("all");
+  });
+
+  it("3. the 'all' perspective carries a safe, non-null 'everyone' projection for a non-manager", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(false));
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") expect(result.model.everyone).not.toBeNull();
+  });
+
+  it("4. the 'all' perspective carries a non-null 'teamWeek' matrix for a non-manager", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(false));
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") expect(result.model.teamWeek).not.toBeNull();
+  });
+
+  it("SECURITY BOUNDARY: permission to view 'all' does NOT imply permission to view an arbitrary person= id -- a non-manager granted 'all' still falls back to self for any specific person id, in the SAME request shape", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(false));
+    const allResult = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+    expect(allResult.status).toBe("ok");
+    if (allResult.status === "ok") expect(allResult.model.perspective).toBe("all");
+
+    const personResult = await loadScheduleReadModel({ rawMonth: null, personId: "p_daniel", rawWeek: null });
+    expect(personResult.status).toBe("ok");
+    if (personResult.status === "ok") {
+      expect(personResult.model.perspective).toBe("self");
+      expect(personResult.model.selectedPersonId).toBeNull();
+    }
+  });
+
+  it("manager/roster stay null/empty for a non-manager's 'all' perspective -- 'all' is never synonymous with manager UI", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(false));
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.model.manager).toBeNull();
+      expect(result.model.roster).toEqual([]);
+    }
+  });
+
+  it("6/personal: 'personal' stays null for the 'all' perspective, same as the manager path", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(false));
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") expect(result.model.personal).toBeNull();
+  });
+
+  it("fetches the 5-source SCHEDULE_WORKBOOK_SOURCES set (no shootingRanges) -- never the 6-source manager set for a non-manager", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(false));
+    await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+    expect(getWorkbookSnapshot).toHaveBeenCalledTimes(1);
+    expect(getWorkbookSnapshot).toHaveBeenCalledWith(["personnel", "schedule", "settings", "potentialH1", "potentialH2"]);
+  });
+
+  it("27/28. Team Week still excludes permanent (קבע) personnel from the matrix columns for a non-manager viewer -- viewing permission never becomes matrix membership", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(false));
+    getWorkbookSnapshot.mockResolvedValue(
+      managerSnapshot({
+        personnel: [
+          ["שם", "מייל", "מנהל"],
+          ["מרטין גוסין", "martin@example.invalid", false],
+          ["קבע טכנאי", "keva@example.invalid", false],
+        ],
+      }),
+    );
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+    expect(result.status).toBe("ok");
+    if (result.status === "ok" && result.model.perspective === "all") {
+      const names = result.model.teamWeek?.people.map((p) => p.name) ?? [];
+      expect(names).not.toContain("קבע טכנאי");
+    } else {
+      throw new Error("expected 'all' perspective");
+    }
+  });
+
+  it("does not leak any colleague's email in the non-manager 'all' result", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(false));
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+    expect(JSON.stringify(result)).not.toContain("@example.invalid");
+  });
+
+  it("15/16/17/18: a race where the fresh re-resolution fails (unmapped) falls back to self, not an error", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(false));
+    getWorkbookSnapshot.mockResolvedValue(
+      managerSnapshot({ personnel: [["שם", "מייל", "מנהל"], ["מישהו אחר", "other@example.invalid", false]] }),
+    );
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") expect(result.model.perspective).toBe("self");
+  });
+
+  it("an invalid/missing shift configuration on the non-manager 'all' fetch fails closed as configuration_error", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(false));
+    getWorkbookSnapshot.mockResolvedValue({
+      fetchedAt: "2026-08-13T08:00:00.000Z",
+      sheets: [personnelSheet(MANAGER_PERSONNEL_ROWS), scheduleSheet([]), settingsSheet([["הגדרה", "ערך"]])],
+    });
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+    expect(result.status).toBe("configuration_error");
   });
 });
 
@@ -222,6 +338,126 @@ describe("loadScheduleReadModel — manager authorization / fetch scope (PR #24 
     });
     const result = await loadScheduleReadModel(DEFAULT_PARAMS);
     expect(result.status).toBe("configuration_error");
+  });
+});
+
+describe("loadScheduleReadModel — stale manager=true, fresh re-check returns 'forbidden' (edge case: forbidden still keeps Team Schedule access on ?person=all)", () => {
+  // 1. The stale PersonalScheduleReadModel says isManager: true (this is
+  //    what routes the request into the manager branch at all).
+  const STALE_MANAGER_PERSONAL_RESULT = () => okPersonalResult(true);
+
+  // 2. The fresh loadManagerWorkbookContext() re-check comes back
+  //    "forbidden": the SAME email still resolves to a real, uniquely
+  //    mapped person from this request's own fresh snapshot, just with
+  //    isManager: false now (e.g. their manager flag was revoked between
+  //    the two fetches).
+  function forbiddenManagerSnapshot() {
+    return managerSnapshot({
+      personnel: [
+        ["שם", "מייל", "מנהל"],
+        ["מרטין גוסין", "martin@example.invalid", false],
+        ["דניאל כהן", "daniel@example.invalid", false],
+      ],
+    });
+  }
+
+  it("3/4/5. ?person=all still resolves to the mapped-viewer 'all' projection, with manager === null and roster === []", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(STALE_MANAGER_PERSONAL_RESULT());
+    getWorkbookSnapshot.mockResolvedValue(forbiddenManagerSnapshot());
+
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.model.perspective).toBe("all");
+      expect(result.model.manager).toBeNull();
+      expect(result.model.roster).toEqual([]);
+      expect(result.model.everyone).not.toBeNull();
+      expect(result.model.teamWeek).not.toBeNull();
+    }
+  });
+
+  it("NOT a privilege escalation: the resulting 'all' projection is byte-identical in shape to what any other non-manager gets for the same request -- this branch grants nothing loadMappedEveryoneScheduleReadModel doesn't already grant every mapped viewer, and re-verifies identity completely independently of the failed manager check", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(STALE_MANAGER_PERSONAL_RESULT());
+    getWorkbookSnapshot.mockResolvedValue(forbiddenManagerSnapshot());
+    const forbiddenResult = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+
+    getRequestPersonalSchedule.mockResolvedValue(okPersonalResult(false));
+    getWorkbookSnapshot.mockResolvedValue(managerSnapshot());
+    const ordinaryNonManagerResult = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+
+    expect(forbiddenResult.status).toBe("ok");
+    expect(ordinaryNonManagerResult.status).toBe("ok");
+    if (forbiddenResult.status === "ok" && ordinaryNonManagerResult.status === "ok") {
+      expect(forbiddenResult.model.manager).toBe(ordinaryNonManagerResult.model.manager); // both null
+      expect(forbiddenResult.model.roster).toEqual(ordinaryNonManagerResult.model.roster); // both []
+      expect(forbiddenResult.model.perspective).toBe(ordinaryNonManagerResult.model.perspective); // both "all"
+    }
+  });
+
+  it("6. an arbitrary colleague id in this same stale-manager-now-forbidden scenario still falls back to self -- never that colleague's schedule", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(STALE_MANAGER_PERSONAL_RESULT());
+    getWorkbookSnapshot.mockResolvedValue(forbiddenManagerSnapshot());
+
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "p_daniel", rawWeek: null });
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.model.perspective).toBe("self");
+      expect(result.model.manager).toBeNull();
+      expect(result.model.selectedPersonId).toBeNull();
+    }
+  });
+
+  it("7. plain self (no ?person= at all) in this same scenario stays self, exactly as before this fix", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(STALE_MANAGER_PERSONAL_RESULT());
+    getWorkbookSnapshot.mockResolvedValue(forbiddenManagerSnapshot());
+
+    const result = await loadScheduleReadModel(DEFAULT_PARAMS);
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.model.perspective).toBe("self");
+      expect(result.model.manager).toBeNull();
+    }
+  });
+
+  it("8a. a fresh re-check that comes back unmapped does NOT grant 'all' -- falls back to self, never Team Schedule access", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(STALE_MANAGER_PERSONAL_RESULT());
+    getWorkbookSnapshot.mockResolvedValue(
+      managerSnapshot({ personnel: [["שם", "מייל", "מנהל"], ["מישהו אחר", "other@example.invalid", true]] }),
+    );
+
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.model.perspective).toBe("self");
+      expect(result.model.everyone).toBeNull();
+      expect(result.model.teamWeek).toBeNull();
+    }
+  });
+
+  it("8b. a fresh re-check that comes back ambiguous_identity does NOT grant 'all' either -- same self-only fallback", async () => {
+    getRequestPersonalSchedule.mockResolvedValue(STALE_MANAGER_PERSONAL_RESULT());
+    getWorkbookSnapshot.mockResolvedValue(
+      managerSnapshot({
+        personnel: [
+          ["שם", "מייל", "מנהל"],
+          ["דני א", "martin@example.invalid", true],
+          ["דני ב", "martin@example.invalid", true],
+        ],
+      }),
+    );
+
+    const result = await loadScheduleReadModel({ rawMonth: null, personId: "all", rawWeek: null });
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.model.perspective).toBe("self");
+      expect(result.model.everyone).toBeNull();
+      expect(result.model.teamWeek).toBeNull();
+    }
   });
 });
 

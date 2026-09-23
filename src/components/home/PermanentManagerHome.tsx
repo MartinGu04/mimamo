@@ -1,8 +1,12 @@
+import { Users } from "lucide-react";
+import Link from "next/link";
 import { Header } from "@/components/dashboard/Header";
 import { DataFreshnessStatus } from "@/components/ui/DataFreshnessStatus";
+import { EXPAND_HIT_AREA_CLASS } from "@/components/ui/hitArea";
 import { SetupSection } from "@/components/home/SetupSection";
 import type { ReportOneDraft } from "@/lib/domain/reportOne";
 import type { PermanentManagerHomeReadModel } from "@/lib/readModels/permanentManagerHomeTypes";
+import { scheduleTeamWeekHref } from "@/lib/presentation/scheduleUrl";
 import { ReportOneQuickAction } from "./ReportOneQuickAction";
 import { ShiftSnapshotCard } from "./ShiftSnapshotCard";
 import { TodayOperationalContext } from "./TodayOperationalContext";
@@ -68,7 +72,25 @@ export function PermanentManagerHome({
       <DataFreshnessStatus fetchedAt={model.fetchedAt} className="w-fit" />
 
       <div>
-        <h2 className="mb-3 text-lg font-semibold text-foreground sm:text-xl">מה קורה עכשיו במחלקה?</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-foreground sm:text-xl">מה קורה עכשיו במחלקה?</h2>
+          {/*
+           * "צוות השבוע" -- the SAME one-click Team Week shortcut
+           * `WeekOverviewSection` gives every regular/reserve viewer on the
+           * normal Dashboard. A permanent manager's Home is this separate
+           * operational-snapshot surface, not the normal Dashboard, but the
+           * product rule is "every mapped viewer can reach Team Week in one
+           * click" -- so it gets its own copy of the exact same canonical
+           * href here, without disrupting this section's own heading.
+           */}
+          <Link
+            href={scheduleTeamWeekHref()}
+            className={`relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted transition-colors duration-200 hover:bg-overlay-soft hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:text-sm ${EXPAND_HIT_AREA_CLASS}`}
+          >
+            <Users className="h-4 w-4 shrink-0" aria-hidden="true" strokeWidth={2} />
+            צוות השבוע
+          </Link>
+        </div>
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_1.5fr_1fr]">
           <div className="order-2 lg:order-1">
             <ShiftSnapshotCard label="הקודמת" shift={model.previousShift} todayDate={todayDate} />

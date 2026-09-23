@@ -87,6 +87,13 @@ describe("PermanentManagerHome — composition", () => {
     expect(screen.getByText("הבא", { exact: false })).toBeInTheDocument();
   });
 
+  it("26. renders a direct 'צוות השבוע' Team Week shortcut, linking to the canonical route, without disrupting the operational headline", () => {
+    render(<PermanentManagerHome model={model()} />);
+    expect(screen.getByText("מה קורה עכשיו במחלקה?")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /צוות השבוע/ });
+    expect(link).toHaveAttribute("href", "/schedule?person=all&view=team-week");
+  });
+
   it("renders exactly one live progress bar, for the current shift only", () => {
     render(<PermanentManagerHome model={model()} />);
     expect(screen.getAllByRole("progressbar")).toHaveLength(1);
