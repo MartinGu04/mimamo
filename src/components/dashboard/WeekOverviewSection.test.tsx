@@ -129,4 +129,26 @@ describe("WeekOverviewSection", () => {
     expect(within(rail).getByText("יום שבת")).toBeInTheDocument();
     expect(within(rail).getByText("22.8")).toBeInTheDocument();
   });
+
+  describe("23/24/25. one-click 'צוות השבוע' Team Week shortcut", () => {
+    it("23. renders a one-click 'צוות השבוע' link in the section heading row", () => {
+      render(<WeekOverviewSection overview={emptyOverview()} />);
+      expect(screen.getByRole("link", { name: /צוות השבוע/ })).toBeInTheDocument();
+    });
+
+    it("24. its href is exactly the canonical current Team Week route -- /schedule?person=all&view=team-week, no week= anchor", () => {
+      render(<WeekOverviewSection overview={emptyOverview()} />);
+      expect(screen.getByRole("link", { name: /צוות השבוע/ })).toHaveAttribute(
+        "href",
+        "/schedule?person=all&view=team-week",
+      );
+    });
+
+    it("25. the shortcut renders unconditionally -- WeekOverviewSection takes no manager/role prop to gate it, so it's visible for every regular/reserve/non-manager fixture too", () => {
+      render(<WeekOverviewSection overview={emptyOverview()} />);
+      // No manager-only prop exists on this component at all -- the
+      // shortcut's presence can never depend on one.
+      expect(screen.getByRole("link", { name: /צוות השבוע/ })).toBeInTheDocument();
+    });
+  });
 });

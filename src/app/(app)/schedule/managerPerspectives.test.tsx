@@ -175,12 +175,16 @@ describe("SchedulePage — normal user never sees manager UI (PR #24 §3)", () =
     expect(screen.queryByText("מציג לוח עבור")).toBeNull();
   });
 
-  it("a normal user requesting ?person=all still only receives model.manager === null (server-side floor, tested at the read-model layer; this asserts the page trusts and never overrides it)", async () => {
+  it("7. a normal user never sees the manager's PersonPicker, regardless of ?person= -- only the compact שלי | כולם switch (model.manager stays the server-side floor; this asserts the page trusts and never overrides it)", async () => {
     getRequestSchedule.mockResolvedValue(okResult(scheduleModel()));
     const element = await SchedulePage({ searchParams: searchParams({ person: "all" }) });
     render(element);
     expect(screen.queryByText("מציג לוח עבור")).toBeNull();
-    expect(screen.queryByText("כולם")).toBeNull();
+    // The compact switch legitimately shows a "כולם" link now -- this is
+    // the new, intended non-manager entry point into Team Schedule, never
+    // the manager's PersonPicker (which would instead show "מציג לוח עבור").
+    expect(screen.getByRole("link", { name: "כולם" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "שלי" })).toBeInTheDocument();
   });
 });
 
@@ -241,6 +245,104 @@ describe("SchedulePage — everyone mode renders team staffing (PR #24 §14/§15
     render(element);
     const cell = screen.getByRole("button", { name: /13 באוגוסט/ });
     expect(cell.textContent).toContain("דניאל כהן");
+  });
+});
+
+describe("SchedulePage — non-manager Team Schedule access (5, 6, 8, 19-22: this PR's core authorization change)", () => {
+  it("5. a non-manager can render the team month calendar in the 'all' perspective, with manager/roster staying null/empty", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(
+        scheduleModel({
+          perspective: "all",
+          personal: null,
+          everyone: { staffing: [staffingEntry()], duties: [], absences: [] },
+        }),
+      ),
+    );
+    const element = await SchedulePage({ searchParams: searchParams({ month: "2026-08", person: "all" }) });
+    render(element);
+    const cell = screen.getByRole("button", { name: /13 באוגוסט/ });
+    expect(cell.textContent).toContain("דניאל כהן");
+    // The manager's rich PersonPicker never renders for this viewer.
+    expect(screen.queryByText("מציג לוח עבור")).toBeNull();
+  });
+
+  it("6. a non-manager can render the Team Week matrix", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(
+        scheduleModel({
+          perspective: "all",
+          personal: null,
+          everyone: { staffing: [], duties: [], absences: [] },
+          teamWeek: teamWeekView(),
+        }),
+      ),
+    );
+    const element = await SchedulePage({ searchParams: searchParams({ person: "all", view: "team-week" }) });
+    render(element);
+    expect(screen.getByRole("table")).toBeInTheDocument();
+    expect(screen.getByText("איתן דוגמה")).toBeInTheDocument();
+    expect(screen.getByText("דניאל כהן")).toBeInTheDocument();
+  });
+
+  it("8. a non-manager in the 'all' perspective still sees the חודש | שבוע צוות switch -- it's gated on perspective, never on model.manager", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(
+        scheduleModel({
+          perspective: "all",
+          personal: null,
+          everyone: { staffing: [], duties: [], absences: [] },
+          teamWeek: teamWeekView(),
+        }),
+      ),
+    );
+    const element = await SchedulePage({ searchParams: searchParams({ person: "all" }) });
+    render(element);
+    expect(screen.getByText("חודש")).toBeInTheDocument();
+    expect(screen.getByText("שבוע צוות")).toBeInTheDocument();
+  });
+
+  it("a non-manager's page title reads 'לוח הצוות' for the team month and 'צוות השבוע' for Team Week -- never 'הלוח שלי' while showing team data", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(scheduleModel({ perspective: "all", personal: null, everyone: { staffing: [], duties: [], absences: [] } })),
+    );
+    const monthElement = await SchedulePage({ searchParams: searchParams({ person: "all" }) });
+    render(monthElement);
+    expect(screen.getByRole("heading", { name: "לוח הצוות" })).toBeInTheDocument();
+    cleanup();
+
+    getRequestSchedule.mockResolvedValue(
+      okResult(
+        scheduleModel({
+          perspective: "all",
+          personal: null,
+          everyone: { staffing: [], duties: [], absences: [] },
+          teamWeek: teamWeekView(),
+        }),
+      ),
+    );
+    const weekElement = await SchedulePage({ searchParams: searchParams({ person: "all", view: "team-week" }) });
+    render(weekElement);
+    expect(screen.getByRole("heading", { name: "צוות השבוע" })).toBeInTheDocument();
+  });
+
+  it("19/20/21/22. the rendered non-manager 'all' page never leaks email, sourceSheet, sourceCell, or rawValue", async () => {
+    getRequestSchedule.mockResolvedValue(
+      okResult(
+        scheduleModel({
+          perspective: "all",
+          personal: null,
+          everyone: { staffing: [staffingEntry()], duties: [], absences: [] },
+          teamWeek: teamWeekView(),
+        }),
+      ),
+    );
+    const element = await SchedulePage({ searchParams: searchParams({ person: "all", view: "team-week" }) });
+    const { container } = render(element);
+    expect(container.innerHTML).not.toContain("@example.invalid");
+    expect(container.innerHTML).not.toContain("sourceSheet");
+    expect(container.innerHTML).not.toContain("sourceCell");
+    expect(container.innerHTML).not.toContain("rawValue");
   });
 });
 

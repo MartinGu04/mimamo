@@ -4,11 +4,18 @@ import type { ManagerAbsenceEntry, ManagerDutyEntry, ManagerShiftOverviewEntry }
 import type { PersonalScheduleReadModel } from "./types";
 
 /**
- * Which question `/schedule` is currently answering (PR #24):
- * - "self" -- "what does MY schedule look like?" (every normal user, always;
- *   a manager's own default).
- * - "person" -- "what does THIS person's schedule look like?" (manager only).
- * - "all" -- "what does the whole team's staffing look like?" (manager only).
+ * Which question `/schedule` is currently answering:
+ * - "self" -- "what does MY schedule look like?" (every mapped viewer,
+ *   always available; the default for anyone, manager or not).
+ * - "all" -- "what does the whole team's staffing look like?" (available to
+ *   EVERY authenticated, uniquely-mapped viewer -- manager or not. This is
+ *   a deliberate authorization change: "all" is no longer synonymous with
+ *   "manager". See `buildMappedEveryoneScheduleReadModel`/
+ *   `buildManagerScheduleReadModel` in `buildScheduleReadModel.ts` and
+ *   `schedule.ts`'s own docs for the split).
+ * - "person" -- "what does THIS SPECIFIC person's schedule look like?"
+ *   (manager-only, unchanged -- a non-manager's `?person=<id>` always
+ *   normalizes/falls back to "self", never reaches "person").
  */
 export type SchedulePerspective = "self" | "all" | "person";
 
@@ -113,12 +120,29 @@ export interface ScheduleTeamWeekView {
 
 /**
  * The full server-computed `/schedule` read model -- safe to serialize to
- * the authenticated user's own browser session. For a normal user,
- * `manager`/`roster` are always null/empty and `perspective` is always
- * "self" -- the exact same shape a manager's own default self view uses,
- * so a normal user's rendered page is byte-for-byte the pre-PR-24
- * personal Schedule experience. Never carries `sourceSheet`/`sourceCell`,
- * raw workbook objects, colleague email, or any `Person` beyond the safe
+ * the authenticated user's own browser session.
+ *
+ * Two SEPARATE authorization concepts live side by side here, and must
+ * never be conflated:
+ * 1. **Team Schedule visibility** (`perspective === "all"`, `everyone`,
+ *    `teamWeek`) -- available to EVERY authenticated, uniquely-mapped
+ *    viewer, manager or not (`buildMappedEveryoneScheduleReadModel` /
+ *    `buildManagerScheduleReadModel`'s own "all" branch, both routed
+ *    through `schedule.ts`'s `loadScheduleWorkbookContext`-based path).
+ * 2. **Manager authorization** (`manager`, `roster`, `perspective ===
+ *    "person"`) -- strictly narrower, still gated by
+ *    `loadManagerWorkbookContext`'s fresh `person.isManager === true`
+ *    re-verification, exactly as before. `manager`/`roster` are non-null/
+ *    non-empty ONLY for an actual manager -- for every other mapped
+ *    viewer, including one currently in `perspective: "all"`, they stay
+ *    null/empty, which is exactly what tells the UI to render the compact
+ *    `SchedulePerspectiveSwitch` ("שלי | כולם") instead of the manager's
+ *    richer `ScheduleManagerSelector`. `perspective === "all"` is
+ *    therefore NO LONGER synonymous with "this viewer is a manager" --
+ *    check `manager !== null` for that, never `perspective`.
+ *
+ * Never carries `sourceSheet`/`sourceCell`, raw workbook objects,
+ * colleague email, auth metadata, or any `Person` field beyond the safe
  * `PersonalProfile`/`ScheduleRosterOption` projections already used
  * elsewhere in this layer.
  */
@@ -126,13 +150,13 @@ export interface ScheduleReadModel {
   fetchedAt: string;
   localNow: LocalNow;
 
-  /** Null for a normal (non-manager) user -- the manager selector must never render. */
+  /** Null for any viewer who isn't an actual manager -- the manager selector (and every manager-only affordance) must never render for them, REGARDLESS of `perspective`. */
   manager: { id: string; name: string } | null;
-  /** The manager-visible roster for the selector, EXCLUDING the manager's own entry (they already have the explicit "אני" option). Always empty for a normal user. */
+  /** The manager-visible roster for the arbitrary-person selector, EXCLUDING the manager's own entry (they already have the explicit "אני" option). Always empty for a non-manager viewer -- Team Schedule visibility never implies this roster. */
   roster: ScheduleRosterOption[];
 
   perspective: SchedulePerspective;
-  /** Set only when `perspective === "person"`. */
+  /** Set only when `perspective === "person"` -- manager-only, see `SchedulePerspective`'s own docs. */
   selectedPersonId: string | null;
   selectedPersonName: string | null;
 
@@ -144,19 +168,26 @@ export interface ScheduleReadModel {
    */
   personal: PersonalScheduleReadModel | null;
 
-  /** Set only for `perspective === "all"`. Null otherwise. */
+  /**
+   * Set for `perspective === "all"`, for EVERY authenticated, uniquely-
+   * mapped viewer -- not manager-gated (see this interface's own docs).
+   * Null otherwise.
+   */
   everyone: ScheduleEveryoneReadModel | null;
 
   /**
-   * The "שבוע צוות" team-week matrix, set only for `perspective === "all"`
-   * (same manager-only gate as `everyone` -- both are populated by the
-   * exact same authorized branch of `buildManagerScheduleReadModel`, so
-   * there is no separate authorization path to keep in sync). Always
-   * populated for that perspective regardless of which presentation the
-   * page is currently showing ("חודש" vs "שבוע צוות") -- computing it is
-   * pure, in-memory work over data already fetched for `everyone`, never
-   * a second Google request, so there's no cost to always having it ready
-   * for an instant client-side-free toggle. Null otherwise.
+   * The "שבוע צוות" team-week matrix, set for `perspective === "all"` for
+   * EVERY authenticated, uniquely-mapped viewer -- the SAME visibility as
+   * `everyone` (both are populated by the same "all"-branch projection,
+   * `buildEveryoneTeamView`, whether the caller is
+   * `buildMappedEveryoneScheduleReadModel` or
+   * `buildManagerScheduleReadModel`), so there is no separate
+   * authorization path to keep in sync. Always populated for that
+   * perspective regardless of which presentation the page is currently
+   * showing ("חודש" vs "שבוע צוות") -- computing it is pure, in-memory
+   * work over data already fetched for `everyone`, never a second Google
+   * request, so there's no cost to always having it ready for an instant
+   * client-side-free toggle. Null otherwise.
    */
   teamWeek: ScheduleTeamWeekView | null;
 }

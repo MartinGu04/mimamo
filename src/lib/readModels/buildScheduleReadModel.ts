@@ -8,16 +8,19 @@ import type { Person } from "@/lib/domain/types";
 import { buildPersonalScheduleReadModel } from "./buildPersonalScheduleReadModel";
 import { buildScheduleTeamWeekView } from "./buildScheduleTeamWeekView";
 import { buildManagerAbsenceEntries, buildManagerDutyEntries, buildShiftStaffingOverview } from "./managerEventProjections";
-import type { ScheduleReadModel, ScheduleRosterOption } from "./scheduleTypes";
+import type { ScheduleEveryoneReadModel, ScheduleReadModel, ScheduleRosterOption, ScheduleTeamWeekView } from "./scheduleTypes";
 import type { PersonalScheduleReadModel } from "./types";
 
 /**
  * Wraps the authenticated person's own `PersonalScheduleReadModel` as a
- * "self" `ScheduleReadModel` with no manager scope at all -- used for every
- * normal user, and as the fail-closed fallback when a manager's fresh
- * re-authorization (see `schedule.ts`) can't be re-proven for this request.
- * `manager: null` / `roster: []` is exactly what tells the page to render
- * zero manager UI (PR #24 §3) -- never a client-side `isManager` flag.
+ * "self" `ScheduleReadModel` with no manager scope at all. Used for:
+ * (1) every mapped viewer's default "self" request (manager or not --
+ * `?person=` absent), (2) a non-manager's `?person=<anything other than
+ * "all">` -- always normalizes/falls back to self, never that other
+ * person's schedule, and (3) the fail-closed fallback when a manager's
+ * fresh re-authorization (see `schedule.ts`) can't be re-proven for this
+ * request. `manager: null` / `roster: []` is exactly what tells the page
+ * to render zero manager UI -- never a client-side `isManager` flag.
  */
 export function buildSelfOnlyScheduleReadModel(model: PersonalScheduleReadModel): ScheduleReadModel {
   return {
@@ -116,6 +119,53 @@ function buildRosterOptions(people: readonly Person[], managerId: string): Sched
     .sort(compareRosterOptions);
 }
 
+interface BuildEveryoneTeamViewInput {
+  people: readonly Person[];
+  events: readonly Event[];
+  shiftSchedule: ShiftSchedule;
+  monthDates: readonly string[];
+  week: OperationalWeek;
+  potentialAllocations?: readonly PotentialAllocation[];
+}
+
+interface EveryoneTeamView {
+  everyone: ScheduleEveryoneReadModel;
+  teamWeek: ScheduleTeamWeekView;
+}
+
+/**
+ * The pure "everyone"/"שבוע צוות" projection, factored out so there is
+ * exactly ONE place that decides what "team staffing"/"team week" means
+ * from a given events/people/week snapshot -- shared by EVERY caller that
+ * ever builds the "all" perspective, an authorized manager
+ * (`buildManagerScheduleReadModel`'s own "all" branch) and an authorized
+ * non-manager mapped viewer (`buildMappedEveryoneScheduleReadModel`) alike.
+ * Never two independently maintained copies of this projection that could
+ * quietly drift apart from each other.
+ */
+function buildEveryoneTeamView(input: BuildEveryoneTeamViewInput): EveryoneTeamView {
+  const dates = new Set(input.monthDates);
+  const peopleById = new Map(input.people.map((person) => [person.id, person]));
+
+  // Same `buildPotentialDutyEventsForRoster` duty-completeness widening
+  // `buildManagerScheduleReadModel`'s own "all" branch always applied --
+  // see that function's own docstring for why this feeds ONLY `duties`,
+  // never `staffing`.
+  const eventsWithPotentialDuties = [
+    ...input.events,
+    ...buildPotentialDutyEventsForRoster(input.potentialAllocations ?? [], input.people, input.events),
+  ];
+
+  return {
+    everyone: {
+      staffing: buildShiftStaffingOverview(input.events, input.shiftSchedule, dates),
+      duties: buildManagerDutyEntries(eventsWithPotentialDuties, peopleById, dates),
+      absences: buildManagerAbsenceEntries(input.events, peopleById, dates),
+    },
+    teamWeek: buildScheduleTeamWeekView(input.events, input.people, input.week),
+  };
+}
+
 /**
  * Pure, deterministic construction of a manager's `ScheduleReadModel` from
  * already-parsed domain data -- no network, no auth, no Date/UTC, mirrors
@@ -153,22 +203,7 @@ export function buildManagerScheduleReadModel(input: BuildManagerScheduleReadMod
   const perspective = resolveSchedulePerspective(requestedPersonId, people, manager.id);
 
   if (perspective.kind === "all") {
-    const dates = new Set(monthDates);
-    const peopleById = new Map(people.map((person) => [person.id, person]));
-
-    /**
-     * Duty-data completeness for the shared/"everyone" calendar, same
-     * conversion `buildManagerOverviewReadModel.ts` already reuses for its
-     * own roster-wide `duties` list (`buildPotentialDutyEventsForRoster` --
-     * resolution/dedup are never re-implemented here). Deliberately feeds
-     * ONLY `duties` -- `staffing` below keeps reading the raw `events`, so
-     * a Potential-sourced duty can never affect shift staffing/coverage,
-     * shift contexts, or fairness; it's a calendar-visible duty entry only.
-     */
-    const eventsWithPotentialDuties = [
-      ...events,
-      ...buildPotentialDutyEventsForRoster(potentialAllocations ?? [], people, events),
-    ];
+    const { everyone, teamWeek } = buildEveryoneTeamView({ people, events, shiftSchedule, monthDates, week, potentialAllocations });
 
     return {
       fetchedAt,
@@ -179,12 +214,8 @@ export function buildManagerScheduleReadModel(input: BuildManagerScheduleReadMod
       selectedPersonId: null,
       selectedPersonName: null,
       personal: null,
-      everyone: {
-        staffing: buildShiftStaffingOverview(events, shiftSchedule, dates),
-        duties: buildManagerDutyEntries(eventsWithPotentialDuties, peopleById, dates),
-        absences: buildManagerAbsenceEntries(events, peopleById, dates),
-      },
-      teamWeek: buildScheduleTeamWeekView(events, people, week),
+      everyone,
+      teamWeek,
     };
   }
 
@@ -210,5 +241,61 @@ export function buildManagerScheduleReadModel(input: BuildManagerScheduleReadMod
     personal,
     everyone: null,
     teamWeek: null,
+  };
+}
+
+export interface BuildMappedEveryoneScheduleReadModelInput {
+  /** Full parsed personnel list -- every mapped viewer sees the SAME roster-wide "all" projection, regardless of who's looking. */
+  people: readonly Person[];
+  /** Full parsed internal Event[] (every person). */
+  events: readonly Event[];
+  shiftSchedule: ShiftSchedule;
+  fetchedAt: string;
+  now: LocalNow;
+  /** Every calendar date in the displayed month -- scopes `everyone`'s staffing/duties/absences, same contract as `BuildManagerScheduleReadModelInput.monthDates`. */
+  monthDates: readonly string[];
+  /** The resolved Sunday-Saturday operational week -- scopes `teamWeek` ONLY, same contract as `BuildManagerScheduleReadModelInput.week`. */
+  week: OperationalWeek;
+  /** Same contract as `BuildManagerScheduleReadModelInput.potentialAllocations` -- feeds ONLY `everyone.duties`, never `everyone.staffing`. */
+  potentialAllocations?: readonly PotentialAllocation[];
+}
+
+/**
+ * The "all" perspective's `ScheduleReadModel` for ANY authenticated,
+ * uniquely-mapped viewer -- manager or not. This is the deliberate
+ * authorization split this whole module exists to make explicit: viewing
+ * the safe, read-only team month/"שבוע צוות" projection is a permission
+ * every mapped person has, while `manager`/`roster` (and everything an
+ * actual manager gets beyond this -- the arbitrary-person picker, Manager
+ * Area, Fairness, Report 1, ...) stay a SEPARATE, strictly narrower
+ * permission this function never grants.
+ *
+ * `manager: null` / `roster: []`, unconditionally, always -- this function
+ * is never a source of manager UI. `perspective` is always `"all"` (the
+ * ONLY perspective this function ever builds; there is no `requestedPersonId`
+ * param here at all, unlike `buildManagerScheduleReadModel` -- "self"/
+ * "person" for a non-manager viewer is `buildSelfOnlyScheduleReadModel`'s
+ * job, resolved by the caller in `schedule.ts` BEFORE this function is ever
+ * reached, never by inspecting the requested person id here).
+ *
+ * `everyone`/`teamWeek` reuse the EXACT SAME `buildEveryoneTeamView`
+ * projection `buildManagerScheduleReadModel`'s own "all" branch uses --
+ * never a second, independently-maintained definition of what "team
+ * staffing"/"team week" means.
+ */
+export function buildMappedEveryoneScheduleReadModel(input: BuildMappedEveryoneScheduleReadModelInput): ScheduleReadModel {
+  const { everyone, teamWeek } = buildEveryoneTeamView(input);
+
+  return {
+    fetchedAt: input.fetchedAt,
+    localNow: input.now,
+    manager: null,
+    roster: [],
+    perspective: "all",
+    selectedPersonId: null,
+    selectedPersonName: null,
+    personal: null,
+    everyone,
+    teamWeek,
   };
 }

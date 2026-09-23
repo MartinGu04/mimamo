@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scheduleEveryoneHref, schedulePersonHref, scheduleSelfHref } from "./scheduleUrl";
+import { scheduleEveryoneHref, schedulePersonHref, scheduleSelfHref, scheduleTeamWeekHref } from "./scheduleUrl";
 
 describe("scheduleSelfHref", () => {
   it("no params -> plain /schedule, no ?person= at all", () => {
@@ -28,6 +28,12 @@ describe("scheduleEveryoneHref", () => {
 
   it("a null/omitted date is left out, never a literal 'null'", () => {
     expect(scheduleEveryoneHref({ date: null })).toBe("/schedule?person=all");
+  });
+});
+
+describe("scheduleTeamWeekHref — the canonical one-click Team Week shortcut (24)", () => {
+  it("24. is exactly /schedule?person=all&view=team-week -- no week= anchor", () => {
+    expect(scheduleTeamWeekHref()).toBe("/schedule?person=all&view=team-week");
   });
 });
 
