@@ -33,24 +33,26 @@ interface IdentityFooterProps {
 export function IdentityFooter({ name, isManager, avatarUrl, userId }: IdentityFooterProps) {
   return (
     <div className="border-t border-sidebar-border px-5 py-5">
-      {/* Phase 7: the one discoverable link into the public accessibility
-          statement from the desktop shell. */}
-      <Link
-        href="/accessibility"
-        className="block rounded px-1 text-[11px] text-sidebar-muted underline decoration-sidebar-muted/40 underline-offset-2 transition-colors duration-150 hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-      >
-        הצהרת נגישות
-      </Link>
-      {/* Phase 9C: the discoverable link into the public privacy notice,
-          grouped with the accessibility statement link for the same reason
-          (see the comment above) -- a legal/informational link, not app
-          navigation. */}
-      <Link
-        href="/privacy"
-        className="mt-1 block rounded px-1 text-[11px] text-sidebar-muted underline decoration-sidebar-muted/40 underline-offset-2 transition-colors duration-150 hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-      >
-        מדיניות פרטיות
-      </Link>
+      {/* Phase 7/9C: the discoverable links into the public accessibility
+          statement and privacy notice from the desktop shell -- legal/
+          informational links, not app navigation. Laid out as a single
+          horizontal row (wrapping only if a narrow sidebar forces it)
+          rather than stacked, so the two quiet footer links read as one
+          group instead of two separate lines. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <Link
+          href="/accessibility"
+          className="rounded px-1 text-[11px] text-sidebar-muted underline decoration-sidebar-muted/40 underline-offset-2 transition-colors duration-150 hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          הצהרת נגישות
+        </Link>
+        <Link
+          href="/privacy"
+          className="rounded px-1 text-[11px] text-sidebar-muted underline decoration-sidebar-muted/40 underline-offset-2 transition-colors duration-150 hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          מדיניות פרטיות
+        </Link>
+      </div>
       <div className="mt-3 flex items-center justify-between gap-2 border-t border-sidebar-border px-1 pt-3">
         <p className="text-[11px] text-sidebar-muted">גרסה {APP_VERSION}</p>
         <div className="flex items-center gap-1">
