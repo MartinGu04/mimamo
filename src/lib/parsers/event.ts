@@ -6,6 +6,7 @@ import type {
   EventPeriod,
   EventRole,
 } from "@/lib/domain/event";
+import { isShiftLeadRoleToken } from "@/lib/domain/shiftLeadRole";
 import type { RawAssignment } from "./types";
 
 /**
@@ -137,10 +138,10 @@ function isChangeNote(text: string): boolean {
 
 // --- 2a. Shift ---------------------------------------------------------------
 
-const SUPERVISOR_TOKEN = 'אחמ"ש';
 const TECHNICIAN_TOKENS = ["טכנאי", "טכנאית"];
 const SHIFT_PERIOD_TOKENS: Record<string, EventPeriod> = { יום: "day", לילה: "night" };
-const SHADOW_SUFFIX = "- צל";
+/** "- צל" or "צל" -- the hyphen before צל is cosmetic and optional. */
+const SHADOW_MODIFIER_RE = /^-?\s*צל$/;
 /** "מ-12", "מ- 12:00", "מ 12", "עד 12", "עד 12:00" */
 const PARTIAL_TIME_RE = /^(מ|עד)-?\s*(\d{1,2}(?::\d{2})?)$/;
 
@@ -153,12 +154,10 @@ interface ShiftMatch {
 }
 
 function parseShift(text: string): ShiftMatch | null {
-  const roleMatch =
-    stripLeadingToken(text, [SUPERVISOR_TOKEN]) ?? stripLeadingToken(text, TECHNICIAN_TOKENS);
+  const roleMatch = matchLeadingRoleToken(text);
   if (!roleMatch) return null;
 
-  const role: EventRole = roleMatch.token === SUPERVISOR_TOKEN ? "supervisor" : "technician";
-  const rest = roleMatch.rest;
+  const { role, rest } = roleMatch;
 
   if (rest === "") {
     return { role, period: "unspecified", shadow: false, startTimeOverride: null, endTimeOverride: null };
@@ -174,7 +173,7 @@ function parseShift(text: string): ShiftMatch | null {
     return { role, period, shadow: false, startTimeOverride: null, endTimeOverride: null };
   }
 
-  if (modifier === SHADOW_SUFFIX) {
+  if (SHADOW_MODIFIER_RE.test(modifier)) {
     return { role, period, shadow: true, startTimeOverride: null, endTimeOverride: null };
   }
 
@@ -191,6 +190,26 @@ function parseShift(text: string): ShiftMatch | null {
     };
   }
 
+  return null;
+}
+
+/**
+ * The leading role word of a shift cell (`text` up to the first space, or
+ * all of `text` when there's no space) classified via the canonical
+ * `isShiftLeadRoleToken` for the shift-lead family (any אחמ"ש spelling
+ * variant, masculine or feminine) and the fixed `TECHNICIAN_TOKENS` list
+ * otherwise. Returns the resolved role and whatever comes after that one
+ * separating space. Unlike `stripLeadingToken`, the matched token's length
+ * is never assumed in advance -- the shift-lead family has more than one
+ * valid spelling length -- so the split happens on the first space instead.
+ */
+function matchLeadingRoleToken(text: string): { role: EventRole; rest: string } | null {
+  const spaceIndex = text.indexOf(" ");
+  const token = spaceIndex === -1 ? text : text.slice(0, spaceIndex);
+  const rest = spaceIndex === -1 ? "" : text.slice(spaceIndex + 1);
+
+  if (isShiftLeadRoleToken(token)) return { role: "supervisor", rest };
+  if (TECHNICIAN_TOKENS.includes(token)) return { role: "technician", rest };
   return null;
 }
 

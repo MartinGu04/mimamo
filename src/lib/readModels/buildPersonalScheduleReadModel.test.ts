@@ -4,6 +4,8 @@ import type { Event } from "@/lib/domain/event";
 import type { LocalNow } from "@/lib/domain/localNow";
 import type { PotentialAllocation } from "@/lib/domain/potentialAllocation";
 import type { Person } from "@/lib/domain/types";
+import { parseEvent } from "@/lib/parsers/event";
+import type { RawAssignment } from "@/lib/parsers/types";
 import {
   buildPersonalScheduleReadModel,
   isCalendarDisplayEvent,
@@ -565,6 +567,29 @@ describe('calendarEvents[].shiftCompanions — "מי איתי במשמרת"', ()
     const model = build({ events, people: everyone() });
     expect(companionsOfFirstEvent(model)).toEqual([
       { personId: COLLEAGUE_ID, personName: "נועה דוגמה", shiftLabel: 'אחמ"ש צל' },
+    ]);
+  });
+
+  // Regression: a shift lead written in the FEMININE form ("אחמשית יום
+  // צל") never showed up in "מי איתי במשמרת" because `parseEvent` only
+  // recognized the masculine spelling 'אחמ"ש' -- the raw cell classified
+  // as category "other" (role: null), so `shiftsOverlapInTime` never
+  // considered it a shift at all. Runs the REAL raw-text pipeline
+  // (`parseEvent`, not a hand-built Event) to prove the fix closes the gap
+  // at the actual boundary the bug was reported at.
+  it('2b. a feminine-form shift-lead colleague ("אחמשית יום צל", parsed from raw text) IS listed as a companion, same as the masculine form', () => {
+    const rawColleagueCell: RawAssignment = {
+      personId: COLLEAGUE_ID,
+      personName: "נועה דוגמה",
+      date: "2026-08-12",
+      rawValue: "אחמשית יום צל",
+      sourceSheet: "משמרות + תורנויות",
+      sourceCell: nextCell(),
+    };
+    const events = [myShift({ date: "2026-08-12", period: "day" }), parseEvent(rawColleagueCell)];
+    const model = build({ events, people: everyone() });
+    expect(companionsOfFirstEvent(model)).toEqual([
+      { personId: COLLEAGUE_ID, personName: "נועה דוגמה", shiftLabel: "אחמשית יום צל" },
     ]);
   });
 

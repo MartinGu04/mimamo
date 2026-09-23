@@ -19,6 +19,11 @@ describe("resolveFairnessAllocationRole — exact deterministic mapping only", (
     expect(resolveFairnessAllocationRole('אחמ"ש')).toBe("supervisor");
   });
 
+  it("אחמשית (feminine shift-lead form) -> supervisor, same as the masculine form", () => {
+    expect(resolveFairnessAllocationRole("אחמשית")).toBe("supervisor");
+    expect(resolveFairnessAllocationRole('אחמ"שית')).toBe("supervisor");
+  });
+
   it.each(['ר"צ', "הסמכה", "הסמכת טכנאי אתרים", "משתחרר", "אחמ\"ש מ\"א"])(
     "%s never gets an invented role",
     (label) => {

@@ -140,6 +140,22 @@ describe("buildDutyFairnessReadModel — E. existing deterministic target mappin
     expect(row?.status).toBe("balanced");
   });
 
+  it("a feminine-form supervisor row ('אחמשית') gets the SAME supervisor target and group as the masculine form -- regression coverage", () => {
+    const model = buildDutyFairnessReadModel({
+      parseResult: parseResult({
+        personRows: [personRow({ allocationLabel: "אחמשית", currentScore: 4 })],
+        targets,
+      }),
+      periodIdentity: { key: "h1", year: 2026 },
+      fetchedAt: "2026-08-15T10:00:00.000Z",
+      now: NOW,
+    });
+    expect(model.groups.map((g) => g.key)).toEqual(["supervisor"]);
+    const row = model.groups.find((g) => g.key === "supervisor")?.rows[0];
+    expect(row?.comparisonTarget).toBe(4);
+    expect(row?.status).toBe("balanced");
+  });
+
   it("an unknown/non-target-bearing allocation label never receives an invented target, even though period targets are known", () => {
     const model = buildDutyFairnessReadModel({
       parseResult: parseResult({
