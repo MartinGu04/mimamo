@@ -203,3 +203,17 @@ one-time scheduled broadcasts, never a second cron). `ruleActions.ts`
 ("use server") is this feature's one manager-gated CRUD surface -- see
 `engine/README.md`'s own section for the full worker-integration
 picture, and the migration's own doc comment for the schema.
+
+## TAKSHAL CTRL -- an additional, optional delivery channel
+
+`takshal/` (server-only) lets the SAME notification job ALSO reach the
+user through the TAKSHAL CTRL notification hub, next to -- never instead
+of -- the direct Web Push + inbox pipeline above. It attaches in
+`engine/delivery.ts`'s `runDelivery`, after a job's recipient and content
+are final; the direct fan-out (`processJob`) is unchanged and stays
+authoritative, and every TAKSHAL failure is fail-open. Which channel(s) a
+recipient gets is decided in ONE place, `deliveryChannel.ts`
+(`direct` / `takshal` / `both`); this phase's policy is a temporary
+server-side rollout allowlist (`TAKSHAL_CTRL_TEST_RECIPIENTS`: allowlisted
+-> `both`, everyone else -> `direct`). See `takshal/README.md` for the
+event-id strategy, reliability trade-off and the manual acceptance test.

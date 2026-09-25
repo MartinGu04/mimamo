@@ -65,6 +65,36 @@ export async function fetchAllUserIdsByEmail(): Promise<Map<string, AuthAccountL
 }
 
 /**
+ * Every Supabase auth user id -> their VERIFIED, normalized email, via the
+ * SAME Admin API `listUsers()` source as `fetchAllUserIdsByEmail` (one bulk
+ * pass per call, never one request per user). The inverse direction of
+ * that lookup, for callers that start from a `notification_jobs.recipient_user_id`
+ * and need the address Supabase Auth itself verified -- the TAKSHAL CTRL
+ * delivery channel addresses its recipient by it
+ * (`lib/notifications/takshal/`).
+ *
+ * Only an address Supabase Auth reports as confirmed (`email_confirmed_at`,
+ * set by the Google provider for a Google-verified address) is included --
+ * an unconfirmed one is simply absent, never guessed. Never a sheet
+ * `Person.email` and never anything a browser supplied.
+ */
+export async function fetchVerifiedEmailsByUserId(): Promise<Map<string, string>> {
+  const supabase = getNotificationServiceClient();
+  const userIdToEmail = new Map<string, string>();
+
+  for (let page = 1; page <= MAX_LIST_USERS_PAGES; page++) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: LIST_USERS_PER_PAGE });
+    if (error) throw error;
+    for (const user of data.users) {
+      if (user.email && user.email_confirmed_at) userIdToEmail.set(user.id, normalizeEmail(user.email));
+    }
+    if (data.users.length < LIST_USERS_PER_PAGE) break;
+  }
+
+  return userIdToEmail;
+}
+
+/**
  * One person's resolved standing against `emailToUserId`, purely from
  * already-fetched data (no I/O of its own) -- `no_email`/`ambiguous`/
  * `not_found` never reach a userId at all; `unmapped` has a normalized

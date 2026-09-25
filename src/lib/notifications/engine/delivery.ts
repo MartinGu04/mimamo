@@ -13,6 +13,7 @@ import {
   updateDeliveryOutcome,
   type ClaimedNotificationJob,
 } from "./store";
+import { startTakshalChannelRun, type TakshalChannelRun } from "./takshalChannel";
 
 export interface DeliverySummary {
   jobsClaimed: number;
@@ -60,8 +61,13 @@ export async function runDelivery(limit = 200): Promise<DeliverySummary> {
     subscriptionsRemoved: 0,
   };
 
+  // The optional TAKSHAL CTRL channel (see `takshalChannel.ts`) -- null,
+  // at zero cost, unless it is configured AND someone is rolled out to it,
+  // in which case every job below is exactly the pre-existing direct path.
+  const takshal = jobs.length > 0 ? startTakshalChannelRun() : null;
+
   for (const job of jobs) {
-    const outcome = await processJob(job);
+    const outcome = takshal ? await routeJob(job, takshal) : await processJob(job);
     summary.deliveriesSucceeded += outcome.succeeded;
     summary.deliveriesFailedPermanent += outcome.failedPermanent;
     summary.deliveriesFailedTransient += outcome.failedTransient;
@@ -73,7 +79,76 @@ export async function runDelivery(limit = 200): Promise<DeliverySummary> {
     else summary.jobsPending++;
   }
 
+  // Bounded (a few seconds at most, see `takshal/dispatcher.ts`): lets
+  // secondary TAKSHAL CTRL requests still in flight finish inside this
+  // invocation. Every direct delivery above has already completed.
+  await takshal?.settle();
+
   return summary;
+}
+
+/**
+ * Follows the job's channel plan (`lib/notifications/deliveryChannel.ts`):
+ *
+ * - `direct` -- `processJob`, unchanged.
+ * - `both`   -- the hub request is QUEUED first (it runs alongside the
+ *   direct fan-out, never before or instead of it), then `processJob`,
+ *   unchanged. The direct pipeline stays authoritative for the job's
+ *   status, retries and receipts; the hub's outcome never touches them.
+ *   A job the direct pipeline retries is offered to the hub again under
+ *   the same event id, which the hub deduplicates -- a free retry for a
+ *   hub request that failed the first time.
+ * - `takshal` -- see `processTakshalOnlyJob`. No policy produces this in
+ *   the current rollout phase (allowlisted -> `both`, everyone else ->
+ *   `direct`); it is wired so a persisted per-user preference can switch
+ *   it on later without touching this pipeline.
+ */
+async function routeJob(job: ClaimedNotificationJob, takshal: TakshalChannelRun): Promise<JobOutcome> {
+  const { plan, notification } = await takshal.planFor(job);
+  if (!notification) return processJob(job);
+  if (plan.direct) {
+    takshal.sendSecondary(notification);
+    return processJob(job);
+  }
+  return processTakshalOnlyJob(job, notification, takshal);
+}
+
+/**
+ * Channel `takshal`: the hub is this job's ONLY push channel, so -- unlike
+ * `both` -- its outcome settles the job, through the SAME bounded
+ * job-level retry every direct job already uses (`attempts` vs.
+ * `max_attempts`, re-claimed by the next tick, same event id so the hub
+ * never pushes twice):
+ *
+ * - accepted -> `completed` (`skipped` when the recipient has no active
+ *   TAKSHAL CTRL device -- the exact meaning `skipped` already has for a
+ *   recipient with no direct device)
+ * - not accepted -> left `pending` for a later tick, or `failed` once the
+ *   attempt budget is spent.
+ *
+ * The inbox shows the job either way (it never depends on delivery
+ * status). No direct device is attempted, so every per-device counter
+ * stays zero.
+ */
+async function processTakshalOnlyJob(
+  job: ClaimedNotificationJob,
+  notification: Parameters<TakshalChannelRun["sendPrimary"]>[0],
+  takshal: TakshalChannelRun,
+): Promise<JobOutcome> {
+  const none = { succeeded: 0, failedPermanent: 0, failedTransient: 0, subscriptionsRemoved: 0 };
+  const result = await takshal.sendPrimary(notification);
+
+  if (result.ok) {
+    const finalStatus = result.noActiveSubscription ? "skipped" : "completed";
+    await setJobStatus(job.id, finalStatus);
+    return { ...none, finalStatus };
+  }
+  if (job.attempts >= job.maxAttempts) {
+    await setJobStatus(job.id, "failed", "TAKSHAL CTRL delivery failed.");
+    return { ...none, finalStatus: "failed" };
+  }
+  await setJobStatus(job.id, "pending");
+  return { ...none, finalStatus: "pending" };
 }
 
 async function processJob(job: ClaimedNotificationJob): Promise<JobOutcome> {
