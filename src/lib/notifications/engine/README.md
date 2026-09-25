@@ -126,15 +126,6 @@ implements; this file is the module map.
   subscription per recipient, reuses PR #29's `sendPush` classification
   (permanent 404/410 -> delete subscription; transient -> never delete,
   bounded retry via the job's own `attempts`/`max_attempts`).
-- `takshalChannel.ts` -- the optional TAKSHAL CTRL channel for ONE
-  `runDelivery()` run (`lib/notifications/takshal/`): per job, asks
-  `lib/notifications/deliveryChannel.ts` for the recipient's channel
-  (`direct`/`takshal`/`both`), addresses the hub by the recipient's
-  Supabase-verified email (`recipients.ts`'s `fetchVerifiedEmailsByUserId`,
-  one bulk lookup per run), and schedules the hub request alongside --
-  never instead of -- `delivery.ts`'s unchanged direct fan-out. Returns
-  null at zero cost unless configured AND someone is rolled out.
-  Fail-open throughout.
 - `pipeline.ts` -- the top-level orchestrator
   (`runNotificationWorkerTick(mode)`). `mode: "dry_run"` computes the
   same summary shape while skipping every mutating store call and the
