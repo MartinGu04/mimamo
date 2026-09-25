@@ -317,56 +317,6 @@ describe("fetchAllUserIdsByEmail", () => {
   });
 });
 
-describe("fetchVerifiedEmailsByUserId", () => {
-  it("maps each auth user id to its normalized email -- only when Supabase Auth has confirmed it", async () => {
-    vi.resetModules();
-    const fakeListUsers = vi.fn(async () => ({
-      data: {
-        users: [
-          { id: "user-1", email: "  Dana@Example.COM ", email_confirmed_at: "2026-01-01T00:00:00Z" },
-          { id: "user-2", email: "unconfirmed@example.com", email_confirmed_at: null },
-          { id: "user-3", email: null, email_confirmed_at: "2026-01-01T00:00:00Z" },
-          { id: "user-4", email: "noconfirmfield@example.com" },
-        ],
-      },
-      error: null,
-    }));
-    vi.doMock("./serviceClient", () => ({ getNotificationServiceClient: () => ({ auth: { admin: { listUsers: fakeListUsers } } }) }));
-
-    const { fetchVerifiedEmailsByUserId } = await import("./recipients");
-    const emails = await fetchVerifiedEmailsByUserId();
-
-    expect([...emails]).toEqual([["user-1", "dana@example.com"]]);
-    expect(fakeListUsers).toHaveBeenCalledTimes(1);
-  });
-
-  it("pages through every account (one bulk pass, never a per-user call)", async () => {
-    vi.resetModules();
-    const fullPage = Array.from({ length: 1000 }, (_, i) => ({ id: `user-${i}`, email: `u${i}@example.com`, email_confirmed_at: "2026-01-01T00:00:00Z" }));
-    const fakeListUsers = vi
-      .fn()
-      .mockResolvedValueOnce({ data: { users: fullPage }, error: null })
-      .mockResolvedValueOnce({ data: { users: [{ id: "user-last", email: "last@example.com", email_confirmed_at: "2026-01-01T00:00:00Z" }] }, error: null });
-    vi.doMock("./serviceClient", () => ({ getNotificationServiceClient: () => ({ auth: { admin: { listUsers: fakeListUsers } } }) }));
-
-    const { fetchVerifiedEmailsByUserId } = await import("./recipients");
-    const emails = await fetchVerifiedEmailsByUserId();
-
-    expect(emails.size).toBe(1001);
-    expect(emails.get("user-last")).toBe("last@example.com");
-    expect(fakeListUsers).toHaveBeenCalledTimes(2);
-  });
-
-  it("propagates an Admin API error rather than returning a partial directory", async () => {
-    vi.resetModules();
-    const fakeListUsers = vi.fn(async () => ({ data: { users: [] }, error: Object.assign(new Error("admin api down"), { name: "AuthApiError", status: 500 }) }));
-    vi.doMock("./serviceClient", () => ({ getNotificationServiceClient: () => ({ auth: { admin: { listUsers: fakeListUsers } } }) }));
-
-    const { fetchVerifiedEmailsByUserId } = await import("./recipients");
-    await expect(fetchVerifiedEmailsByUserId()).rejects.toThrow("admin api down");
-  });
-});
-
 describe("fetchAllSubscribedUserIds", () => {
   it("returns distinct user ids from push_subscriptions", async () => {
     vi.resetModules();

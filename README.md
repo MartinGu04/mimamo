@@ -49,7 +49,6 @@ src/lib/auth/         authentication & permissions
 src/lib/push/         Web Push mechanics (VAPID, payload contract, send/classify)
 src/lib/notifications/ push subscription persistence (Supabase) + Server Actions
 src/lib/notifications/engine/ automatic notification worker (PR #30)
-src/lib/notifications/takshal/ optional TAKSHAL CTRL delivery channel (server-only)
 supabase/migrations/  SQL migrations (push_subscriptions, notification engine)
 ```
 
